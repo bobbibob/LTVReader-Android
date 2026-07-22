@@ -121,7 +121,7 @@ dependencies {
     implementation("androidx.media3:media3-common:1.3.1")
 
     // ffmpeg-kit (https://github.com/Arthenica/ffmpeg-kit) — через JitPack/MavenCentral
-    implementation("com.arthenica:ffmpeg-kit-full:6.0-2.LTS")
+
 
     // onnxruntime-android (Kokoro TTS, локальный движок)
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.19.0")

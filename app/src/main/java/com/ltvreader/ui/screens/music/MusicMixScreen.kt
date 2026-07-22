@@ -172,9 +172,9 @@ class MusicMixViewModel(
         outFile.parentFile?.mkdirs()
         if (s.musicPath == null) {
             // Просто конвертация + normalise
-            FFmpegBridge.encode(voiceFile, outFile, "mp3")
+            FFmpegBridge.encode(context, voiceFile, outFile, "mp3")
         } else {
-            FFmpegBridge.applyMusicDucking(
+            FFmpegBridge.applyMusicDucking(context, 
                 voice = voiceFile,
                 music = File(s.musicPath),
                 output = outFile,

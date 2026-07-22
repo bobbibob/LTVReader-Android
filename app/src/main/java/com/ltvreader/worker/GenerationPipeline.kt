@@ -123,9 +123,9 @@ class GenerationPipeline(
             _progress.update { it.copy(phase = Progress.Phase.Encoding) }
             val finalMp3 = File(outputDir, "audiobook.mp3")
             if (segmentWavs.size == 1) {
-                FFmpegBridge.encode(segmentWavs.first(), finalMp3, "mp3")
+                FFmpegBridge.encode(context, segmentWavs.first(), finalMp3, "mp3")
             } else {
-                FFmpegBridge.concat(segmentWavs, finalMp3, "mp3")
+                FFmpegBridge.concat(context, segmentWavs, finalMp3, "mp3")
             }
             _progress.update { it.copy(phase = Progress.Phase.Completed) }
             finalMp3
