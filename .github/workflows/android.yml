@@ -5,6 +5,7 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   test:
@@ -18,7 +19,7 @@ jobs:
       - uses: android-actions/setup-android@v3
       - name: Run unit tests
         run: ./gradlew :app:testDebugUnitTest
-      - name: Upload artifacts
+      - name: Upload test reports
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
@@ -35,8 +36,16 @@ jobs:
           java-version: 17
       - uses: android-actions/setup-android@v3
       - name: Build debug APK
-        run: ./gradlew :app:assembleDebug
+        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
       - uses: actions/upload-artifact@v4
         with:
-          name: debug-apk
+          name: app-debug
           path: app/build/outputs/apk/debug/app-debug.apk
+        if: success()
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            app/build/outputs/logs/
+            ~/.gradle/daemon/
+        if: failure()
