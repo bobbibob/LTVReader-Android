@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LTV Reader</string>
+    <string name="nav_editor">Editor</string>
+    <string name="nav_generation">Generación</string>
+    <string name="nav_review">Revisión</string>
+    <string name="nav_music">Mezcla</string>
+    <string name="nav_voices">Voces</string>
+    <string name="nav_settings">Ajustes</string>
+    <string name="nav_projects">Proyectos</string>
+    <string name="gen_start">Generar</string>
+    <string name="gen_cancel">Cancelar</string>
+    <string name="gen_engine">Motor</string>
+    <string name="gen_voice">Voz</string>
+    <string name="gen_speed">Velocidad</string>
+    <string name="action_save">Guardar</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_ok">OK</string>
+    <string name="action_delete">Eliminar</string>
+    <string name="action_share">Compartir</string>
+    <string name="action_open">Abrir</string>
+    <string name="mix_title">Mezcla de audio</string>
+    <string name="mix_render">Renderizar</string>
+    <string name="review_title">Revisión de generación</string>
+    <string name="settings_general">General</string>
+    <string name="settings_engines">Motores TTS</string>
+    <string name="settings_remote_host">Host remoto</string>
+    <string name="settings_about">Acerca de</string>
+    <string name="status_idle">Inactivo</string>
+    <string name="status_generating">Generando segmento %1$d de %2$d</string>
+    <string name="status_completed">Completado</string>
+</resources>

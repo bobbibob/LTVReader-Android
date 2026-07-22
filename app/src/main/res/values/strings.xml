@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LTV Reader</string>
+
+    <!-- Главное меню -->
+    <string name="nav_editor">Editor</string>
+    <string name="nav_generation">Generation</string>
+    <string name="nav_review">Review</string>
+    <string name="nav_music">Music Mix</string>
+    <string name="nav_voices">Voices</string>
+    <string name="nav_settings">Settings</string>
+    <string name="nav_projects">Projects</string>
+
+    <!-- Editor -->
+    <string name="editor_placeholder">Paste or import text here…</string>
+    <string name="editor_import">Import</string>
+    <string name="editor_import_txt">Plain text (.txt)</string>
+    <string name="editor_import_md">Markdown (.md)</string>
+    <string name="editor_import_docx">Word document (.docx)</string>
+    <string name="editor_normalize">Normalize</string>
+    <string name="editor_split_safe">Safe chunks</string>
+    <string name="editor_split_sentence">Sentence-aware</string>
+    <string name="editor_split_paragraph">By paragraphs</string>
+
+    <!-- Markup toolbar -->
+    <string name="markup_pause">Pause</string>
+    <string name="markup_voice">Voice</string>
+    <string name="markup_lang">Lang</string>
+    <string name="markup_speed">Speed</string>
+    <string name="markup_volume">Volume</string>
+    <string name="markup_chapter">Chapter</string>
+    <string name="markup_pitch">Pitch</string>
+
+    <!-- Generation -->
+    <string name="gen_start">Generate</string>
+    <string name="gen_pause">Pause</string>
+    <string name="gen_resume">Resume</string>
+    <string name="gen_cancel">Cancel</string>
+    <string name="gen_retry">Retry</string>
+    <string name="gen_engine">Engine</string>
+    <string name="gen_voice">Voice</string>
+    <string name="gen_speed">Speed</string>
+    <string name="gen_export">Export</string>
+    <string name="gen_progress">Generating…</string>
+    <string name="gen_done">Done</string>
+
+    <!-- Engines -->
+    <string name="engine_kokoro">Kokoro (on-device)</string>
+    <string name="engine_openai">OpenAI TTS</string>
+    <string name="engine_elevenlabs">ElevenLabs</string>
+    <string name="engine_gemini">Google Gemini TTS</string>
+    <string name="engine_azure">Azure Speech</string>
+    <string name="engine_custom_http">Custom HTTP</string>
+    <string name="engine_remote_host">Remote engine host</string>
+    <string name="engine_piper_remote">Piper (via remote host)</string>
+    <string name="engine_chatterbox_remote">Chatterbox (via remote host)</string>
+    <string name="engine_qwen_remote">Qwen3 TTS (via remote host)</string>
+    <string name="engine_omnivoice_remote">OmniVoice (via remote host)</string>
+
+    <!-- Music mix -->
+    <string name="mix_title">Audio Mix</string>
+    <string name="mix_voice_track">Voice track</string>
+    <string name="mix_music_track">Background music</string>
+    <string name="mix_volume">Volume</string>
+    <string name="mix_fade_in">Fade in</string>
+    <string name="mix_fade_out">Fade out</string>
+    <string name="mix_ducking">Music ducking</string>
+    <string name="mix_render">Render mix</string>
+
+    <!-- Review -->
+    <string name="review_title">Generation review</string>
+    <string name="review_transcript">Transcript</string>
+    <string name="review_similarity">Similarity</string>
+    <string name="review_tail">Tail analysis</string>
+    <string name="review_cut_tail">Cut tail</string>
+    <string name="review_regenerate">Regenerate segment</string>
+
+    <!-- Settings -->
+    <string name="settings_general">General</string>
+    <string name="settings_engines">TTS engines</string>
+    <string name="settings_voice_gallery">Voice gallery</string>
+    <string name="settings_remote_host">Remote engine host</string>
+    <string name="settings_normalization">Text normalization</string>
+    <string name="settings_about">About</string>
+    <string name="settings_language">Interface language</string>
+    <string name="settings_output_dir">Output directory</string>
+    <string name="settings_pause_between_blocks">Pause between blocks (ms)</string>
+    <string name="settings_pause_between_chapters">Pause between chapters (ms)</string>
+    <string name="settings_paragraph_pause_min">Paragraph pause min (ms)</string>
+    <string name="settings_paragraph_pause_max">Paragraph pause max (ms)</string>
+    <string name="settings_chunk_size">Safe chunk size</string>
+    <string name="settings_markup_toolbar">Show markup toolbar</string>
+    <string name="settings_syntax_highlight">Editor syntax highlighting</string>
+
+    <!-- Common -->
+    <string name="action_save">Save</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_ok">OK</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_share">Share</string>
+    <string name="action_open">Open</string>
+    <string name="action_install">Install</string>
+    <string name="action_uninstall">Uninstall</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="action_apply">Apply</string>
+    <string name="action_reset">Reset</string>
+    <string name="action_back">Back</string>
+    <string name="action_next">Next</string>
+    <string name="action_play">Play</string>
+    <string name="action_pause">Pause</string>
+    <string name="action_stop">Stop</string>
+
+    <!-- Errors -->
+    <string name="error_no_engine">No TTS engine selected</string>
+    <string name="error_engine_not_installed">Engine not installed</string>
+    <string name="error_api_key_missing">API key is not set</string>
+    <string name="error_network">Network error: %1$s</string>
+    <string name="error_invalid_markup">Invalid markup at line %1$d: %2$s</string>
+    <string name="error_cancelled">Cancelled</string>
+
+    <!-- Status / progress -->
+    <string name="status_idle">Idle</string>
+    <string name="status_loading_model">Loading model…</string>
+    <string name="status_generating">Generating segment %1$d of %2$d</string>
+    <string name="status_exporting">Exporting…</string>
+    <string name="status_mixing">Mixing audio…</string>
+    <string name="status_completed">Completed</string>
+    <string name="status_failed">Failed: %1$s</string>
+</resources>

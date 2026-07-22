@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LTV Reader</string>
+    <string name="nav_editor">Редактор</string>
+    <string name="nav_generation">Генерация</string>
+    <string name="nav_review">Обзор</string>
+    <string name="nav_music">Микс</string>
+    <string name="nav_voices">Голоса</string>
+    <string name="nav_settings">Настройки</string>
+    <string name="nav_projects">Проекты</string>
+    <string name="gen_start">Сгенерировать</string>
+    <string name="gen_cancel">Отмена</string>
+    <string name="gen_engine">Движок</string>
+    <string name="gen_voice">Голос</string>
+    <string name="gen_speed">Скорость</string>
+    <string name="action_save">Сохранить</string>
+    <string name="action_cancel">Отмена</string>
+    <string name="action_ok">ОК</string>
+    <string name="action_delete">Удалить</string>
+    <string name="action_share">Поделиться</string>
+    <string name="action_open">Открыть</string>
+    <string name="mix_title">Аудио-микс</string>
+    <string name="mix_render">Рендер</string>
+    <string name="review_title">Обзор генерации</string>
+    <string name="settings_general">Общие</string>
+    <string name="settings_engines">TTS-движки</string>
+    <string name="settings_remote_host">Удалённый хост</string>
+    <string name="settings_about">О приложении</string>
+    <string name="status_idle">Готов</string>
+    <string name="status_generating">Генерация сегмента %1$d из %2$d</string>
+    <string name="status_completed">Готово</string>
+</resources>

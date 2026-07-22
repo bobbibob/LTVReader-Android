@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LTV Reader</string>
+    <string name="nav_editor">编辑器</string>
+    <string name="nav_generation">生成</string>
+    <string name="nav_review">审核</string>
+    <string name="nav_music">混音</string>
+    <string name="nav_voices">语音</string>
+    <string name="nav_settings">设置</string>
+    <string name="nav_projects">项目</string>
+    <string name="gen_start">生成</string>
+    <string name="gen_cancel">取消</string>
+    <string name="gen_engine">引擎</string>
+    <string name="gen_voice">语音</string>
+    <string name="gen_speed">速度</string>
+    <string name="action_save">保存</string>
+    <string name="action_cancel">取消</string>
+    <string name="action_ok">确定</string>
+    <string name="action_delete">删除</string>
+    <string name="action_share">分享</string>
+    <string name="action_open">打开</string>
+    <string name="mix_title">音频混音</string>
+    <string name="mix_render">渲染</string>
+    <string name="review_title">生成审核</string>
+    <string name="settings_general">常规</string>
+    <string name="settings_engines">TTS 引擎</string>
+    <string name="settings_remote_host">远程主机</string>
+    <string name="settings_about">关于</string>
+    <string name="status_idle">空闲</string>
+    <string name="status_generating">正在生成第 %2$d 段中的第 %1$d 段</string>
+    <string name="status_completed">完成</string>
+</resources>

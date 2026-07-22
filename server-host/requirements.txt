@@ -1,0 +1,9 @@
+# Урезанный набор зависимостей для запуска engine_host.py
+# Полный список — в корневом requirements.txt оригинала.
+fastapi>=0.116,<1
+uvicorn[standard]>=0.35,<1
+pydantic>=2,<3
+# TTS-движки (по желанию)
+kokoro-onnx>=0.4,<1
+# Для Piper, Chatterbox, Qwen3, OmniVoice — ставьте зависимости
+# из исходного репозитория LocalText2Voice.

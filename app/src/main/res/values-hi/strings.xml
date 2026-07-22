@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LTV Reader</string>
+    <string name="nav_editor">एडिटर</string>
+    <string name="nav_generation">जनरेशन</string>
+    <string name="nav_review">समीक्षा</string>
+    <string name="nav_music">मिक्स</string>
+    <string name="nav_voices">आवाज़ें</string>
+    <string name="nav_settings">सेटिंग्स</string>
+    <string name="nav_projects">प्रोजेक्ट</string>
+    <string name="gen_start">जनरेट करें</string>
+    <string name="gen_cancel">रद्द करें</string>
+    <string name="gen_engine">इंजन</string>
+    <string name="gen_voice">आवाज़</string>
+    <string name="gen_speed">गति</string>
+    <string name="action_save">सहेजें</string>
+    <string name="action_cancel">रद्द करें</string>
+    <string name="action_ok">ठीक है</string>
+    <string name="action_delete">हटाएं</string>
+    <string name="action_share">साझा करें</string>
+    <string name="action_open">खोलें</string>
+    <string name="mix_title">ऑडियो मिक्स</string>
+    <string name="mix_render">रेंडर</string>
+    <string name="review_title">जनरेशन समीक्षा</string>
+    <string name="settings_general">सामान्य</string>
+    <string name="settings_engines">TTS इंजन</string>
+    <string name="settings_remote_host">रिमोट होस्ट</string>
+    <string name="settings_about">के बारे में</string>
+    <string name="status_idle">निष्क्रिय</string>
+    <string name="status_generating">%2$d में से %1$d सेगमेंट जनरेट हो रहा है</string>
+    <string name="status_completed">पूरा हुआ</string>
+</resources>

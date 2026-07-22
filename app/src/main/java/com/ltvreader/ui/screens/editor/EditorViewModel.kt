@@ -1,0 +1,64 @@
+package com.ltvreader.ui.screens.editor
+
+import android.content.Context
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.ltvreader.app.AppContainer
+import com.ltvreader.core.text.TextProcessor
+import com.ltvreader.data.ProjectEntity
+import com.ltvreader.tts.VoiceConfig
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
+
+data class EditorState(
+    val title: String = "Untitled",
+    val text: String = "",
+    val splitMode: String = "safe_chunks",
+    val chunkCount: Int = 0,
+)
+
+class EditorViewModel(private val context: Context) : ViewModel() {
+
+    private val db = AppContainer.database(context)
+    private val settings = AppContainer.settings(context)
+    private val textProcessor = AppContainer.textProcessor(context)
+
+    private val _state = MutableStateFlow(EditorState())
+    val state: StateFlow<EditorState> = _state.asStateFlow()
+
+    fun setTitle(value: String) = _state.update { it.copy(title = value) }
+    fun setText(value: String) {
+        _state.update { it.copy(text = value, chunkCount = estimateChunkCount(value)) }
+    }
+    fun setSplitMode(value: String) = _state.update { it.copy(splitMode = value) }
+
+    private fun estimateChunkCount(text: String): Int {
+        if (text.isBlank()) return 0
+        val (_, chunks) = textProcessor.process(text)
+        return chunks.size
+    }
+
+    suspend fun save(context: Context): Long? {
+        if (_state.value.text.isBlank()) return null
+        val s = settings.flow.first()
+        val project = ProjectEntity(
+            title = _state.value.title.ifBlank { "Untitled" },
+            rawText = _state.value.text,
+            ttsEngine = s.ttsEngine,
+            voiceConfigJson = Json.encodeToString(VoiceConfig.serializer(), VoiceConfig.EMPTY.copy(voice = s.voiceId, lang = s.language, speed = s.speed)),
+            splitMode = _state.value.splitMode,
+        )
+        return db.projects().upsert(project)
+    }
+}
+
+class EditorViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T = EditorViewModel(context) as T
+}
