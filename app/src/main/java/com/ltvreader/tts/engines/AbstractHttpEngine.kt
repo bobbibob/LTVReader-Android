@@ -144,7 +144,7 @@ abstract class AbstractHttpEngine(
     }
 
     protected fun JsonPrimitive.contentOrNull(): String? =
-        if (this is JsonPrimitive && !this.isString) content else content.takeIf { it != "null" }
+        if (this.isString) content else content.takeIf { it != "null" }
 
     companion object {
         val JSON_MEDIA = "application/json; charset=utf-8".toMediaType()

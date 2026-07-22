@@ -37,25 +37,25 @@ class GeminiTtsEngine(
     )
 
     override fun buildBody(request: TtsRequest): JsonObject = buildJsonObject {
-        putJsonArray("contents") {
-            addJsonObject {
-                putJsonArray("parts") {
-                    addJsonObject {
+        put("contents", kotlinx.serialization.json.buildJsonArray {
+            add(kotlinx.serialization.json.buildJsonObject {
+                put("parts", kotlinx.serialization.json.buildJsonArray {
+                    add(kotlinx.serialization.json.buildJsonObject {
                         put("text", request.text)
-                    }
-                }
-            }
-        }
-        putJsonObject("generationConfig") {
-            putJsonArray("responseModalities") { add("AUDIO") }
-            putJsonObject("speechConfig") {
-                putJsonObject("voiceConfig") {
-                    putJsonObject("prebuiltVoiceConfig") {
+                    })
+                })
+            })
+        })
+        put("generationConfig", kotlinx.serialization.json.buildJsonObject {
+            put("responseModalities", kotlinx.serialization.json.buildJsonArray { add("AUDIO") })
+            put("speechConfig", kotlinx.serialization.json.buildJsonObject {
+                put("voiceConfig", kotlinx.serialization.json.buildJsonObject {
+                    put("prebuiltVoiceConfig", kotlinx.serialization.json.buildJsonObject {
                         put("voiceName", request.voice.extras["voiceName"] ?: voiceName)
-                    }
-                }
-            }
-        }
+                    })
+                })
+            })
+        })
     }
 
     override suspend fun listVoices(): List<VoiceInfo> = listOf(

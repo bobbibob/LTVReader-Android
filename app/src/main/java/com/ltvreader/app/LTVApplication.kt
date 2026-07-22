@@ -23,7 +23,7 @@ class LTVApplication : Application() {
     val database: AppDatabase by lazy { AppDatabase.get(this) }
     val settingsRepo: SettingsRepository by lazy { SettingsRepository(this) }
 
-    @Volatile private var hostClient: EngineHostClient? = null
+    @Volatile var hostClient: EngineHostClient? = null
     val engineRegistry: EngineRegistry by lazy {
         // Загружаем актуальные настройки и пересоздаём реестр.
         appScope.launch {

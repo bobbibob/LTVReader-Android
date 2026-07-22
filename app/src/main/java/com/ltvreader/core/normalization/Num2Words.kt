@@ -26,7 +26,7 @@ class Num2Words(private val locale: Locale) {
         val cardinal = intToWords(value.toLong())
         return when (locale.language) {
             "ru" -> ordinalRu(cardinal)
-            "es" -> "$cardinalº".replace("uno", "primer").replace("una", "primera")
+            "es" -> cardinal + "º".replace("uno", "primer").replace("una", "primera")
             "fr" -> "$cardinal${if (value == 1) "er" else "e"}"
             "de" -> "$cardinal."
             else -> {

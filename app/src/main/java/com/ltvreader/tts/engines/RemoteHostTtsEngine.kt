@@ -39,15 +39,15 @@ class RemoteHostTtsEngine(
 
     override fun isAvailable(): Boolean = hostClient.isReachable()
 
-    override suspend fun listVoices(): List<VoiceInfo> = withContext(Dispatchers.IO) {
+    suspend fun listVoicesRemote(): List<VoiceInfo> = withContext(Dispatchers.IO) {
         hostClient.listVoices(engineId)
     }
 
-    override suspend fun preload() = withContext(Dispatchers.IO) {
+    suspend fun preloadRemote() = withContext(Dispatchers.IO) {
         hostClient.preloadEngine(engineId, emptyMap())
     }
 
-    override suspend fun close() = withContext(Dispatchers.IO) {
+    suspend fun closeRemote() = withContext(Dispatchers.IO) {
         hostClient.unloadEngine(engineId)
     }
 

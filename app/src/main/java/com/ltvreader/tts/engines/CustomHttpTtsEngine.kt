@@ -63,6 +63,14 @@ class CustomHttpTtsEngine(
     private fun escape(s: String): String =
         s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")
 
+    private fun downloadBytes(url: String): ByteArray {
+        val rq = okhttp3.Request.Builder().url(url).get().build()
+        httpClient.newCall(rq).execute().use { r ->
+            if (!r.isSuccessful) throw com.ltvreader.tts.TtsEngineException.Api(r.code, "audio download failed")
+            return r.body?.bytes() ?: throw com.ltvreader.tts.TtsEngineException.Generic("Empty audio body")
+        }
+    }
+
     override suspend fun synthesize(request: TtsRequest): com.ltvreader.tts.TtsResult {
         val body = buildBody(request).toString().toRequestBody(config.contentType.toMediaType())
         val req = Request.Builder()

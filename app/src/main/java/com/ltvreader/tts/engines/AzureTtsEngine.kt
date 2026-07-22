@@ -4,6 +4,7 @@ import com.ltvreader.tts.EngineInfo
 import com.ltvreader.tts.EngineInfo.EngineKind
 import com.ltvreader.tts.TtsRequest
 import com.ltvreader.tts.VoiceInfo
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 

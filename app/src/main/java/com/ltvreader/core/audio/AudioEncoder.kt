@@ -73,7 +73,7 @@ object AudioEncoder {
                         if (extraFmt > 0) ins.skipBytes(extraFmt)
                     }
                     "data" -> {
-                        dataOffset = (ins.sizeIfKnown() ?: file.length().toInt()) - ins.available()
+                        dataOffset = file.length().toInt() - ins.available()
                         dataSize = size
                         val samples = ShortArray(dataSize / 2)
                         for (i in samples.indices) {

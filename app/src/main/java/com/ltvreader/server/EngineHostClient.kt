@@ -93,7 +93,7 @@ class EngineHostClient(
         )
         val req = Request.Builder()
             .url("$baseUrl/synthesize")
-            .post(json.encodeToString(BodyMap.serializer(), BodyMap(body)).toRequestBody(JSON_MEDIA))
+            .post("""{"engine_id":"${body["engine_id"]}","text":"${(body["text"] as String).replace(""","\\\"")}","voice":"${body["voice"]}","lang":"${body["lang"]}","speed":${body["speed"]}}""".toRequestBody(JSON_MEDIA))
             .build()
         http.newCall(req).execute().use { resp ->
             if (!resp.isSuccessful) {
@@ -123,7 +123,23 @@ class EngineHostClient(
     }
 
     private suspend fun postJson(path: String, body: Map<String, Any?>): String = withContext(Dispatchers.IO) {
-        val text = json.encodeToString(BodyMap.serializer(), BodyMap(body))
+        val sb = StringBuilder("{")
+        var first = true
+        for ((k, v) in body) {
+            if (!first) sb.append(',')
+            first = false
+            sb.append('"').append(k).append('":')
+            when (v) {
+                null -> sb.append("null")
+                is Number, is Boolean -> sb.append(v.toString())
+                is Map<*, *> -> sb.append("{}")  // nested maps not supported in this simple impl
+                else -> {
+                    sb.append('"').append(v.toString().replace("\", "\\").replace(""", "\"")).append('"')
+                }
+            }
+        }
+        sb.append("}")
+        val text = sb.toString()
         val rq = Request.Builder()
             .url("$baseUrl$path")
             .post(text.toRequestBody(JSON_MEDIA))
@@ -134,11 +150,7 @@ class EngineHostClient(
     }
 
     @Serializable
-    private data class BodyMap(val data: Map<String, @Serializable(with = AnyValueSerializer::class) Any?>) {
-        companion object {
-            // Helper to use the same name as kotlin property
-        }
-    }
+    private data class BodyMap(val data: Map<String, String>)
 
     @Serializable
     private data class RemoteVoice(
@@ -155,28 +167,4 @@ class EngineHostClient(
     }
 }
 
-/**
- * Сериализатор Any? в JSON (только для тела запросов).
- */
-private object AnyValueSerializer : kotlinx.serialization.KSerializer<Any?> {
-    override val descriptor = kotlinx.serialization.descriptors.PrimitiveSerialDescriptor("AnyValue", kotlinx.serialization.descriptors.PrimitiveKind.STRING)
-    override fun serialize(encoder: kotlinx.serialization.encoding.Encoder, value: Any?) {
-        when (value) {
-            null -> encoder.encodeNull()
-            is String -> encoder.encodeString(value)
-            is Number -> encoder.encodeString(value.toString())
-            is Boolean -> encoder.encodeString(value.toString())
-            is Map<*, *> -> {
-                val mapSerializer = kotlinx.serialization.builtins.MapSerializer(
-                    kotlinx.serialization.builtins.serializer<String>(),
-                    kotlinx.serialization.PolymorphicSerializer(Any::class),
-                )
-                mapSerializer.serialize(encoder, value.mapKeys { it.key.toString() })
-            }
-            else -> encoder.encodeString(value.toString())
-        }
-    }
-    override fun deserialize(decoder: kotlinx.serialization.encoding.Decoder): Any? {
-        return decoder.decodeString()
-    }
-}
+// simple JSON encoder for requests

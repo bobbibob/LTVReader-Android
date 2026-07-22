@@ -14,7 +14,7 @@ data class TextChunk(
     val paragraphNumber: Int = 0,
     val markupPauseBeforeMs: Int = 0,
     val markupPauseAfterMs: Int? = null,
-    val markupState: MarkupState = MarkupState(),
+    val markupState: com.ltvreader.core.markup.MarkupState = com.ltvreader.core.markup.MarkupState(),
     val markupAudioEvents: List<AudioEventRef> = emptyList(),
 ) {
     /** Примерная длительность TTS в секундах (по 16 символов/сек, как в оригинале). */
