@@ -91,7 +91,7 @@ class TextNormalizer(
             val year = if (y.length == 2) "20$y" else y
             val monthName = monthNameOrNull(mo.toInt())
             if (monthName == null) m.value
-            else "${num2words.numberToWords(d.toInt())} $monthName ${num2words.numberToWords(year.toInt())}"
+            else "${num2words.numberToWords(d.toInt().toDouble())} $monthName ${num2words.numberToWords(year.toInt().toDouble())}"
         }
 
     private val romanRegex = Regex("""\b([IVXLCM]{2,8})\b""")

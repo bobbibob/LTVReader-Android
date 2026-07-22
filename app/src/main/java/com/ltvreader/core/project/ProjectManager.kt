@@ -22,17 +22,21 @@ class ProjectManager(
         data class Failed(val message: String) : ImportResult()
     }
 
-    fun importFile(file: File): ImportResult = runCatching {
-        when (file.extension.lowercase()) {
-            "txt" -> ImportedDocument(file.nameWithoutExtension, file.readText(Charsets.UTF_8), "txt")
-            "md" -> ImportedDocument(file.nameWithoutExtension, file.readText(Charsets.UTF_8), "md")
-            "docx" -> {
-                val text = readDocx(file)
-                ImportedDocument(file.nameWithoutExtension, text, "docx")
+    fun importFile(file: File): ImportResult {
+        return try {
+            when (file.extension.lowercase()) {
+                "txt" -> ImportResult.Ok(ImportedDocument(file.nameWithoutExtension, file.readText(Charsets.UTF_8), "txt"))
+                "md" -> ImportResult.Ok(ImportedDocument(file.nameWithoutExtension, file.readText(Charsets.UTF_8), "md"))
+                "docx" -> {
+                    val text = readDocx(file)
+                    ImportResult.Ok(ImportedDocument(file.nameWithoutExtension, text, "docx"))
+                }
+                else -> ImportResult.Failed("Unsupported format: " + file.extension)
             }
-            else -> return ImportResult.Failed("Unsupported format: ${file.extension}")
+        } catch (t: Throwable) {
+            ImportResult.Failed(t.message ?: "Import failed")
         }
-    }.getOrElse { ImportResult.Failed(it.message ?: "Import failed") }
+    }
 
     fun importText(name: String, text: String): ImportedDocument =
         ImportedDocument(name, text, "pasted")

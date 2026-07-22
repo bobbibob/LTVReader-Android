@@ -39,6 +39,10 @@ class RemoteHostTtsEngine(
 
     override fun isAvailable(): Boolean = hostClient.isReachable()
 
+    override suspend fun listVoices(): List<com.ltvreader.tts.VoiceInfo> = withContext(Dispatchers.IO) {
+        hostClient.listVoices(engineId)
+    }
+
     suspend fun listVoicesRemote(): List<VoiceInfo> = withContext(Dispatchers.IO) {
         hostClient.listVoices(engineId)
     }

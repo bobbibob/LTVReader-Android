@@ -10,11 +10,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -32,11 +34,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/**
- * Список проектов.
- *
- * Прямой порт `MainWindow._build_audio_library_tab()` из `main_window.py`.
- */
 @Composable
 fun ProjectsScreen(
     nav: NavController,
@@ -64,8 +61,8 @@ fun ProjectsScreen(
 private fun ProjectCard(p: ProjectEntity, onClick: () -> Unit) {
     Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Column(Modifier.padding(12.dp)) {
-            Text(p.title, style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
-            Text("${p.rawText.length} chars · ${p.ttsEngine}", style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
+            Text(p.title, style = MaterialTheme.typography.titleMedium)
+            Text("${p.rawText.length} chars • ${p.ttsEngine}", style = MaterialTheme.typography.bodySmall)
         }
     }
 }

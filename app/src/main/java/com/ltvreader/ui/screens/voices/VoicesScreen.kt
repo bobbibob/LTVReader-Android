@@ -7,13 +7,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -31,11 +32,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/**
- * Список голосов по всем доступным движкам.
- *
- * Прямой порт `MainWindow._build_voices_page()` (~140 строк).
- */
 @Composable
 fun VoicesScreen(
     nav: NavController,
@@ -47,16 +43,17 @@ fun VoicesScreen(
         title = stringResource(R.string.nav_voices),
     ) { padding: PaddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(state.byEngine.entries.toList(), key = { it.key }) { (engineId, voices) ->
-                    Text("$engineId (${voices.size})", style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
-                    voices.forEach { v -> VoiceCard(v) }
+                state.byEngine.forEach { (engineId, voices) ->
+                    item(key = engineId) {
+                        Text("$engineId (${voices.size})", style = MaterialTheme.typography.titleMedium)
+                    }
+                    voices.forEach { v ->
+                        item(key = "${engineId}-${v.id}") { VoiceCard(v) }
+                    }
                 }
             }
         }
@@ -67,9 +64,9 @@ fun VoicesScreen(
 private fun VoiceCard(v: VoiceInfo) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
-            Text(v.displayName.ifBlank { v.id }, style = androidx.compose.material3.MaterialTheme.typography.titleSmall)
-            Text("${v.language} · ${v.gender}", style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
-            if (v.previewUrl != null) Text("preview available", style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
+            Text(v.displayName.ifBlank { v.id }, style = MaterialTheme.typography.titleSmall)
+            Text("${v.language} · ${v.gender}", style = MaterialTheme.typography.bodySmall)
+            if (v.previewUrl != null) Text("preview available", style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -83,15 +80,13 @@ class VoicesViewModel(private val context: android.content.Context) : ViewModel(
     private val registry = AppContainer.registry(context)
     private val _state = MutableStateFlow(VoicesState())
     val state: StateFlow<VoicesState> = _state.asStateFlow()
-
     init {
         viewModelScope.launch {
             _state.update { it.copy(loading = true) }
             val all = registry.allEngineInfos()
             val map = mutableMapOf<String, List<VoiceInfo>>()
             for (e in all) {
-                runCatching { registry.get(e.id).listVoices() }
-                    .onSuccess { map[e.id] = it }
+                runCatching { registry.get(e.id).listVoices() }.onSuccess { map[e.id] = it }
             }
             _state.update { it.copy(byEngine = map, loading = false) }
         }

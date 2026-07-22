@@ -3,13 +3,14 @@ package com.ltvreader.ui.screens.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
@@ -17,11 +18,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -39,16 +40,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/**
- * Экран настроек. Прямой порт `MainWindow._build_settings_page()` (~600 строк).
- */
 @Composable
 fun SettingsScreen(
     nav: NavController,
     vm: SettingsViewModel = viewModel(factory = SettingsViewModelFactory(LocalContext.current)),
 ) {
     val state by vm.state.collectAsState()
-    val scope = rememberCoroutineScope()
     LTVScaffold(
         nav = nav,
         title = stringResource(R.string.nav_settings),
@@ -58,9 +55,7 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             SectionTitle(stringResource(R.string.settings_general))
-            SliderSetting("Chunk size", state.settings.chunkSize.toFloat(), 500f..5000f, onChange = { vm.setChunkSize(it.toInt()) })
-            SliderSetting("Pause between blocks (ms)", state.settings.pauseBetweenBlocksMs.toFloat(), 0f..2000f, onChange = { vm.setPauseBlocks(it.toInt()) })
-            SliderSetting("Pause between chapters (ms)", state.settings.pauseBetweenChaptersMs.toFloat(), 0f..5000f, onChange = { vm.setPauseChapters(it.toInt()) })
+            SliderSetting("Chunk size", state.settings.chunkSize.toFloat(), 500f..5000f) { vm.setChunkSize(it.toInt()) }
             SwitchSetting("Markup toolbar", state.settings.markupToolbar) { vm.setMarkupToolbar(it) }
             SwitchSetting("Syntax highlight", state.settings.syntaxHighlight) { vm.setSyntaxHighlight(it) }
 
@@ -94,7 +89,7 @@ fun SettingsScreen(
 
 @Composable
 private fun SectionTitle(text: String) {
-    Text(text, style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
+    Text(text, style = MaterialTheme.typography.titleMedium)
 }
 
 @Composable
@@ -107,7 +102,7 @@ private fun SliderSetting(label: String, value: Float, range: ClosedFloatingPoin
 
 @Composable
 private fun SwitchSetting(label: String, value: Boolean, onChange: (Boolean) -> Unit) {
-    androidx.compose.foundation.layout.Row(
+    Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -124,7 +119,7 @@ private fun PasswordField(label: String, value: String, onChange: (String) -> Un
         label = { Text(label) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
-        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+        visualTransformation = PasswordVisualTransformation(),
     )
 }
 
@@ -145,8 +140,6 @@ class SettingsViewModel(private val context: android.content.Context) : ViewMode
     }
 
     fun setChunkSize(v: Int) = viewModelScope.launch { repo.update { it[SettingsRepository.Keys.CHUNK_SIZE] = v } }
-    fun setPauseBlocks(v: Int) = viewModelScope.launch { repo.update { it[SettingsRepository.Keys.PAUSE_BETWEEN_BLOCKS] = v } }
-    fun setPauseChapters(v: Int) = viewModelScope.launch { repo.update { it[SettingsRepository.Keys.PAUSE_BETWEEN_CHAPTERS] = v } }
     fun setMarkupToolbar(v: Boolean) = viewModelScope.launch { repo.update { it[SettingsRepository.Keys.MARKUP_TOOLBAR] = v } }
     fun setSyntaxHighlight(v: Boolean) = viewModelScope.launch { repo.update { it[SettingsRepository.Keys.SYNTAX_HIGHLIGHT] = v } }
     fun setRemoteHostUrl(v: String) = viewModelScope.launch { repo.update { it[SettingsRepository.Keys.REMOTE_HOST_URL] = v } }

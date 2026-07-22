@@ -40,7 +40,7 @@ class EngineHostClient(
     }.getOrDefault(false)
 
     suspend fun listEngines(): List<String> = withContext(Dispatchers.IO) {
-        getJson<List<String>>("/engines") ?: emptyList()
+        getJson("/engines", List::class.java) as? List<String> ?: emptyList()
     }
 
     suspend fun listVoices(engineId: String): List<VoiceInfo> = withContext(Dispatchers.IO) {
@@ -50,13 +50,13 @@ class EngineHostClient(
             val id = (v["id"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrEmpty() ?: return@mapNotNull null
             VoiceInfo(
                 id = id,
-                displayName = (v["display_name"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrEmpty(),
-                language = (v["language"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrEmpty() ?: "en",
-                gender = (v["gender"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrEmpty(),
+                displayName = ((v["display_name"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrEmpty() ?: ""),
+                language = ((v["language"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrEmpty() ?: "en"),
+                gender = ((v["gender"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrEmpty() ?: ""),
                 engineId = engineId,
-                previewUrl = (v["preview_url"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrEmpty(),
+                previewUrl = ((v["preview_url"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrEmpty() ?: null),
                 isLocal = false,
-                sampleRate = (v["sample_rate"] as? kotlinx.serialization.json.JsonPrimitive)?.intOrZero() ?: 22050,
+                sampleRate = ((v["sample_rate"] as? kotlinx.serialization.json.JsonPrimitive)?.intOrZero() ?: 22050),
             )
         }
     }
@@ -116,14 +116,15 @@ class EngineHostClient(
     private fun kotlinx.serialization.json.JsonPrimitive.intOrZero(): Int =
         content.toIntOrNull() ?: 0
 
-    private suspend inline fun <reified T> getJson(path: String): T? = withContext(Dispatchers.IO) {
+    @Suppress("UNCHECKED_CAST")
+    private suspend fun <T> getJson(path: String, clazz: Class<T>): T? = withContext(Dispatchers.IO) {
         val rq = Request.Builder().url("$baseUrl$path").get().build()
         runCatching {
             http.newCall(rq).execute().use { resp ->
                 if (!resp.isSuccessful) return@runCatching null
                 val text = resp.body?.string().orEmpty()
                 if (text.isBlank()) null
-                else json.decodeFromString(kotlinx.serialization.serializer(), text) as T
+                else json.decodeFromString(kotlinx.serialization.serializer(clazz.kotlin), text) as T
             }
         }.getOrNull()
     }

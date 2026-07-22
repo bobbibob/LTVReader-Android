@@ -10,11 +10,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -32,14 +34,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/**
- * Экран обзора сгенерированной аудиокниги: список сегментов, транскрипт, similarity.
- *
- * Прямой порт `MainWindow._build_review_page()` (~200 строк).
- *
- * На Android-клиенте Faster Whisper-верификация отключена, но список
- * сегментов, их статусы и ручные операции (regenerate, cut tail) работают.
- */
 @Composable
 fun ReviewScreen(
     nav: NavController,
@@ -53,14 +47,11 @@ fun ReviewScreen(
         onBack = { nav.popBackStack() },
     ) { padding: PaddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text("Audiobook #$audiobookId", style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
-            Text("Segments: ${state.segments.size}", style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
+            Text("Audiobook #$audiobookId", style = MaterialTheme.typography.titleMedium)
+            Text("Segments: ${state.segments.size}", style = MaterialTheme.typography.bodyMedium)
             LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.weight(1f)) {
                 items(state.segments, key = { it.id }) { s -> SegmentRow(s) }
             }
@@ -75,16 +66,14 @@ fun ReviewScreen(
 private fun SegmentRow(s: SegmentEntity) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
-            Text("[#${s.orderIndex}] ${s.status}", style = androidx.compose.material3.MaterialTheme.typography.labelLarge)
-            Text(s.text.take(120) + if (s.text.length > 120) "…" else "", style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
-            Text("${s.durationMs} ms", style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
+            Text("[#${s.orderIndex}] ${s.status}", style = MaterialTheme.typography.labelLarge)
+            Text(s.text.take(120) + if (s.text.length > 120) "…" else "", style = MaterialTheme.typography.bodySmall)
+            Text("${s.durationMs} ms", style = MaterialTheme.typography.bodySmall)
         }
     }
 }
 
-data class ReviewState(
-    val segments: List<SegmentEntity> = emptyList(),
-)
+data class ReviewState(val segments: List<SegmentEntity> = emptyList())
 
 class ReviewViewModel(
     private val context: android.content.Context,
@@ -93,12 +82,10 @@ class ReviewViewModel(
     private val db = AppContainer.database(context)
     private val _state = MutableStateFlow(ReviewState())
     val state: StateFlow<ReviewState> = _state.asStateFlow()
-
     init {
         viewModelScope.launch {
-            db.segments().listForAudiobook(audiobookId).also { segs ->
-                _state.update { it.copy(segments = segs) }
-            }
+            val segs = db.segments().listForAudiobook(audiobookId)
+            _state.update { it.copy(segments = segs) }
         }
     }
 }

@@ -8,19 +8,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -32,30 +26,16 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.ltvreader.R
 import com.ltvreader.app.AppContainer
-import com.ltvreader.core.audio.AudioEncoder
 import com.ltvreader.core.audio.AudioMixSettings
-import com.ltvreader.core.audio.AudioMixer
 import com.ltvreader.core.audio.FFmpegBridge
 import com.ltvreader.ui.components.LTVScaffold
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
 
-/**
- * Экран микширования аудио.
- *
- * Прямой порт `audio_mix_preview_panel.py:AudioMixPreviewPanel` (3 474 строк)
- * — упрощённый: один голосовой файл + одна фоновая музыка + настройки микса.
- *
- * Полная версия (timeline, несколько клипов, SFX-события) — в следующих
- * итерациях, см. docs/ROADMAP.md.
- */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MusicMixScreen(
     nav: NavController,
@@ -72,16 +52,13 @@ fun MusicMixScreen(
         onBack = { nav.popBackStack() },
     ) { padding: PaddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(12.dp)) {
-                    Text("Voice: ${state.voicePath ?: "—"}")
-                    Text("Music: ${state.musicPath ?: "— (none)"}")
+                    Text("Voice: ${state.voicePath ?: "—"}", style = MaterialTheme.typography.bodySmall)
+                    Text("Music: ${state.musicPath ?: "— (none)"}", style = MaterialTheme.typography.bodySmall)
                 }
             }
             Text("Voice volume: ${state.settings.voiceVolumeDb.toInt()} dB")
@@ -102,18 +79,6 @@ fun MusicMixScreen(
                 onValueChange = { vm.setDucking(it.toDouble()) },
                 valueRange = -20f..0f,
             )
-            Text("Fade in/out: ${state.settings.fadeInMs}/${state.settings.fadeOutMs} ms")
-            Slider(
-                value = state.settings.fadeInMs.toFloat(),
-                onValueChange = { vm.setFadeIn(it.toInt()) },
-                valueRange = 0f..5000f,
-            )
-            Slider(
-                value = state.settings.fadeOutMs.toFloat(),
-                onValueChange = { vm.setFadeOut(it.toInt()) },
-                valueRange = 0f..5000f,
-            )
-
             Button(
                 onClick = { scope.launch { vm.render(context) } },
                 modifier = Modifier.fillMaxWidth(),
@@ -122,7 +87,7 @@ fun MusicMixScreen(
                 Text(stringResource(R.string.mix_render))
             }
             if (state.outputPath != null) {
-                Text("✓ ${state.outputPath}", style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
+                Text("✓ ${state.outputPath}", style = MaterialTheme.typography.bodySmall)
             }
         }
     }
@@ -140,11 +105,9 @@ class MusicMixViewModel(
     private val context: android.content.Context,
     private val audiobookId: Long,
 ) : ViewModel() {
-
     private val db = AppContainer.database(context)
     private val _state = MutableStateFlow(MusicMixState())
     val state: StateFlow<MusicMixState> = _state.asStateFlow()
-
     init {
         viewModelScope.launch {
             val audiobook = db.audiobooks().byId(audiobookId)
@@ -156,13 +119,9 @@ class MusicMixViewModel(
             }
         }
     }
-
     fun setVoiceVolume(db: Double) = _state.update { it.copy(settings = it.settings.copy(voiceVolumeDb = db)) }
     fun setMusicVolume(db: Double) = _state.update { it.copy(settings = it.settings.copy(musicVolumeDb = db)) }
     fun setDucking(db: Double) = _state.update { it.copy(settings = it.settings.copy(duckingDb = db)) }
-    fun setFadeIn(ms: Int) = _state.update { it.copy(settings = it.settings.copy(fadeInMs = ms)) }
-    fun setFadeOut(ms: Int) = _state.update { it.copy(settings = it.settings.copy(fadeOutMs = ms)) }
-
     suspend fun render(context: android.content.Context) {
         val s = _state.value
         val voiceFile = s.voicePath?.let { File(it) } ?: return
@@ -171,10 +130,10 @@ class MusicMixViewModel(
         val outFile = File(context.filesDir, "audiobooks/$audiobookId/mix.mp3")
         outFile.parentFile?.mkdirs()
         if (s.musicPath == null) {
-            // Просто конвертация + normalise
             FFmpegBridge.encode(context, voiceFile, outFile, "mp3")
         } else {
-            FFmpegBridge.applyMusicDucking(context, 
+            FFmpegBridge.applyMusicDucking(
+                context = context,
                 voice = voiceFile,
                 music = File(s.musicPath),
                 output = outFile,
