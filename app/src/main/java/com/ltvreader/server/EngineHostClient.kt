@@ -15,25 +15,24 @@ import java.util.concurrent.TimeUnit
 /**
  * HTTP-клиент к удалённому engine-host (см. /server-host/engine_host.py).
  *
- * Поддерживает все эндпоинты из оригинального `app/server/http_app.py`:
- *   - GET  /info
- *   - GET  /engines
- *   - POST /engines/{id}/preload
- *   - POST /engines/{id}/unload
- *   - GET  /engines/{id}/voices
- *   - POST /jobs
- *   - GET  /jobs/{id}
- *   - POST /jobs/{id}/cancel
+ * Поддерживает эндпоинты:
+ *   GET  /info
+ *   GET  /engines
+ *   POST /engines/{id}/preload
+ *   POST /engines/{id}/unload
+ *   GET  /engines/{id}/voices
+ *   POST /synthesize  (упрощённый, как в server-host)
  */
 class EngineHostClient(
     private val baseUrl: String,
 ) {
-    private val http = OkHttpClient.Builder()
+    private val http: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(300, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS)
         .build()
-    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+
+    private val json: Json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     fun isReachable(): Boolean = runCatching {
         val req = Request.Builder().url("$baseUrl/info").get().build()
@@ -41,22 +40,25 @@ class EngineHostClient(
     }.getOrDefault(false)
 
     suspend fun listEngines(): List<String> = withContext(Dispatchers.IO) {
-        get<List<String>>("/engines") ?: emptyList()
+        getJson<List<String>>("/engines") ?: emptyList()
     }
 
     suspend fun listVoices(engineId: String): List<VoiceInfo> = withContext(Dispatchers.IO) {
-        get<List<RemoteVoice>>("/engines/$engineId/voices")?.map {
+        val arr = getJsonArray("/engines/$engineId/voices")
+        arr.mapNotNull { el ->
+            val v = el as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
+            val id = (v["id"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrEmpty() ?: return@mapNotNull null
             VoiceInfo(
-                id = it.id,
-                displayName = it.display_name,
-                language = it.language,
-                gender = it.gender,
+                id = id,
+                displayName = (v["display_name"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrEmpty(),
+                language = (v["language"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrEmpty() ?: "en",
+                gender = (v["gender"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrEmpty(),
                 engineId = engineId,
-                previewUrl = it.preview_url,
+                previewUrl = (v["preview_url"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrEmpty(),
                 isLocal = false,
-                sampleRate = it.sample_rate,
+                sampleRate = (v["sample_rate"] as? kotlinx.serialization.json.JsonPrimitive)?.intOrZero() ?: 22050,
             )
-        } ?: emptyList()
+        }
     }
 
     suspend fun preloadEngine(engineId: String, options: Map<String, String>) = withContext(Dispatchers.IO) {
@@ -91,80 +93,76 @@ class EngineHostClient(
             "speed" to speed,
             "options" to extras,
         )
+        val text_json = encodeJson(body)
         val req = Request.Builder()
             .url("$baseUrl/synthesize")
-            .post("""{"engine_id":"${body["engine_id"]}","text":"${(body["text"] as String).replace(""","\\\"")}","voice":"${body["voice"]}","lang":"${body["lang"]}","speed":${body["speed"]}}""".toRequestBody(JSON_MEDIA))
+            .post(text_json.toRequestBody(JSON_MEDIA))
             .build()
         http.newCall(req).execute().use { resp ->
             if (!resp.isSuccessful) {
                 val err = resp.body?.string().orEmpty()
-                error("engine-host $engineId returned ${resp.code}: ${err.take(200)}")
+                error("engine-host returned ${resp.code}: ${err.take(200)}")
             }
-            val bytes = resp.body?.bytes() ?: error("empty audio")
+            val bytes = resp.body?.bytes() ?: error("empty audio body")
             outputFile.parentFile?.mkdirs()
             outputFile.writeBytes(bytes)
-            // engine-host возвращает WAV с заголовком; sample-rate/channels парсятся в пайплайне
             SynthResponse(24000, 1, -1, bytes.size.toLong())
         }
     }
 
-    // --- helpers -----------------------------------------------------------
+    private fun kotlinx.serialization.json.JsonPrimitive.contentOrEmpty(): String? =
+        if (isString) content else null
 
-    private suspend inline fun <reified T> get(path: String): T? = withContext(Dispatchers.IO) {
+    private fun kotlinx.serialization.json.JsonPrimitive.intOrZero(): Int =
+        content.toIntOrNull() ?: 0
+
+    private suspend inline fun <reified T> getJson(path: String): T? = withContext(Dispatchers.IO) {
         val rq = Request.Builder().url("$baseUrl$path").get().build()
         runCatching {
             http.newCall(rq).execute().use { resp ->
                 if (!resp.isSuccessful) return@runCatching null
                 val text = resp.body?.string().orEmpty()
-                if (text.isEmpty()) null
-                else json.decodeFromString(text) as T
+                if (text.isBlank()) null
+                else json.decodeFromString(kotlinx.serialization.serializer(), text) as T
             }
         }.getOrNull()
     }
 
-    private suspend fun postJson(path: String, body: Map<String, Any?>): String = withContext(Dispatchers.IO) {
-        val sb = StringBuilder("{")
-        var first = true
-        for ((k, v) in body) {
-            if (!first) sb.append(',')
-            first = false
-            sb.append('"').append(k).append('":')
-            when (v) {
-                null -> sb.append("null")
-                is Number, is Boolean -> sb.append(v.toString())
-                is Map<*, *> -> sb.append("{}")  // nested maps not supported in this simple impl
-                else -> {
-                    sb.append('"').append(v.toString().replace("\", "\\").replace(""", "\"")).append('"')
-                }
+    private suspend fun getJsonArray(path: String): List<kotlinx.serialization.json.JsonElement> = withContext(Dispatchers.IO) {
+        val rq = Request.Builder().url("$baseUrl$path").get().build()
+        runCatching {
+            http.newCall(rq).execute().use { resp ->
+                if (!resp.isSuccessful) return@runCatching emptyList()
+                val text = resp.body?.string().orEmpty()
+                if (text.isBlank()) emptyList()
+                else json.parseToJsonElement(text) as? kotlinx.serialization.json.JsonArray ?: emptyList()
             }
-        }
-        sb.append("}")
-        val text = sb.toString()
+        }.getOrDefault(emptyList())
+    }
+
+    private fun postJson(path: String, body: Map<String, Any?>): String {
+        val text = encodeJson(body)
         val rq = Request.Builder()
             .url("$baseUrl$path")
             .post(text.toRequestBody(JSON_MEDIA))
             .build()
-        http.newCall(rq).execute().use { resp ->
-            resp.body?.string().orEmpty()
-        }
+        return runCatching {
+            http.newCall(rq).execute().use { resp -> resp.body?.string().orEmpty() }
+        }.getOrDefault("")
     }
 
-    @Serializable
-    private data class BodyMap(val data: Map<String, String>)
-
-    @Serializable
-    private data class RemoteVoice(
-        val id: String,
-        val display_name: String,
-        val language: String,
-        val gender: String = "",
-        val preview_url: String? = null,
-        val sample_rate: Int = 22050,
-    )
+    private fun encodeJson(obj: Any?): String = when (obj) {
+        null -> "null"
+        is Number, is Boolean -> obj.toString()
+        is String -> "\"${obj.replace("\\", "\\\\").replace("\"", "\\\"")}\""
+        is Map<*, *> -> obj.entries.joinToString(prefix = "{", postfix = "}") { (k, v) ->
+            "\"${k}\":${encodeJson(v)}"
+        }
+        is List<*> -> obj.joinToString(prefix = "[", postfix = "]") { encodeJson(it) }
+        else -> "\"${obj.toString().replace("\\", "\\\\").replace("\"", "\\\"")}\""
+    }
 
     companion object {
         private val JSON_MEDIA = "application/json; charset=utf-8".toMediaType()
     }
 }
-
-// simple JSON encoder for requests
