@@ -2,7 +2,6 @@ package com.ltvreader.tts.engines
 
 import com.ltvreader.tts.EngineInfo
 import com.ltvreader.tts.EngineInfo.EngineKind
-import com.ltvreader.tts.TtsEngineException
 import com.ltvreader.tts.TtsRequest
 import com.ltvreader.tts.TtsResult
 import com.ltvreader.tts.VoiceInfo
@@ -14,16 +13,10 @@ import java.io.File
 /**
  * Универсальный клиент к удалённому `engine_host.py` (см. /server-host).
  *
- * Этот класс покрывает движки, которые **не могут** работать локально
- * на Android-устройстве:
- *   - Piper (нужен нативный бинарник под aarch64-android)
- *   - Chatterbox (PyTorch 2 ГБ + модель)
- *   - Qwen3 TTS (огромные модели + CUDA)
- *   - OmniVoice (то же)
+ * Покрывает движки, которые **не могут** работать локально на Android-устройстве:
+ * Piper, Chatterbox, Qwen3 TTS, OmniVoice.
  *
- * Клиент обращается к локальному engine-host по HTTP (Wi-Fi).
- *
- * Прямой порт `app/server/engine_host_client.py`.
+ * Клиент обращается к engine-host по HTTP (LAN).
  */
 class RemoteHostTtsEngine(
     private val hostClient: EngineHostClient,
@@ -39,19 +32,15 @@ class RemoteHostTtsEngine(
 
     override fun isAvailable(): Boolean = hostClient.isReachable()
 
-    override suspend fun listVoices(): List<com.ltvreader.tts.VoiceInfo> = withContext(Dispatchers.IO) {
+    override suspend fun listVoices(): List<VoiceInfo> = withContext(Dispatchers.IO) {
         hostClient.listVoices(engineId)
     }
 
-    suspend fun listVoicesRemote(): List<VoiceInfo> = withContext(Dispatchers.IO) {
-        hostClient.listVoices(engineId)
-    }
-
-    suspend fun preloadRemote() = withContext(Dispatchers.IO) {
+    override suspend fun preload() = withContext(Dispatchers.IO) {
         hostClient.preloadEngine(engineId, emptyMap())
     }
 
-    suspend fun closeRemote() = withContext(Dispatchers.IO) {
+    override suspend fun close() = withContext(Dispatchers.IO) {
         hostClient.unloadEngine(engineId)
     }
 
@@ -60,6 +49,9 @@ class RemoteHostTtsEngine(
     }
 
     override suspend fun synthesize(request: TtsRequest): TtsResult = withContext(Dispatchers.IO) {
+        val extras = mutableMapOf<String, String>()
+        extras.putAll(request.voice.extras)
+        request.voice.referenceAudioPath?.let { extras["reference_audio_path"] = it }
         val response = hostClient.synthesize(
             engineId = engineId,
             text = request.text,
@@ -67,7 +59,7 @@ class RemoteHostTtsEngine(
             lang = request.voice.lang,
             speed = request.voice.speed,
             outputFile = request.outputFile,
-            extras = request.voice.extras + request.voice.referenceAudioPath?.let { "reference_audio_path" to it }.let { if (it != null) mapOf(it) else emptyMap() },
+            extras = extras,
         )
         TtsResult(
             outputFile = request.outputFile,

@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.MicNone
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -23,9 +24,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import com.ltvreader.R
 import com.ltvreader.ui.navigation.Routes
 
-/**
- * Нижняя навигация + Scaffold для всех экранов.
- */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LTVScaffold(
     nav: NavController,
@@ -52,6 +51,7 @@ fun LTVScaffold(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun NavItem(
     nav: NavController,

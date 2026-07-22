@@ -96,9 +96,9 @@ abstract class AbstractHttpEngine(
             val obj = runCatching { json.parseToJsonElement(text).jsonObject }.getOrElse {
                 throw TtsEngineException.Generic("Invalid JSON: ${text.take(200)}")
             }
-            val url = audioUrlField()?.let { obj[it]?.jsonPrimitive?.contentOrNull }
-            val inline = inlineAudioField()?.let { obj[it]?.jsonPrimitive?.contentOrNull }
-            val base64 = audioBase64Field()?.let { obj[it]?.jsonPrimitive?.contentOrNull }
+            val url = audioUrlField()?.let { obj[it]?.jsonPrimitive?.let { p -> if (p.isString) p.content else null } }
+            val inline = inlineAudioField()?.let { obj[it]?.jsonPrimitive?.let { p -> if (p.isString) p.content else null } }
+            val base64 = audioBase64Field()?.let { obj[it]?.jsonPrimitive?.let { p -> if (p.isString) p.content else null } }
             val bytes: ByteArray = when {
                 !url.isNullOrEmpty() -> downloadBytes(url)
                 !inline.isNullOrEmpty() -> inline.toByteArray(Charsets.UTF_8)

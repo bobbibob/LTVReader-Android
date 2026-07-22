@@ -129,41 +129,4 @@ class EngineHostClient(
         }.getOrNull()
     }
 
-    private suspend fun getJsonArray(path: String): List<kotlinx.serialization.json.JsonElement> = withContext(Dispatchers.IO) {
-        val rq = Request.Builder().url("$baseUrl$path").get().build()
-        runCatching {
-            http.newCall(rq).execute().use { resp ->
-                if (!resp.isSuccessful) return@runCatching emptyList()
-                val text = resp.body?.string().orEmpty()
-                if (text.isBlank()) emptyList()
-                else json.parseToJsonElement(text) as? kotlinx.serialization.json.JsonArray ?: emptyList()
-            }
-        }.getOrDefault(emptyList())
-    }
-
-    private fun postJson(path: String, body: Map<String, Any?>): String {
-        val text = encodeJson(body)
-        val rq = Request.Builder()
-            .url("$baseUrl$path")
-            .post(text.toRequestBody(JSON_MEDIA))
-            .build()
-        return runCatching {
-            http.newCall(rq).execute().use { resp -> resp.body?.string().orEmpty() }
-        }.getOrDefault("")
-    }
-
-    private fun encodeJson(obj: Any?): String = when (obj) {
-        null -> "null"
-        is Number, is Boolean -> obj.toString()
-        is String -> "\"${obj.replace("\\", "\\\\").replace("\"", "\\\"")}\""
-        is Map<*, *> -> obj.entries.joinToString(prefix = "{", postfix = "}") { (k, v) ->
-            "\"${k}\":${encodeJson(v)}"
-        }
-        is List<*> -> obj.joinToString(prefix = "[", postfix = "]") { encodeJson(it) }
-        else -> "\"${obj.toString().replace("\\", "\\\\").replace("\"", "\\\"")}\""
-    }
-
-    companion object {
-        private val JSON_MEDIA = "application/json; charset=utf-8".toMediaType()
-    }
-}
+    

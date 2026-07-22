@@ -7,6 +7,9 @@ import com.ltvreader.tts.VoiceInfo
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 
 /**
  * Microsoft Azure Speech (REST API, не SDK).
