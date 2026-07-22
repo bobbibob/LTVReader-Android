@@ -8,7 +8,25 @@ on:
   workflow_dispatch:
 
 jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      gradle-version: ${{ steps.gradle-version.outputs.value }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: gradle-version
+        run: |
+          VERSION=$(grep distributionUrl gradle/wrapper/gradle-wrapper.properties | sed -E 's|.*gradle-([0-9.]+)-.*|\1|')
+          echo "value=$VERSION" >> $GITHUB_OUTPUT
+          echo "Gradle version: $VERSION"
+      - name: Cache gradle-wrapper.jar
+        uses: actions/cache@v4
+        with:
+          path: gradle/wrapper/gradle-wrapper.jar
+          key: gradle-wrapper-${{ steps.gradle-version.outputs.value }}
+
   test:
+    needs: setup
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,17 +34,23 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+      - uses: actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
       - uses: android-actions/setup-android@v3
+      - name: Validate Gradle wrapper
+        uses: gradle/wrapper-validation-action@v3
       - name: Run unit tests
-        run: ./gradlew :app:testDebugUnitTest
+        run: ./gradlew :app:testDebugUnitTest --no-daemon --stacktrace
       - name: Upload test reports
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: test-reports
           path: app/build/reports/tests/
 
   build:
-    needs: test
+    needs: [setup, test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,18 +58,24 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+      - uses: actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
       - uses: android-actions/setup-android@v3
+      - name: Validate Gradle wrapper
+        uses: gradle/wrapper-validation-action@v3
       - name: Build debug APK
         run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
-      - uses: actions/upload-artifact@v4
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        if: success()
         with:
           name: app-debug
           path: app/build/outputs/apk/debug/app-debug.apk
-        if: success()
-      - uses: actions/upload-artifact@v4
+      - name: Upload logs on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
         with:
           name: build-logs
           path: |
             app/build/outputs/logs/
-            ~/.gradle/daemon/
-        if: failure()
