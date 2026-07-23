@@ -1,6 +1,6 @@
 # Repository Guidelines
 
-Guidelines for AI agents and human contributors working on **LTV Reader** — an Android port of [LocalText2Voice](https://github.com/estebanstifli/LocalText2Voice). Active development: **v0.1.0-alpha** (build APK 40 MB, run #29977084836 ✅).
+Guidelines for AI agents and human contributors working on **LTV Reader** — an Android port of [LocalText2Voice](https://github.com/estebanstifli/LocalText2Voice). Active development: **v0.1.0-alpha** (CI build #29988737348 in progress, last green: #29977084836).
 
 ## Project Structure & Module Organization
 
@@ -9,18 +9,18 @@ t2v/
 ├── app/                        Android-приложение (Kotlin, Compose)
 │   ├── src/main/java/com/ltvreader/
 │   │   ├── core/               бизнес-логика (text, markup, audio, subtitle, normalization, project)
-│   │   ├── tts/                TTS-движки + реестр (Kokoro, OpenAI, ElevenLabs, Gemini, Azure, Custom, Remote)
-│   │   ├── data/               Room (AppDatabase, 6 DAO, 6 Entities) + DataStore
-│   │   ├── ui/                 Compose-экраны (7), ViewModel'и, тема, навигация
-│   │   ├── worker/             GenerationPipeline + GenerationService (FGS)
-│   │   ├── server/             EngineHostClient (HTTP к удалённому engine-host)
+│   │   ├── tts/                TTS-движки (Kokoro, OpenAI, ElevenLabs, Gemini, Azure, Custom, Remote)
+│   │   ├── data/               Room (6 DAO, 6 Entities) + DataStore Settings
+│   │   ├── ui/                 Compose-экраны (7: editor, generation, music, review, voices, projects, settings, models)
+│   │   ├── worker/             GenerationPipeline + GenerationService
+│   │   ├── server/             EngineHostClient + ModelRepository (HTTP к engine-host)
 │   │   ├── util/               LocaleHelper, Permissions, AudioPlayer
 │   │   └── app/                LTVApplication + AppContainer (ручной DI)
 │   ├── src/main/assets/        Kokoro-модель, FFmpeg-бинарь (см. README каждого)
 │   ├── src/main/res/values*/   strings.xml (11 локалей)
 │   ├── src/test/               JVM unit-тесты (8 классов)
 │   └── src/androidTest/        ART integration-тесты
-├── server-host/                Python FastAPI-бэкенд (опционально)
+├── server-host/                Python FastAPI-бэкенд (прокси HuggingFace + TTS)
 ├── docs/                       документация (PORTING, ROADMAP, LTV_MARKUP, FAQ, …)
 └── tools/                      install.sh, check_completeness.sh, inspect_layout.sh
 ```
@@ -34,7 +34,7 @@ t2v/
 ./gradlew :app:assembleDebug
 # → app/build/outputs/apk/debug/app-debug.apk (~40 МБ)
 
-# Unit-тесты (некоторые сейчас падают — см. ROADMAP; APK не блокируется)
+# Unit-тесты (некоторые сейчас падают; APK не блокируется)
 ./gradlew :app:testDebugUnitTest
 
 # Интеграционные тесты (нужен эмулятор/устройство)
@@ -46,8 +46,10 @@ t2v/
 # Установка на устройство
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 
-# Server-host (опционально)
-cd server-host && pip install -r requirements.txt && python engine_host.py --port 8765 --allow-lan
+# Server-host (опционально, нужен для ModelsScreen)
+cd server-host && pip install -r requirements.txt
+python engine_host.py --port 8765 --allow-lan
+# Эндпоинты: /info, /engines, /synthesize, /models, /local-models
 ```
 
 CI: `.github/workflows/android.yml`. Триггер: push в main, PR, или `gh workflow run android.yml`.
@@ -62,7 +64,7 @@ CI: `.github/workflows/android.yml`. Триггер: push в main, PR, или `g
 - **Тесты**: `XxxTest.kt`, методы — обратные кавычки с пробелами: `` `parses voice commands` ``.
 - **JSON-ключи**: `camelCase` в Kotlin, `snake_case` в wire-формах.
 - **Imports**: без wildcard'ов; сортируются автоматически.
-- **Локализация**: новая строка → `values/strings.xml` И в 10 `values-<lang>/`.
+- **Локализация**: новая строка → `values/strings.xml` И в 10 `values-<lang>/`. **Не дублируйте** — будут ошибки `mergeDebugResources`.
 
 ## Testing Guidelines
 
@@ -75,7 +77,7 @@ CI: `.github/workflows/android.yml`. Триггер: push в main, PR, или `g
   ```
 - **Smoke-тест движков** (`RegistrySmokeTest`): только метаданные `EngineInfo`.
 - **Coverage цель**: > 60% в `core/`, > 40% в `tts/`.
-- **Известные фейлы** (см. ROADMAP): 5 тестов в `core/` — чинить первым делом.
+- **Известные фейлы** (см. ROADMAP): 1-2 теста в `core/`.
 
 ## Commit & Pull Request Guidelines
 
@@ -87,14 +89,12 @@ CI: `.github/workflows/android.yml`. Триггер: push в main, PR, или `g
 
 ## Текущий план работы (см. `docs/ROADMAP.md`)
 
-1. **Сейчас**: починить 5 упавших unit-тестов в `core/`.
+1. **Сейчас**: починить оставшиеся 1-2 unit-теста в `core/` (writeSilence, pause 0.7s).
 2. **Потом**: подключить реальный FFmpeg-бинарь в `assets/ffmpeg/`.
 3. **Потом**: подключить Kokoro-модель в `assets/voices/kokoro/`.
 4. **Потом**: тесты на реальном устройстве.
 5. **Потом**: UI-тесты, нормализация edge cases, полировка.
 6. **В самом конце** (или никогда): публикация в Google Play / F-Droid.
-   Сейчас APK распространяется через [GitHub Actions](../../actions) и
-   GitHub Releases.
 
 ## Agent-Specific Instructions
 
@@ -105,6 +105,8 @@ CI: `.github/workflows/android.yml`. Триггер: push в main, PR, или `g
 - **Compose Material 3 1.2.x**: `NavigationBarItem` помечен как `@ExperimentalMaterial3Api`. Используйте `@OptIn(ExperimentalMaterial3Api::class)` или собственную реализацию (как `BottomNavButton` в `LTVScaffold.kt`).
 - **FFmpeg**: `FFmpegBridge` запускает нативный бинарь через `Runtime.exec()`. Бинарь лежит в `assets/ffmpeg/<abi>/ffmpeg`. Никаких JNI или AAR-зависимостей.
 - **override suspend fun** в реализациях `TtsEngine`: всегда указывайте `: Unit` явно, иначе Kotlin не считает override корректным.
-- **JSON в kotlinx.serialization**: для `JsonObject?.get(key)?.jsonPrimitive` используйте `if (p.isString) p.content else null` вместо extension-функций (extension-метод на `JsonPrimitive` плохо резолвится из подклассов).
+- **JSON в kotlinx.serialization**: для `JsonObject?.get(key)?.jsonPrimitive` используйте `if (p.isString) p.content else null` вместо extension-функций.
 - **Regex со спецсимволами** (например, `\S\n`): используйте raw string `Regex("""[^\S\n]+""")`, иначе Kotlin выдаёт "Illegal escape".
-
+- **strings.xml**: не дублируйте ключи — будет `Found item String/<name> more than one time` в `mergeDebugResources`.
+- **ModelsScreen** (`ui/screens/models/ModelsScreen.kt`): показывает каталог TTS-моделей с HuggingFace через engine-host. Kokoro скачивается на устройство, тяжёлые модели — на сервер.
+- **engine-host** (`server-host/engine_host.py`): эндпоинты `/models` (каталог), `/local-models`, `/models/{id}/download`. Требует `huggingface_hub`. Приватные репо — `HF_TOKEN=...` env var.
