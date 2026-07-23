@@ -136,7 +136,7 @@
     <string name="status_mixing">Mixing audio…</string>
     <string name="status_completed">Completed</string>
     <string name="status_failed">Failed: %1$s</string>
-</resources>
+
     <string name="nav_models">Models</string>
     <string name="settings_manage_models">Manage TTS Models...</string>
     <string name="models_server_connected">✓ Engine host connected</string>
@@ -150,3 +150,4 @@
     <string name="models_active">✓ Active</string>
     <string name="models_unknown_engine">Unknown engine</string>
     <string name="models_hf_token_required">Set HF_TOKEN env var for private repos</string>
+</resources>
