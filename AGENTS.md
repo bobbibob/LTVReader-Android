@@ -1,6 +1,6 @@
 # Repository Guidelines
 
-Guidelines for AI agents and human contributors working on **LTV Reader** — an Android port of [LocalText2Voice](https://github.com/estebanstifli/LocalText2Voice).
+Guidelines for AI agents and human contributors working on **LTV Reader** — an Android port of [LocalText2Voice](https://github.com/estebanstifli/LocalText2Voice). Active development: **v0.1.0-alpha** (build APK 40 MB, run #29977084836 ✅).
 
 ## Project Structure & Module Organization
 
@@ -8,91 +8,91 @@ Guidelines for AI agents and human contributors working on **LTV Reader** — an
 t2v/
 ├── app/                        Android-приложение (Kotlin, Compose)
 │   ├── src/main/java/com/ltvreader/
-│   │   ├── core/               бизнес-логика (text, markup, audio, subtitle, normalization)
-│   │   ├── tts/                TTS-движки (Kokoro, OpenAI, ElevenLabs, …) + реестр
-│   │   ├── data/               Room (AppDatabase, DAO, Entities) + DataStore
-│   │   ├── ui/                 Compose-экраны, ViewModel'и, тема, навигация
-│   │   ├── worker/             GenerationPipeline + Foreground Service
-│   │   ├── server/             HTTP-клиент к engine-host
+│   │   ├── core/               бизнес-логика (text, markup, audio, subtitle, normalization, project)
+│   │   ├── tts/                TTS-движки + реестр (Kokoro, OpenAI, ElevenLabs, Gemini, Azure, Custom, Remote)
+│   │   ├── data/               Room (AppDatabase, 6 DAO, 6 Entities) + DataStore
+│   │   ├── ui/                 Compose-экраны (7), ViewModel'и, тема, навигация
+│   │   ├── worker/             GenerationPipeline + GenerationService (FGS)
+│   │   ├── server/             EngineHostClient (HTTP к удалённому engine-host)
 │   │   ├── util/               LocaleHelper, Permissions, AudioPlayer
-│   │   └── app/                LTVApplication + AppContainer (DI)
-│   ├── src/main/assets/        Kokoro-модель, FFmpeg-бинарь, локализуемые ресурсы
+│   │   └── app/                LTVApplication + AppContainer (ручной DI)
+│   ├── src/main/assets/        Kokoro-модель, FFmpeg-бинарь (см. README каждого)
 │   ├── src/main/res/values*/   strings.xml (11 локалей)
-│   ├── src/test/               JVM unit-тесты
+│   ├── src/test/               JVM unit-тесты (8 классов)
 │   └── src/androidTest/        ART integration-тесты
 ├── server-host/                Python FastAPI-бэкенд (опционально)
-├── docs/                       документация (PORTING, ROADMAP, LTV_MARKUP, …)
+├── docs/                       документация (PORTING, ROADMAP, LTV_MARKUP, FAQ, …)
 └── tools/                      install.sh, check_completeness.sh, inspect_layout.sh
 ```
 
-Слои: `core/` → `tts/` → `worker/` → `ui/`. Зависимости направлены строго вверх, обратные ссылки запрещены.
+**Слои (зависимости только вверх)**: `core/` → `tts/` → `worker/` → `ui/`. Обратные ссылки запрещены.
 
 ## Build, Test, and Development Commands
 
 ```bash
-# Сборка debug APK
+# Сборка debug APK (главная цель CI)
 ./gradlew :app:assembleDebug
+# → app/build/outputs/apk/debug/app-debug.apk (~40 МБ)
 
-# Все unit-тесты (JVM)
+# Unit-тесты (некоторые сейчас падают — см. ROADMAP; APK не блокируется)
 ./gradlew :app:testDebugUnitTest
 
 # Интеграционные тесты (нужен эмулятор/устройство)
 ./gradlew :app:connectedDebugAndroidTest
 
-# С линтингом и проверкой
-./gradlew :app:lint :app:testDebugUnitTest
+# Линт
+./gradlew :app:lint
 
 # Установка на устройство
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 # Server-host (опционально)
-cd server-host && python engine_host.py --port 8765 --allow-lan
+cd server-host && pip install -r requirements.txt && python engine_host.py --port 8765 --allow-lan
 ```
 
-Перед PR всегда запускайте `assembleDebug` + `testDebugUnitTest`.
+CI: `.github/workflows/android.yml`. Триггер: push в main, PR, или `gh workflow run android.yml`.
 
 ## Coding Style & Naming Conventions
 
 - **Kotlin**: официальный стиль JetBrains (4 пробела, без табов). Включите `ktlint` в IDE.
-- **Имена пакетов**: `com.ltvreader.<layer>.<feature>` (например, `com.ltvreader.tts.engines`).
-- **Имена классов**: `PascalCase`. ViewModel'и — `XxxViewModel`. Sealed-иерархии — `Xxx`.
-- **Имена файлов**: имя совпадает с главным классом (`KokoroTtsEngine.kt`).
-- **Compose**: composable-функции — `PascalCase` (как в Material 3).
+- **Имена пакетов**: `com.ltvreader.<layer>.<feature>` (`com.ltvreader.tts.engines`).
+- **Классы**: `PascalCase`. ViewModel'и — `XxxViewModel`. Sealed-иерархии — `Xxx`.
+- **Файлы**: имя совпадает с главным классом (`KokoroTtsEngine.kt`).
+- **Composable-функции**: `PascalCase` (как в Material 3).
 - **Тесты**: `XxxTest.kt`, методы — обратные кавычки с пробелами: `` `parses voice commands` ``.
-- **JSON-ключи в API**: `camelCase` в Kotlin, `snake_case` в wire-формах (OpenAI, ElevenLabs).
+- **JSON-ключи**: `camelCase` в Kotlin, `snake_case` в wire-формах.
 - **Imports**: без wildcard'ов; сортируются автоматически.
-- **Локализация**: каждая новая строка — в `values/strings.xml` И в 10 `values-<lang>/`.
+- **Локализация**: новая строка → `values/strings.xml` И в 10 `values-<lang>/`.
 
 ## Testing Guidelines
 
-- **Фреймворк**: JUnit 4 для unit, AndroidJUnit4 для integration.
-- **Что покрывать тестами**: всё в `core/`, `tts/registry/`, `data/`, edge cases в `tts/engines/`.
-- **Кор-тесты должны быть детерминированными**: не вызывать сеть, использовать `Random(seed)`.
-- **Запуск перед PR**:
+- **Фреймворк**: JUnit 4 (unit), AndroidJUnit4 (integration).
+- **Что покрывать**: всё в `core/`, edge cases в `tts/engines/`.
+- **Тесты детерминированы**: не вызывать сеть; `Random(seed)` для воспроизводимости.
+- **Запуск**:
   ```bash
   ./gradlew :app:testDebugUnitTest
   ```
-- **Smoke-тест движков** (`RegistrySmokeTest`) проверяет только метаданные `EngineInfo`, не сами движки.
-- **Coverage** (цель): > 60% в `core/`, > 40% в `tts/`.
+- **Smoke-тест движков** (`RegistrySmokeTest`): только метаданные `EngineInfo`.
+- **Coverage цель**: > 60% в `core/`, > 40% в `tts/`.
 
 ## Commit & Pull Request Guidelines
 
-- **Conventional Commits** (как в `git log`): `feat:`, `fix:`, `docs:`, `ci:`, `refactor:`, `chore:`.
-- **Один коммит = одна логическая правка**. Не мешайте фиксы с фичами.
-- **Сообщение**: imperative mood, ≤ 72 символов в заголовке, тело — при необходимости.
-- **PR**: ссылка на issue (`Closes #N`), краткое описание "что и почему", скриншоты для UI-изменений, отметка breaking changes.
-- **Перед PR**:
-  1. Проверить `tools/check_completeness.sh` — все компоненты на месте.
-  2. Обновить `docs/CHANGELOG.md` и `docs/ROADMAP.md`, если применимо.
-  3. Добавить тесты.
-  4. Прогнать `./gradlew :app:testDebugUnitTest`.
+- **Conventional Commits**: `feat:`, `fix:`, `docs:`, `ci:`, `refactor:`, `chore:`.
+- **Один коммит = одна логическая правка**.
+- **Заголовок**: imperative mood, ≤ 72 символов.
+- **PR**: ссылка на issue (`Closes #N`), краткое "что и почему", скриншоты для UI.
+- **Перед PR**: `tools/check_completeness.sh`, обновить `docs/CHANGELOG.md`, прогнать тесты.
 
 ## Agent-Specific Instructions
 
-- **Не коммитьте крупные бинарники** (Kokoro .onnx, FFmpeg-бинарь) в git — только плейсхолдеры. Реальные модели скачиваются отдельно.
-- **Не модифицируйте** `LocalText2Voice` upstream — это форк, синхронизация ручная.
-- **При добавлении TTS-движка**: реализуйте `TtsEngine`, зарегистрируйте в `EngineRegistry.createEngine()` и `allEngineInfos()`, добавьте API-ключ в `SettingsRepository.Keys`.
-- **При изменении LTV-разметки**: обновите парсер (`LTVMarkupParser`), подсветку (`MarkupHighlighter`), панель кнопок (`MarkupToolbar`) и тесты.
+- **Не коммитьте крупные бинарники** (Kokoro .onnx, FFmpeg-бинарь) — только плейсхолдеры.
 - **Compose-экраны**: передавайте `LocalContext.current` явно в `ViewModelFactory`; не полагайтесь на глобальный контекст.
-- **FFmpeg**: `FFmpegBridge` запускает нативный бинарь через `Runtime.exec()`. Никаких JNI или внешних AAR.
+- **При добавлении TTS-движка**: реализуйте `TtsEngine`, зарегистрируйте в `EngineRegistry.createEngine()` + `allEngineInfos()`, добавьте API-ключ в `SettingsRepository.Keys`, добавьте `EngineInfo` с правильным `EngineKind` (Local/Cloud/Remote).
+- **При изменении LTV-разметки**: обновите парсер (`LTVMarkupParser`), подсветку (`MarkupHighlighter`), панель кнопок (`MarkupToolbar`) и тесты.
+- **Compose Material 3 1.2.x**: `NavigationBarItem` помечен как `@ExperimentalMaterial3Api`. Используйте `@OptIn(ExperimentalMaterial3Api::class)` или собственную реализацию (как `BottomNavButton` в `LTVScaffold.kt`).
+- **FFmpeg**: `FFmpegBridge` запускает нативный бинарь через `Runtime.exec()`. Бинарь лежит в `assets/ffmpeg/<abi>/ffmpeg`. Никаких JNI или AAR-зависимостей.
+- **override suspend fun** в реализациях `TtsEngine`: всегда указывайте `: Unit` явно, иначе Kotlin не считает override корректным.
+- **JSON в kotlinx.serialization**: для `JsonObject?.get(key)?.jsonPrimitive` используйте `if (p.isString) p.content else null` вместо extension-функций (extension-метод на `JsonPrimitive` плохо резолвится из подклассов).
+- **Regex со спецсимволами** (например, `\S\n`): используйте raw string `Regex("""[^\S\n]+""")`, иначе Kotlin выдаёт "Illegal escape".
 
