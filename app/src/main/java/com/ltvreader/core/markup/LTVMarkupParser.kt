@@ -29,7 +29,7 @@ class LTVMarkupParser(
 ) {
 
     // {{...}} с произвольным содержимым (lazy: внутри могут быть кавычки с "}}").
-    private val commandPattern = Regex("""\{\{([\s\S]+?)\}\}|\{\{([\s\S]+?)\}\}\s*""")
+    private val commandPattern = Regex("""\{\{([\s\S]+?)\}\}""")
 
     fun parse(input: String): ParsedMarkup {
         val commands = mutableListOf<MarkupCommand>()
@@ -40,7 +40,7 @@ class LTVMarkupParser(
         // Сначала вырежем все команды и заменим их на маркер-плейсхолдер.
         // Это позволяет TextProcessor потом работать с "чистым" текстом.
         for (match in commandPattern.findAll(input)) {
-            val inside = match.groupValues[1].ifEmpty { match.groupValues[2] }
+            val inside = match.groupValues[1]
             val cmd = parseCommand(inside.trim(), match.range.first) ?: continue
             commands += cmd
 

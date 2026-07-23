@@ -17,11 +17,11 @@ object AudioEncoder {
 
         java.io.DataOutputStream(java.io.BufferedOutputStream(out.outputStream())).use { os ->
             // RIFF header
-            os.writeBytes("RIFF")
+            os.write(byteArrayOf(0x52, 0x49, 0x46, 0x46))
             os.writeIntLe(totalSize)
-            os.writeBytes("WAVE")
+            os.write(byteArrayOf(0x57, 0x41, 0x56, 0x45))
             // fmt subchunk
-            os.writeBytes("fmt ")
+            os.write(byteArrayOf(0x66, 0x6D, 0x74, 0x20))
             os.writeIntLe(16)              // subchunk size
             os.writeShortLe(1)              // PCM
             os.writeShortLe(chunk.channels.toShort().toInt())
@@ -30,7 +30,7 @@ object AudioEncoder {
             os.writeShortLe((chunk.channels * 2).toShort().toInt()) // block align
             os.writeShortLe(16)             // bits per sample
             // data subchunk
-            os.writeBytes("data")
+            os.write(byteArrayOf(0x64, 0x61, 0x74, 0x61))
             os.writeIntLe(dataSize)
             for (s in chunk.samples) os.writeShortLe(s.toInt())
         }

@@ -72,6 +72,7 @@ class Num2Words(private val locale: Locale) {
         if (n == 0L) return "zero"
         val parts = mutableListOf<String>()
         var v = n
+        // Millions, thousands (scales) — рекурсивно
         for ((scaleEng, scaleVal) in SCALES_EN) {
             if (v >= scaleVal) {
                 val count = v / scaleVal
@@ -83,13 +84,21 @@ class Num2Words(private val locale: Locale) {
                 v %= scaleVal
             }
         }
-        if (v in 1L..20L) parts += ONES_EN[v.toInt()]
-        else {
+        // Hundreds (100..900)
+        if (v >= 100L) {
+            val h = (v / 100L).toInt()
+            parts += ONES_EN[h] + " hundred"
+            v %= 100L
+        }
+        // Tens and ones (1..99)
+        if (v in 1L..20L) {
+            parts += ONES_EN[v.toInt()]
+        } else if (v > 0L) {
             val tens = (v / 10).toInt()
             val ones = (v % 10).toInt()
             parts += if (ones == 0) TENS_EN[tens] else "${TENS_EN[tens]}-${ONES_EN[ones]}"
         }
-        return parts.joinToString(" ")
+        return parts.filter { it.isNotEmpty() }.joinToString(" ")
     }
 
     private fun intToWordsRu(n: Long): String {
@@ -238,7 +247,7 @@ class Num2Words(private val locale: Locale) {
             "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen",
             "sixteen", "seventeen", "eighteen", "nineteen", "twenty")
         private val TENS_EN = arrayOf("", "", "twenty", "thirty", "forty", "fifty",
-            "sixty", "seventy", "eighty", "ninety")
+            "sixty", "seventy", "eighty", "ninety", "hundred")
         private val SCALES_EN = listOf(
             "billion" to 1_000_000_000L, "million" to 1_000_000L, "thousand" to 1_000L,
         )
