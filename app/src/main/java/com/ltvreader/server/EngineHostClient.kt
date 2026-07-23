@@ -3,8 +3,9 @@ package com.ltvreader.server
 import com.ltvreader.tts.VoiceInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -15,13 +16,13 @@ import java.util.concurrent.TimeUnit
 /**
  * HTTP-клиент к удалённому engine-host (см. /server-host/engine_host.py).
  *
- * Поддерживает эндпоинты:
+ * Эндпоинты:
  *   GET  /info
  *   GET  /engines
+ *   GET  /engines/{id}/voices
  *   POST /engines/{id}/preload
  *   POST /engines/{id}/unload
- *   GET  /engines/{id}/voices
- *   POST /synthesize  (упрощённый, как в server-host)
+ *   POST /synthesize
  */
 class EngineHostClient(
     private val baseUrl: String,
@@ -40,33 +41,35 @@ class EngineHostClient(
     }.getOrDefault(false)
 
     suspend fun listEngines(): List<String> = withContext(Dispatchers.IO) {
-        getJson("/engines", List::class.java) as? List<String> ?: emptyList()
+        getJsonArray("/engines").mapNotNull { (it as? kotlinx.serialization.json.JsonPrimitive)?.content }
     }
 
     suspend fun listVoices(engineId: String): List<VoiceInfo> = withContext(Dispatchers.IO) {
         val arr = getJsonArray("/engines/$engineId/voices")
         arr.mapNotNull { el ->
-            val v = el as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
-            val id = (v["id"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrEmpty() ?: return@mapNotNull null
+            val v = el as? JsonObject ?: return@mapNotNull null
+            val idPrim = v["id"] as? kotlinx.serialization.json.JsonPrimitive
+            val id = idPrim?.contentOrEmpty() ?: return@mapNotNull null
             VoiceInfo(
                 id = id,
-                displayName = ((v["display_name"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrEmpty() ?: ""),
-                language = ((v["language"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrEmpty() ?: "en"),
-                gender = ((v["gender"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrEmpty() ?: ""),
+                displayName = stringField(v, "display_name") ?: id,
+                language = stringField(v, "language") ?: "en",
+                gender = stringField(v, "gender").orEmpty(),
                 engineId = engineId,
-                previewUrl = ((v["preview_url"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrEmpty() ?: null),
+                previewUrl = stringField(v, "preview_url"),
                 isLocal = false,
-                sampleRate = ((v["sample_rate"] as? kotlinx.serialization.json.JsonPrimitive)?.intOrZero() ?: 22050),
+                sampleRate = intField(v, "sample_rate") ?: 22050,
             )
         }
     }
 
     suspend fun preloadEngine(engineId: String, options: Map<String, String>) = withContext(Dispatchers.IO) {
-        postJson("/engines/$engineId/preload", mapOf("options" to options))
+        val body = mapOf("options" to options)
+        postJsonText("/engines/$engineId/preload", body)
     }
 
     suspend fun unloadEngine(engineId: String) = withContext(Dispatchers.IO) {
-        postJson("/engines/$engineId/unload", emptyMap())
+        postJsonText("/engines/$engineId/unload", emptyMap())
     }
 
     data class SynthResponse(
@@ -110,23 +113,56 @@ class EngineHostClient(
         }
     }
 
-    private fun kotlinx.serialization.json.JsonPrimitive.contentOrEmpty(): String? =
-        if (isString) content else null
+    // --- helpers -----------------------------------------------------------
 
-    private fun kotlinx.serialization.json.JsonPrimitive.intOrZero(): Int =
-        content.toIntOrNull() ?: 0
-
-    @Suppress("UNCHECKED_CAST")
-    private suspend fun <T> getJson(path: String, clazz: Class<T>): T? = withContext(Dispatchers.IO) {
+    private suspend fun getJsonArray(path: String): List<JsonElement> = withContext(Dispatchers.IO) {
         val rq = Request.Builder().url("$baseUrl$path").get().build()
         runCatching {
             http.newCall(rq).execute().use { resp ->
-                if (!resp.isSuccessful) return@runCatching null
+                if (!resp.isSuccessful) return@runCatching emptyList()
                 val text = resp.body?.string().orEmpty()
-                if (text.isBlank()) null
-                else json.decodeFromString(kotlinx.serialization.serializer(clazz.kotlin), text) as T
+                if (text.isBlank()) emptyList()
+                else json.parseToJsonElement(text) as? kotlinx.serialization.json.JsonArray ?: emptyList()
             }
-        }.getOrNull()
+        }.getOrDefault(emptyList())
     }
 
-    
+    private fun postJsonText(path: String, body: Map<String, Any?>): String {
+        val text = encodeJson(body)
+        val rq = Request.Builder()
+            .url("$baseUrl$path")
+            .post(text.toRequestBody(JSON_MEDIA))
+            .build()
+        return runCatching {
+            http.newCall(rq).execute().use { resp -> resp.body?.string().orEmpty() }
+        }.getOrDefault("")
+    }
+
+    private fun stringField(obj: JsonObject, key: String): String? {
+        val prim = obj[key] as? kotlinx.serialization.json.JsonPrimitive ?: return null
+        return if (prim.isString) prim.content else null
+    }
+
+    private fun intField(obj: JsonObject, key: String): Int? {
+        val prim = obj[key] as? kotlinx.serialization.json.JsonPrimitive ?: return null
+        return prim.content.toIntOrNull()
+    }
+
+    private fun kotlinx.serialization.json.JsonPrimitive.contentOrEmpty(): String? =
+        if (isString) content else null
+
+    private fun encodeJson(obj: Any?): String = when (obj) {
+        null -> "null"
+        is Number, is Boolean -> obj.toString()
+        is String -> "\"${obj.replace("\\", "\\\\").replace("\"", "\\\"")}\""
+        is Map<*, *> -> obj.entries.joinToString(prefix = "{", postfix = "}") { (k, v) ->
+            "\"${k}\":${encodeJson(v)}"
+        }
+        is List<*> -> obj.joinToString(prefix = "[", postfix = "]") { encodeJson(it) }
+        else -> "\"${obj.toString().replace("\\", "\\\\").replace("\"", "\\\"")}\""
+    }
+
+    companion object {
+        private val JSON_MEDIA = "application/json; charset=utf-8".toMediaType()
+    }
+}
