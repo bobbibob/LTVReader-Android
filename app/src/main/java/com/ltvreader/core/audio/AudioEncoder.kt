@@ -43,9 +43,21 @@ object AudioEncoder {
      */
     fun readWav(file: java.io.File): Pair<WavInfo, AudioChunk> {
         java.io.RandomAccessFile(file, "r").use { raf ->
+            fun readLeShort(): Int {
+                val b0 = raf.read()
+                val b1 = raf.read()
+                return (b1 shl 8) or b0
+            }
+            fun readLeInt(): Int {
+                val b0 = raf.read()
+                val b1 = raf.read()
+                val b2 = raf.read()
+                val b3 = raf.read()
+                return (b3 shl 24) or (b2 shl 16) or (b1 shl 8) or b0
+            }
             val riff = ByteArray(4).also { raf.readFully(it) }
             require(riff.toString(Charsets.US_ASCII) == "RIFF") { "Not a RIFF file" }
-            val riffSize = raf.readIntLe()
+            readLeInt() // riffSize
             val wave = ByteArray(4).also { raf.readFully(it) }
             require(wave.toString(Charsets.US_ASCII) == "WAVE") { "Not a WAVE file" }
             var sampleRate = 0
@@ -58,16 +70,16 @@ object AudioEncoder {
                 if (raf.read(idBytes) < 4) break
                 val id = idBytes.toString(Charsets.US_ASCII)
                 if (id[0].code == 0) break
-                val size = raf.readIntLe()
+                val size = readLeInt()
                 when (id) {
                     "fmt " -> {
-                        val audioFormat = raf.readShortLe().toInt() and 0xFFFF
+                        val audioFormat = readLeShort() and 0xFFFF
                         require(audioFormat == 1) { "Only PCM is supported (got format $audioFormat)" }
-                        channels = raf.readShortLe().toInt() and 0xFFFF
-                        sampleRate = raf.readIntLe()
-                        raf.readIntLe() // byteRate
-                        raf.readShortLe() // blockAlign
-                        bitsPerSample = raf.readShortLe().toInt() and 0xFFFF
+                        channels = readLeShort() and 0xFFFF
+                        sampleRate = readLeInt()
+                        readLeInt() // byteRate
+                        readLeShort() // blockAlign
+                        bitsPerSample = readLeShort() and 0xFFFF
                         require(bitsPerSample == 16) { "Only 16-bit PCM is supported" }
                         val extraFmt = size - 16
                         if (extraFmt > 0) raf.skipBytes(extraFmt.toLong())
@@ -77,7 +89,7 @@ object AudioEncoder {
                         dataSize = size
                         val samples = ShortArray(dataSize / 2)
                         for (i in samples.indices) {
-                            samples[i] = raf.readShortLe()
+                            samples[i] = readLeShort().toShort()
                         }
                         val info = WavInfo(sampleRate, channels, bitsPerSample, dataOffset, dataSize)
                         return info to AudioChunk(samples, sampleRate, channels)
