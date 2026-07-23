@@ -1,8 +1,6 @@
 package com.ltvreader.ui.components
 
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
@@ -16,7 +14,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -24,6 +22,11 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import com.ltvreader.R
 import com.ltvreader.ui.navigation.Routes
 
+/**
+ * Bottom navigation + scaffold for all screens.
+ * Marked as ExperimentalMaterial3Api because NavigationBarItem is experimental
+ * in Compose Material 3 1.2.x.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LTVScaffold(
@@ -41,10 +44,10 @@ fun LTVScaffold(
         },
         bottomBar = {
             NavigationBar {
-                NavItem(nav, current, Routes.Editor, R.string.nav_editor, Icons.Default.Edit)
-                NavItem(nav, current, Routes.Projects, R.string.nav_projects, Icons.Default.Folder)
-                NavItem(nav, current, Routes.Voices, R.string.nav_voices, Icons.Default.MicNone)
-                NavItem(nav, current, Routes.Settings, R.string.nav_settings, Icons.Default.Settings)
+                BottomNavItem(nav, current, Routes.Editor, R.string.nav_editor, Icons.Default.Edit)
+                BottomNavItem(nav, current, Routes.Projects, R.string.nav_projects, Icons.Default.Folder)
+                BottomNavItem(nav, current, Routes.Voices, R.string.nav_voices, Icons.Default.MicNone)
+                BottomNavItem(nav, current, Routes.Settings, R.string.nav_settings, Icons.Default.Settings)
             }
         },
         content = content,
@@ -53,24 +56,25 @@ fun LTVScaffold(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun NavItem(
+private fun BottomNavItem(
     nav: NavController,
     currentRoute: String?,
     route: String,
     labelRes: Int,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
 ) {
     val isSelected = currentRoute?.startsWith(route) == true
+    val onClickLambda: () -> Unit = {
+        nav.navigate(route) {
+            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
     NavigationBarItem(
         selected = isSelected,
-        onClick = {
-            nav.navigate(route) {
-                popUpTo(nav.graph.findStartDestination().id) { saveState = true }
-                launchSingleTop = true
-                restoreState = true
-            }
-        },
-        icon = { Icon(icon, contentDescription = null) },
-        label = { Text(stringResource(labelRes)) },
+        onClick = onClickLambda,
+        icon = { Icon(imageVector = icon, contentDescription = null) },
+        label = { Text(text = stringResource(labelRes)) },
     )
 }

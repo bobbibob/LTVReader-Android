@@ -36,11 +36,11 @@ class RemoteHostTtsEngine(
         hostClient.listVoices(engineId)
     }
 
-    override suspend fun preload() = withContext(Dispatchers.IO) {
+    override suspend fun preload(): Unit = withContext(Dispatchers.IO) {
         hostClient.preloadEngine(engineId, emptyMap())
     }
 
-    override suspend fun close() = withContext(Dispatchers.IO) {
+    override suspend fun close(): Unit = withContext(Dispatchers.IO) {
         hostClient.unloadEngine(engineId)
     }
 
