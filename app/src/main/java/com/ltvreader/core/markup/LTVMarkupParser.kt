@@ -1,5 +1,7 @@
 package com.ltvreader.core.markup
 
+import kotlin.math.roundToInt
+
 /**
  * Парсер LTV-разметки. Полный порт `app/core/ltv_markup.py`.
  *
@@ -149,7 +151,7 @@ class LTVMarkupParser(
                     raw.endsWith("ms", true) -> raw.dropLast(2).toIntOrNull() ?: defaultMs
                     raw.endsWith("s", true) -> {
                         val sec = raw.dropLast(1).toDoubleOrNull() ?: (defaultMs / 1000.0)
-                        (sec * 1000).toInt()
+                        (sec * 1000).roundToInt()
                     }
                     else -> raw.toIntOrNull() ?: defaultMs
                 }

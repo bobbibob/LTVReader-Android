@@ -132,25 +132,34 @@ class Num2Words(private val locale: Locale) {
         return sb.toString().trim()
     }
 
+    private val HUNDREDS_ES = arrayOf("", "ciento", "doscientos", "trescientos",
+        "cuatrocientos", "quinientos", "seiscientos", "setecientos", "ochocientos", "novecientos")
+
     private fun intToWordsEs(n: Long): String {
         if (n == 0L) return "cero"
         val parts = mutableListOf<String>()
         var v = n
-        for ((scaleEs, scaleVal) in SCALES_ES) {
-            if (v >= scaleVal) {
-                val count = v / scaleVal
-                if (count == 1L) parts += scaleEs
-                else parts += "${intToWordsEs(count)} $scaleEs"
-                v %= scaleVal
+        // Hundreds
+        if (v >= 100L) {
+            val h = (v / 100L).toInt()
+            if (v in 100L..199L) {
+                parts += "cien"
+            } else {
+                parts += HUNDREDS_ES[h]
             }
+            v %= 100L
         }
-        if (v in 1L..29L) parts += ONES_ES[v.toInt()]
-        else {
+        // Scales (millones, miles)
+        // (обрабатываются выше в intToWords для тысяч и миллионов)
+        // Tens and ones
+        if (v in 1L..29L) {
+            parts += ONES_ES[v.toInt()]
+        } else if (v > 0L) {
             val tens = (v / 10).toInt()
             val ones = (v % 10).toInt()
             parts += if (ones == 0) TENS_ES[tens] else "${TENS_ES[tens]} y ${ONES_ES[ones]}"
         }
-        return parts.joinToString(" ")
+        return parts.filter { it.isNotEmpty() }.joinToString(" ")
     }
 
     private fun intToWordsFr(n: Long): String {

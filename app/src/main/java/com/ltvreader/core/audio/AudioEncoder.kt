@@ -55,8 +55,12 @@ object AudioEncoder {
             var bitsPerSample = 0
             var dataOffset = 0
             var dataSize = 0
-            while (ins.available() > 0) {
-                val id = ByteArray(4).also { ins.readFully(it) }.toString(Charsets.US_ASCII)
+            while (true) {
+                val idBytes = ByteArray(4)
+                val read1 = ins.read(idBytes)
+                if (read1 < 4) break
+                val id = idBytes.toString(Charsets.US_ASCII)
+                if (id[0].code == 0) break
                 val size = ins.readIntLe()
                 when (id) {
                     "fmt " -> {

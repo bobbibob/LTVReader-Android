@@ -25,7 +25,7 @@ class TextProcessor(
     // --- Шаг 1: очистка ----------------------------------------------------
 
     private val controlChars = Regex("[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]")
-    private val horizontalSpace = Regex("""[^\S\n]+""")
+    private val horizontalSpace = Regex("[ \t]+")
 
     fun clean(raw: String): String {
         var s = controlChars.replace(raw, "")

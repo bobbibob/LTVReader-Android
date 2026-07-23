@@ -50,13 +50,14 @@ class TextNormalizer(
 
     // --- правила -----------------------------------------------------------
 
-    private val currencyRegex = Regex("""(\d{1,9}(?:[.,]\d{1,2})?)\s?([\$€£¥₽]|USD|EUR|GBP|RUB|JPY|CNY)""")
-    private fun normalizeCurrencies(s: String): String =
-        currencyRegex.replace(s) { m ->
-            val (num, cur) = m.destructured
+    private val currencyRegexPrefix = Regex("""([\$€£¥₽]|USD|EUR|GBP|RUB|JPY|CNY)\s?(\d{1,9}(?:[.,]\d{1,2})?)""")
+    private val currencyRegexSuffix = Regex("""(\d{1,9}(?:[.,]\d{1,2})?)\s?([\$€£¥₽]|USD|EUR|GBP|RUB|JPY|CNY)""")
+    private fun normalizeCurrencies(s: String): String {
+        var out = currencyRegexPrefix.replace(s) { m ->
+            val (cur, num) = m.destructured
             val value = num.replace(',', '.').toDoubleOrNull() ?: return@replace m.value
             val amount = num2words.numberToWords(value)
-            val spoken = when (cur.uppercase()) {
+            when (cur.uppercase()) {
                 "$", "USD" -> "$amount dollars"
                 "€", "EUR" -> "$amount euros"
                 "£", "GBP" -> "$amount pounds"
@@ -64,8 +65,22 @@ class TextNormalizer(
                 "₽", "RUB" -> "$amount rubles"
                 else -> "$amount $cur"
             }
-            spoken
         }
+        out = currencyRegexSuffix.replace(out) { m ->
+            val (num, cur) = m.destructured
+            val value = num.replace(',', '.').toDoubleOrNull() ?: return@replace m.value
+            val amount = num2words.numberToWords(value)
+            when (cur.uppercase()) {
+                "$", "USD" -> "$amount dollars"
+                "€", "EUR" -> "$amount euros"
+                "£", "GBP" -> "$amount pounds"
+                "¥", "JPY", "CNY" -> "$amount yuan"
+                "₽", "RUB" -> "$amount rubles"
+                else -> "$amount $cur"
+            }
+        }
+        return out
+    }
 
     private val percentRegex = Regex("""(\d{1,3}(?:[.,]\d{1,2})?)\s?%""")
     private fun normalizePercentages(s: String): String =
