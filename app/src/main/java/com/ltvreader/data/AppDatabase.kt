@@ -29,7 +29,7 @@ import androidx.room.TypeConverters
         NormalizationRuleEntity::class,
     ],
     version = 1,
-    exportSchema = true,
+    exportSchema = false,
 )
 @TypeConverters(StringListConverter::class)
 abstract class AppDatabase : RoomDatabase() {
