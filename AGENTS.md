@@ -75,6 +75,7 @@ CI: `.github/workflows/android.yml`. Триггер: push в main, PR, или `g
   ```
 - **Smoke-тест движков** (`RegistrySmokeTest`): только метаданные `EngineInfo`.
 - **Coverage цель**: > 60% в `core/`, > 40% в `tts/`.
+- **Известные фейлы** (см. ROADMAP): 5 тестов в `core/` — чинить первым делом.
 
 ## Commit & Pull Request Guidelines
 
@@ -83,6 +84,17 @@ CI: `.github/workflows/android.yml`. Триггер: push в main, PR, или `g
 - **Заголовок**: imperative mood, ≤ 72 символов.
 - **PR**: ссылка на issue (`Closes #N`), краткое "что и почему", скриншоты для UI.
 - **Перед PR**: `tools/check_completeness.sh`, обновить `docs/CHANGELOG.md`, прогнать тесты.
+
+## Текущий план работы (см. `docs/ROADMAP.md`)
+
+1. **Сейчас**: починить 5 упавших unit-тестов в `core/`.
+2. **Потом**: подключить реальный FFmpeg-бинарь в `assets/ffmpeg/`.
+3. **Потом**: подключить Kokoro-модель в `assets/voices/kokoro/`.
+4. **Потом**: тесты на реальном устройстве.
+5. **Потом**: UI-тесты, нормализация edge cases, полировка.
+6. **В самом конце** (или никогда): публикация в Google Play / F-Droid.
+   Сейчас APK распространяется через [GitHub Actions](../../actions) и
+   GitHub Releases.
 
 ## Agent-Specific Instructions
 
