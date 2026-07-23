@@ -1,6 +1,6 @@
 # Repository Guidelines
 
-Guidelines for AI agents and human contributors working on **LTV Reader** — an Android port of [LocalText2Voice](https://github.com/estebanstifli/LocalText2Voice). Active development: **v0.1.0-alpha** (CI build #29988737348 in progress, last green: #29977084836).
+Guidelines for AI agents and human contributors working on **LTV Reader** — an Android port of [LocalText2Voice](https://github.com/estebanstifli/LocalText2Voice). Active development: **v0.1.0-alpha** (CI build #29990160060 in progress, last green: #29977084836).
 
 ## Project Structure & Module Organization
 
@@ -11,14 +11,14 @@ t2v/
 │   │   ├── core/               бизнес-логика (text, markup, audio, subtitle, normalization, project)
 │   │   ├── tts/                TTS-движки (Kokoro, OpenAI, ElevenLabs, Gemini, Azure, Custom, Remote)
 │   │   ├── data/               Room (6 DAO, 6 Entities) + DataStore Settings
-│   │   ├── ui/                 Compose-экраны (7: editor, generation, music, review, voices, projects, settings, models)
+│   │   ├── ui/                 Compose-экраны (8: editor, generation, music, review, voices, projects, settings, models)
 │   │   ├── worker/             GenerationPipeline + GenerationService
 │   │   ├── server/             EngineHostClient + ModelRepository (HTTP к engine-host)
 │   │   ├── util/               LocaleHelper, Permissions, AudioPlayer
 │   │   └── app/                LTVApplication + AppContainer (ручной DI)
 │   ├── src/main/assets/        Kokoro-модель, FFmpeg-бинарь (см. README каждого)
 │   ├── src/main/res/values*/   strings.xml (11 локалей)
-│   ├── src/test/               JVM unit-тесты (8 классов)
+│   ├── src/test/               JVM unit-тесты (7 классов)
 │   └── src/androidTest/        ART integration-тесты
 ├── server-host/                Python FastAPI-бэкенд (прокси HuggingFace + TTS)
 ├── docs/                       документация (PORTING, ROADMAP, LTV_MARKUP, FAQ, …)
@@ -34,7 +34,7 @@ t2v/
 ./gradlew :app:assembleDebug
 # → app/build/outputs/apk/debug/app-debug.apk (~40 МБ)
 
-# Unit-тесты (некоторые сейчас падают; APK не блокируется)
+# Unit-тесты (есть 1-2 фейла, APK не блокируется)
 ./gradlew :app:testDebugUnitTest
 
 # Интеграционные тесты (нужен эмулятор/устройство)
@@ -45,6 +45,9 @@ t2v/
 
 # Установка на устройство
 adb install -r app/build/outputs/apk/debug/app-debug.apk
+
+# Скачать готовый APK из CI
+gh run download 29977084836 -n app-debug
 
 # Server-host (опционально, нужен для ModelsScreen)
 cd server-host && pip install -r requirements.txt
@@ -63,8 +66,8 @@ CI: `.github/workflows/android.yml`. Триггер: push в main, PR, или `g
 - **Composable-функции**: `PascalCase` (как в Material 3).
 - **Тесты**: `XxxTest.kt`, методы — обратные кавычки с пробелами: `` `parses voice commands` ``.
 - **JSON-ключи**: `camelCase` в Kotlin, `snake_case` в wire-формах.
-- **Imports**: без wildcard'ов; сортируются автоматически.
-- **Локализация**: новая строка → `values/strings.xml` И в 10 `values-<lang>/`. **Не дублируйте** — будут ошибки `mergeDebugResources`.
+- **Imports**: без wildcard'ов; только в начале файла; сортируются автоматически.
+- **Локализация**: новая строка → `values/strings.xml` И в 10 `values-<lang>/`. **Не дублируйте** — будет ошибка `mergeDebugResources`.
 
 ## Testing Guidelines
 
@@ -77,7 +80,7 @@ CI: `.github/workflows/android.yml`. Триггер: push в main, PR, или `g
   ```
 - **Smoke-тест движков** (`RegistrySmokeTest`): только метаданные `EngineInfo`.
 - **Coverage цель**: > 60% в `core/`, > 40% в `tts/`.
-- **Известные фейлы** (см. ROADMAP): 1-2 теста в `core/`.
+- **Известные фейлы** (см. ROADMAP): 1-2 теста в `core/` (writeSilence, pause 0.7s).
 
 ## Commit & Pull Request Guidelines
 
@@ -89,7 +92,7 @@ CI: `.github/workflows/android.yml`. Триггер: push в main, PR, или `g
 
 ## Текущий план работы (см. `docs/ROADMAP.md`)
 
-1. **Сейчас**: починить оставшиеся 1-2 unit-теста в `core/` (writeSilence, pause 0.7s).
+1. **Сейчас**: починить оставшиеся 1-2 unit-теста в `core/` (writeSilence — переход на RandomAccessFile, pause 0.7s — проверить roundToInt).
 2. **Потом**: подключить реальный FFmpeg-бинарь в `assets/ffmpeg/`.
 3. **Потом**: подключить Kokoro-модель в `assets/voices/kokoro/`.
 4. **Потом**: тесты на реальном устройстве.
@@ -108,5 +111,8 @@ CI: `.github/workflows/android.yml`. Триггер: push в main, PR, или `g
 - **JSON в kotlinx.serialization**: для `JsonObject?.get(key)?.jsonPrimitive` используйте `if (p.isString) p.content else null` вместо extension-функций.
 - **Regex со спецсимволами** (например, `\S\n`): используйте raw string `Regex("""[^\S\n]+""")`, иначе Kotlin выдаёт "Illegal escape".
 - **strings.xml**: не дублируйте ключи — будет `Found item String/<name> more than one time` в `mergeDebugResources`.
+- **Импорты в Kotlin**: только в начале файла. Если IDE вставил посреди — будет `imports are only allowed in the beginning of file`.
+- **WAV read**: используйте `RandomAccessFile` с ручным little-endian чтением (`(b1 shl 8) or b0`). `DataInputStream.readShortLe()` есть, но на разных JVM-платформах ведёт себя по-разному в unit-тестах.
+- **Room**: `exportSchema = false` обязательно, иначе KSP падает в CI.
 - **ModelsScreen** (`ui/screens/models/ModelsScreen.kt`): показывает каталог TTS-моделей с HuggingFace через engine-host. Kokoro скачивается на устройство, тяжёлые модели — на сервер.
 - **engine-host** (`server-host/engine_host.py`): эндпоинты `/models` (каталог), `/local-models`, `/models/{id}/download`. Требует `huggingface_hub`. Приватные репо — `HF_TOKEN=...` env var.
