@@ -9,10 +9,10 @@ import java.util.Locale
 class Num2WordsTest {
 
     private val en = Num2Words(Locale.ENGLISH)
-    private val ru = Num2Words("ru")
-    private val es = Num2Words("es")
-    private val fr = Num2Words("fr")
-    private val de = Num2Words("de")
+    private val ru = Num2Words(Locale("ru"))
+    private val es = Num2Words(Locale("es"))
+    private val fr = Num2Words(Locale("fr"))
+    private val de = Num2Words(Locale("de"))
 
     @Test
     fun `english 0`() = assertEquals("zero", en.numberToWords(0.0))
