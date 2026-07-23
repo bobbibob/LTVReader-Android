@@ -1,21 +1,31 @@
 package com.ltvreader.ui.components
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.MicNone
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -23,11 +33,12 @@ import com.ltvreader.R
 import com.ltvreader.ui.navigation.Routes
 
 /**
- * Bottom navigation + scaffold for all screens.
- * Marked as ExperimentalMaterial3Api because NavigationBarItem is experimental
- * in Compose Material 3 1.2.x.
+ * Scaffold с верхней панелью и нижней навигацией.
+ *
+ * Использует самодельную BottomBar вместо Material3 NavigationBar —
+ * чтобы не зависеть от experimental API и обеспечить совместимость
+ * с разными версиями Compose BOM.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LTVScaffold(
     nav: NavController,
@@ -43,20 +54,43 @@ fun LTVScaffold(
             LTVTopBar(title = title, onBack = onBack)
         },
         bottomBar = {
-            NavigationBar {
-                BottomNavItem(nav, current, Routes.Editor, R.string.nav_editor, Icons.Default.Edit)
-                BottomNavItem(nav, current, Routes.Projects, R.string.nav_projects, Icons.Default.Folder)
-                BottomNavItem(nav, current, Routes.Voices, R.string.nav_voices, Icons.Default.MicNone)
-                BottomNavItem(nav, current, Routes.Settings, R.string.nav_settings, Icons.Default.Settings)
-            }
+            BottomNavBar(
+                currentRoute = current,
+                nav = nav,
+            )
         },
         content = content,
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun BottomNavItem(
+private fun BottomNavBar(
+    currentRoute: String?,
+    nav: NavController,
+) {
+    Surface(
+        tonalElevation = 8.dp,
+        color = MaterialTheme.colorScheme.surface,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(64.dp)
+                .background(MaterialTheme.colorScheme.surface),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            BottomNavButton(nav, currentRoute, Routes.Editor, R.string.nav_editor, Icons.Default.Edit)
+            BottomNavButton(nav, currentRoute, Routes.Projects, R.string.nav_projects, Icons.Default.Folder)
+            BottomNavButton(nav, currentRoute, Routes.Voices, R.string.nav_voices, Icons.Default.MicNone)
+            BottomNavButton(nav, currentRoute, Routes.Settings, R.string.nav_settings, Icons.Default.Settings)
+        }
+    }
+}
+
+@Composable
+private fun BottomNavButton(
     nav: NavController,
     currentRoute: String?,
     route: String,
@@ -64,17 +98,25 @@ private fun BottomNavItem(
     icon: ImageVector,
 ) {
     val isSelected = currentRoute?.startsWith(route) == true
-    val onClickLambda: () -> Unit = {
-        nav.navigate(route) {
-            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
-            launchSingleTop = true
-            restoreState = true
-        }
+    val tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+    Column(
+        modifier = Modifier
+            .clickable {
+                nav.navigate(route) {
+                    popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            }
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Icon(imageVector = icon, contentDescription = null, tint = tint)
+        Text(
+            text = stringResource(labelRes),
+            color = tint,
+            style = MaterialTheme.typography.labelSmall,
+        )
     }
-    NavigationBarItem(
-        selected = isSelected,
-        onClick = onClickLambda,
-        icon = { Icon(imageVector = icon, contentDescription = null) },
-        label = { Text(text = stringResource(labelRes)) },
-    )
 }
