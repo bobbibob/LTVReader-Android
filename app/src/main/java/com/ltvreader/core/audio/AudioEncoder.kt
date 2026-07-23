@@ -42,51 +42,47 @@ object AudioEncoder {
      * остальные форматы конвертируются через ffmpeg-kit заранее.
      */
     fun readWav(file: java.io.File): Pair<WavInfo, AudioChunk> {
-        java.io.DataInputStream(java.io.BufferedInputStream(file.inputStream())).use { ins ->
-            // RIFF header
-            val riff = ByteArray(4).also { ins.readFully(it) }
+        java.io.RandomAccessFile(file, "r").use { raf ->
+            val riff = ByteArray(4).also { raf.readFully(it) }
             require(riff.toString(Charsets.US_ASCII) == "RIFF") { "Not a RIFF file" }
-            val riffSize = ins.readIntLe()
-            val wave = ByteArray(4).also { ins.readFully(it) }
+            val riffSize = raf.readIntLe()
+            val wave = ByteArray(4).also { raf.readFully(it) }
             require(wave.toString(Charsets.US_ASCII) == "WAVE") { "Not a WAVE file" }
-            // iterate subchunks
             var sampleRate = 0
             var channels = 0
             var bitsPerSample = 0
             var dataOffset = 0
             var dataSize = 0
-            while (true) {
+            while (raf.filePointer < raf.length()) {
                 val idBytes = ByteArray(4)
-                val read1 = ins.read(idBytes)
-                if (read1 < 4) break
+                if (raf.read(idBytes) < 4) break
                 val id = idBytes.toString(Charsets.US_ASCII)
                 if (id[0].code == 0) break
-                val size = ins.readIntLe()
+                val size = raf.readIntLe()
                 when (id) {
                     "fmt " -> {
-                        val audioFormat = ins.readShortLe().toInt() and 0xFFFF
+                        val audioFormat = raf.readShortLe().toInt() and 0xFFFF
                         require(audioFormat == 1) { "Only PCM is supported (got format $audioFormat)" }
-                        channels = ins.readShortLe().toInt() and 0xFFFF
-                        sampleRate = ins.readIntLe()
-                        val _byteRate = ins.readIntLe()
-                        val _blockAlign = ins.readShortLe().toInt() and 0xFFFF
-                        bitsPerSample = ins.readShortLe().toInt() and 0xFFFF
+                        channels = raf.readShortLe().toInt() and 0xFFFF
+                        sampleRate = raf.readIntLe()
+                        raf.readIntLe() // byteRate
+                        raf.readShortLe() // blockAlign
+                        bitsPerSample = raf.readShortLe().toInt() and 0xFFFF
                         require(bitsPerSample == 16) { "Only 16-bit PCM is supported" }
-                        // Skip extra fmt bytes if any
                         val extraFmt = size - 16
-                        if (extraFmt > 0) ins.skipBytes(extraFmt)
+                        if (extraFmt > 0) raf.skipBytes(extraFmt.toLong())
                     }
                     "data" -> {
-                        dataOffset = file.length().toInt() - ins.available()
+                        dataOffset = raf.filePointer.toInt()
                         dataSize = size
                         val samples = ShortArray(dataSize / 2)
                         for (i in samples.indices) {
-                            samples[i] = ins.readShortLe()
+                            samples[i] = raf.readShortLe()
                         }
                         val info = WavInfo(sampleRate, channels, bitsPerSample, dataOffset, dataSize)
                         return info to AudioChunk(samples, sampleRate, channels)
                     }
-                    else -> ins.skipBytes(size)
+                    else -> raf.skipBytes(size.toLong())
                 }
             }
             error("WAV file has no 'data' subchunk")
