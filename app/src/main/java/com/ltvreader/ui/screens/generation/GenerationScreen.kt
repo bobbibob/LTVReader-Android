@@ -74,7 +74,7 @@ fun GenerationScreen(
                 }
             }
 
-            Text("Engine: ${state.selectedEngine}")
+            Text(if (state.selectedEngine.isBlank()) "Choose an engine" else "Engine: ${state.selectedEngine}")
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -109,7 +109,7 @@ fun GenerationScreen(
                 Button(
                     onClick = { scope.launch { vm.startGeneration(context) } },
                     modifier = Modifier.weight(1f),
-                    enabled = !state.isRunning,
+                    enabled = !state.isRunning && state.selectedEngine.isNotBlank(),
                 ) {
                     Icon(Icons.Default.PlayArrow, contentDescription = null)
                     Text("  " + stringResource(R.string.gen_start))
@@ -154,7 +154,7 @@ data class GenState(
     val projectId: Long = 0,
     val projectTitle: String = "Loading…",
     val engines: List<EngineInfo> = emptyList(),
-    val selectedEngine: String = "kokoro",
+    val selectedEngine: String = "",
     val speed: Double = 1.0,
     val isRunning: Boolean = false,
     val progress: GenerationPipeline.Progress = GenerationPipeline.Progress(),

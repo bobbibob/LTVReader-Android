@@ -11,12 +11,16 @@ import com.ltvreader.ui.screens.projects.ProjectsScreen
 import com.ltvreader.ui.screens.review.ReviewScreen
 import com.ltvreader.ui.screens.settings.SettingsScreen
 import com.ltvreader.ui.screens.voices.VoicesScreen
+import com.ltvreader.ui.screens.models.ModelsScreen
+import com.ltvreader.ui.screens.onboarding.OnboardingScreen
 
 object Routes {
+    const val Onboarding = "onboarding"
     const val Editor = "editor"
     const val Projects = "projects"
     const val Voices = "voices"
     const val Settings = "settings"
+    const val Models = "models"
     const val Generation = "generation/{projectId}"
     const val Review = "review/{audiobookId}"
     const val MusicMix = "music/{audiobookId}"
@@ -27,8 +31,9 @@ object Routes {
 }
 
 @Composable
-fun LTVNavHost(nav: NavHostController) {
-    NavHost(navController = nav, startDestination = Routes.Editor) {
+fun LTVNavHost(nav: NavHostController, startDestination: String = Routes.Editor) {
+    NavHost(navController = nav, startDestination = startDestination) {
+        composable(Routes.Onboarding) { OnboardingScreen(nav) }
         composable(Routes.Editor) { EditorScreen(nav) }
         composable(Routes.Projects) { ProjectsScreen(nav) }
         composable(Routes.Generation) { entry ->
@@ -44,6 +49,7 @@ fun LTVNavHost(nav: NavHostController) {
             MusicMixScreen(nav, id)
         }
         composable(Routes.Voices) { VoicesScreen(nav) }
+        composable(Routes.Models) { ModelsScreen(nav) }
         composable(Routes.Settings) { SettingsScreen(nav) }
     }
 }

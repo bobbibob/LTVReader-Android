@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
@@ -46,6 +47,15 @@ fun SettingsScreen(
     vm: SettingsViewModel = viewModel(factory = SettingsViewModelFactory(LocalContext.current)),
 ) {
     val state by vm.state.collectAsState()
+    val context = LocalContext.current
+    val modelsFolderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) {
+            context.contentResolver.takePersistableUriPermission(
+                uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+            )
+            vm.setModelsTreeUri(uri.toString())
+        }
+    }
     LTVScaffold(
         nav = nav,
         title = stringResource(R.string.nav_settings),
@@ -58,6 +68,27 @@ fun SettingsScreen(
             SliderSetting("Chunk size", state.settings.chunkSize.toFloat(), 500f..5000f) { vm.setChunkSize(it.toInt()) }
             SwitchSetting("Markup toolbar", state.settings.markupToolbar) { vm.setMarkupToolbar(it) }
             SwitchSetting("Syntax highlight", state.settings.syntaxHighlight) { vm.setSyntaxHighlight(it) }
+
+            HorizontalDivider()
+
+            SectionTitle(stringResource(R.string.settings_tts_mode))
+            SwitchSetting(
+                label = if (state.settings.ttsMode == "cloud") "Cloud services" else "Local models",
+                value = state.settings.ttsMode == "cloud",
+            ) { cloud -> vm.setTtsMode(if (cloud) "cloud" else "local") }
+            if (state.settings.ttsMode != "cloud") {
+                Text(stringResource(R.string.settings_models_folder), style = MaterialTheme.typography.labelLarge)
+                Text(
+                    text = state.settings.modelsTreeUri.ifBlank { stringResource(R.string.settings_default_folder) },
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                OutlinedButton(onClick = { modelsFolderPicker.launch(null) }) {
+                    Text(stringResource(R.string.settings_choose_folder))
+                }
+                OutlinedButton(onClick = { nav.navigate(com.ltvreader.ui.navigation.Routes.Models) }) {
+                    Text("Manage TTS Models…")
+                }
+            }
 
             HorizontalDivider()
 
@@ -124,11 +155,12 @@ private fun PasswordField(label: String, value: String, onChange: (String) -> Un
 }
 
 data class SettingsUiState(val settings: Settings = Settings(
-    uiLanguage = "en", outputDir = "output", ttsEngine = "kokoro", voiceId = "",
+    uiLanguage = "en", outputDir = "output", ttsEngine = "", voiceId = "",
     language = "", speed = 1.0, splitMode = "safe_chunks", exportMode = "single",
     chunkSize = 2500, pauseBetweenBlocksMs = 350, pauseBetweenChaptersMs = 900,
     paragraphPauseMinMs = 450, paragraphPauseMaxMs = 900, markupToolbar = true, syntaxHighlight = true,
-    remoteHostUrl = "", remoteHostEnabled = false, engines = emptyMap(),
+    remoteHostUrl = "", remoteHostEnabled = false, selectedModelId = "", ttsMode = "",
+    modelsTreeUri = "", onboardingCompleted = false, engines = emptyMap(),
 ))
 
 class SettingsViewModel(private val context: android.content.Context) : ViewModel() {
@@ -144,6 +176,8 @@ class SettingsViewModel(private val context: android.content.Context) : ViewMode
     fun setSyntaxHighlight(v: Boolean) = viewModelScope.launch { repo.update { it[SettingsRepository.Keys.SYNTAX_HIGHLIGHT] = v } }
     fun setRemoteHostUrl(v: String) = viewModelScope.launch { repo.update { it[SettingsRepository.Keys.REMOTE_HOST_URL] = v } }
     fun setRemoteHostEnabled(v: Boolean) = viewModelScope.launch { repo.update { it[SettingsRepository.Keys.REMOTE_HOST_ENABLED] = v } }
+    fun setTtsMode(v: String) = viewModelScope.launch { repo.update { it[SettingsRepository.Keys.TTS_MODE] = v } }
+    fun setModelsTreeUri(v: String) = viewModelScope.launch { repo.update { it[SettingsRepository.Keys.MODELS_TREE_URI] = v } }
     fun setApiKey(engine: String, v: String, field: String = "apiKey") = viewModelScope.launch {
         repo.update {
             when (engine) {
@@ -161,3 +195,6 @@ class SettingsViewModelFactory(private val context: android.content.Context) : V
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T = SettingsViewModel(context) as T
 }
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts

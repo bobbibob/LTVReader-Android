@@ -92,6 +92,7 @@ dependencies {
 
     // DataStore для настроек
     implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("androidx.documentfile:documentfile:1.0.1")
 
     // Room (БД проектов/аудиокниг)
     val room = "2.6.1"

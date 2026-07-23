@@ -8,6 +8,16 @@
     <string name="nav_voices">Голоса</string>
     <string name="nav_settings">Настройки</string>
     <string name="nav_projects">Проекты</string>
+    <string name="nav_models">Модели</string>
+    <string name="onboarding_title">Как создавать речь?</string>
+    <string name="onboarding_local">Использовать локальные модели</string>
+    <string name="onboarding_local_hint">Скачивать и запускать совместимые модели на устройстве.</string>
+    <string name="onboarding_cloud">Использовать облачные сервисы</string>
+    <string name="onboarding_cloud_hint">Подключить OpenAI, ElevenLabs, Gemini, Azure или свой API.</string>
+    <string name="settings_tts_mode">Режим генерации</string>
+    <string name="settings_models_folder">Папка моделей</string>
+    <string name="settings_choose_folder">Выбрать папку моделей</string>
+    <string name="settings_default_folder">Внутреннее хранилище приложения</string>
     <string name="gen_start">Сгенерировать</string>
     <string name="gen_cancel">Отмена</string>
     <string name="gen_engine">Движок</string>

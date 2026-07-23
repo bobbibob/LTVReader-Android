@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.MicNone
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -84,6 +85,7 @@ private fun BottomNavBar(
             BottomNavButton(nav, currentRoute, Routes.Editor, R.string.nav_editor, Icons.Default.Edit)
             BottomNavButton(nav, currentRoute, Routes.Projects, R.string.nav_projects, Icons.Default.Folder)
             BottomNavButton(nav, currentRoute, Routes.Voices, R.string.nav_voices, Icons.Default.MicNone)
+            BottomNavButton(nav, currentRoute, Routes.Models, R.string.nav_models, Icons.Default.Cloud)
             BottomNavButton(nav, currentRoute, Routes.Settings, R.string.nav_settings, Icons.Default.Settings)
         }
     }

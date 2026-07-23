@@ -16,13 +16,6 @@ private val Context.dataStore by preferencesDataStore(name = "ltvreader_settings
 /**
  * Хранилище пользовательских настроек. Прямой порт
  * `app/core/settings_manager.py:SettingsManager`.
- *
- * Поля 1:1 с DEFAULT_SETTINGS из оригинала:
- *   - ui_language, output_dir, tts_engine, voice_id, language, speed
- *   - split_mode, export_mode, chunk_size, pause_between_blocks, ...
- *   - text_normalization, editor_syntax_highlighting, ...
- *   - engines.{openai,elevenlabs,gemini,azure,custom_http}.*
- *   - remote_host.url, remote_host.enabled
  */
 class SettingsRepository(private val context: Context) {
 
@@ -42,8 +35,16 @@ class SettingsRepository(private val context: Context) {
         val PARAGRAPH_PAUSE_MAX = intPreferencesKey("paragraph_pause_max_ms")
         val MARKUP_TOOLBAR = booleanPreferencesKey("markup_toolbar")
         val SYNTAX_HIGHLIGHT = booleanPreferencesKey("syntax_highlight")
+
+        // Server
         val REMOTE_HOST_URL = stringPreferencesKey("remote_host_url")
         val REMOTE_HOST_ENABLED = booleanPreferencesKey("remote_host_enabled")
+        val SELECTED_MODEL_ID = stringPreferencesKey("selected_model_id")
+        /** local = downloaded models on the device; cloud = API providers. */
+        val TTS_MODE = stringPreferencesKey("tts_mode")
+        /** Persisted URI returned by ACTION_OPEN_DOCUMENT_TREE. */
+        val MODELS_TREE_URI = stringPreferencesKey("models_tree_uri")
+        val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
 
         // engine configs
         val OPENAI_KEY = stringPreferencesKey("engines.openai.apiKey")
@@ -63,7 +64,7 @@ class SettingsRepository(private val context: Context) {
     private fun Preferences.toSettings(): Settings = Settings(
         uiLanguage = this[Keys.UI_LANGUAGE] ?: "en",
         outputDir = this[Keys.OUTPUT_DIR] ?: "output",
-        ttsEngine = this[Keys.TTS_ENGINE] ?: "kokoro",
+        ttsEngine = this[Keys.TTS_ENGINE] ?: "",
         voiceId = this[Keys.VOICE_ID] ?: "",
         language = this[Keys.LANGUAGE] ?: "",
         speed = this[Keys.SPEED] ?: 1.0,
@@ -78,6 +79,10 @@ class SettingsRepository(private val context: Context) {
         syntaxHighlight = this[Keys.SYNTAX_HIGHLIGHT] ?: true,
         remoteHostUrl = this[Keys.REMOTE_HOST_URL] ?: "",
         remoteHostEnabled = this[Keys.REMOTE_HOST_ENABLED] ?: false,
+        selectedModelId = this[Keys.SELECTED_MODEL_ID] ?: "",
+        ttsMode = this[Keys.TTS_MODE] ?: "",
+        modelsTreeUri = this[Keys.MODELS_TREE_URI] ?: "",
+        onboardingCompleted = this[Keys.ONBOARDING_COMPLETED] ?: false,
         engines = mapOf(
             "openai" to mapOf("apiKey" to (this[Keys.OPENAI_KEY] ?: "")),
             "elevenlabs" to mapOf("apiKey" to (this[Keys.ELEVENLABS_KEY] ?: "")),
@@ -109,5 +114,9 @@ data class Settings(
     val syntaxHighlight: Boolean,
     val remoteHostUrl: String,
     val remoteHostEnabled: Boolean,
+    val selectedModelId: String,
+    val ttsMode: String,
+    val modelsTreeUri: String,
+    val onboardingCompleted: Boolean,
     val engines: Map<String, Map<String, String>>,
 )

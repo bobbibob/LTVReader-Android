@@ -19,7 +19,7 @@ data class ProjectEntity(
     val markupText: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
-    val ttsEngine: String = "kokoro",
+    val ttsEngine: String = "",
     val voiceConfigJson: String = "{}",
     val splitMode: String = "safe_chunks",
     val exportMode: String = "single",
