@@ -19,6 +19,7 @@
 - Стабильная debug-подпись APK между GitHub Actions сборками для обновления без потери данных.
 - Паузы наследуют PCM-формат TTS, поэтому Kokoro 24 кГц корректно собирается в итоговый WAV.
 - Ошибка генерации отображается отдельно и больше не помечается как готовая аудиокнига.
+- Debug-вариант явно использует постоянный CI-keystore; сертификат APK проверяется в workflow.
 - 11 локалей strings.xml: en, ru, es, fr, de, it, pt, zh, ja, hi, ar.
 - Документация: README, PORTING, ROADMAP, LTV_MARKUP, QUICKSTART,
   INTERNALS, ARCHITECTURE, CHANGELOG.
