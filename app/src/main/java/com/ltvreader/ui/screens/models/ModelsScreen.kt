@@ -24,7 +24,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,7 +43,9 @@ import androidx.navigation.NavController
 import com.ltvreader.R
 import com.ltvreader.app.AppContainer
 import com.ltvreader.data.SettingsRepository
+import com.ltvreader.server.EngineHostClient
 import com.ltvreader.server.HuggingFaceRepository
+import com.ltvreader.server.ModelRepository
 import com.ltvreader.ui.components.LTVScaffold
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -101,35 +102,47 @@ fun ModelsScreen(
                     }
                 }
             }
-            OutlinedTextField(
-                value = state.query,
-                onValueChange = vm::setQuery,
-                label = { Text(stringResource(R.string.models_hf_repo)) },
-                singleLine = true,
+            Card(
                 modifier = Modifier.fillMaxWidth(),
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
-                    onClick = vm::search,
-                    enabled = !state.loading && state.downloadingId.isBlank(),
+                onClick = vm::openRemoteVariants,
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    Text(stringResource(R.string.models_hf_search_action))
-                }
-                OutlinedButton(
-                    onClick = vm::openExactRepository,
-                    enabled = state.query.contains('/') &&
-                        !state.loading &&
-                        state.downloadingId.isBlank(),
-                ) {
-                    Text(stringResource(R.string.models_hf_open_repo))
-                }
-                if (state.loading) {
-                    CircularProgressIndicator()
+                    Text("Qwen3-TTS", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "4 verified variants • 1.8–4.2 GB • installed on engine-host",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Text(
+                        if (state.remoteHostUrl.isBlank()) {
+                            "Set the engine-host address in Settings before downloading"
+                        } else {
+                            "Host: ${state.remoteHostUrl}"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Button(
+                        onClick = vm::openRemoteVariants,
+                        enabled = state.remoteDownloadingId.isBlank(),
+                    ) {
+                        Text("Choose variant")
+                    }
                 }
             }
 
             state.error?.let {
                 Text(it, color = MaterialTheme.colorScheme.error)
+            }
+            if (state.remoteVariantDialog) {
+                RemoteVariantDialog(
+                    variants = QWEN_REMOTE_VARIANTS,
+                    installed = state.remoteInstalled,
+                    downloadingId = state.remoteDownloadingId,
+                    onDismiss = vm::closeRemoteVariants,
+                    onDownload = vm::downloadRemote,
+                )
             }
             state.variantModel?.let { model ->
                 VariantDialog(
@@ -159,27 +172,113 @@ fun ModelsScreen(
                 }
             }
 
-            Text(
-                "${stringResource(R.string.models_available)} (${state.catalog.size})",
-                style = MaterialTheme.typography.titleMedium,
-            )
-            LazyColumn(
-                modifier = Modifier.weight(0.65f),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(state.catalog, key = { it.id }) { model ->
-                    HuggingFaceModelCard(
-                        model = model,
-                        installed = state.installed.any { it.id == model.id },
-                        downloading = state.downloadingId == model.id,
-                        progress = state.downloadProgress,
-                        onDownload = { vm.openVariants(model) },
-                        onCancel = vm::cancelDownload,
-                    )
-                }
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    "Local Android models are hidden until an exact model, runtime and revision " +
+                        "pass a real-device compatibility test. A GGUF/ONNX extension alone is not sufficient.",
+                    modifier = Modifier.padding(12.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
         }
     }
+}
+
+data class RemoteModelVariant(
+    val id: String,
+    val label: String,
+    val capability: String,
+    val sizeBytes: Long,
+)
+
+private val QWEN_REMOTE_VARIANTS = listOf(
+    RemoteModelVariant(
+        "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice",
+        "Qwen3-TTS 0.6B",
+        "9 built-in voices",
+        1_800L * 1024 * 1024,
+    ),
+    RemoteModelVariant(
+        "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+        "Qwen3-TTS 1.7B",
+        "9 voices + instruction control",
+        4_200L * 1024 * 1024,
+    ),
+    RemoteModelVariant(
+        "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+        "Qwen3-TTS Base 0.6B",
+        "Voice cloning",
+        1_800L * 1024 * 1024,
+    ),
+    RemoteModelVariant(
+        "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+        "Qwen3-TTS Base 1.7B",
+        "Voice cloning, higher quality",
+        4_200L * 1024 * 1024,
+    ),
+)
+
+@Composable
+private fun RemoteVariantDialog(
+    variants: List<RemoteModelVariant>,
+    installed: Set<String>,
+    downloadingId: String,
+    onDismiss: () -> Unit,
+    onDownload: (RemoteModelVariant) -> Unit,
+) {
+    var selected by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf(variants.first())
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Choose Qwen3-TTS variant") },
+        text = {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(variants, key = { it.id }) { variant ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { selected = variant },
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(
+                                selected = selected.id == variant.id,
+                                onClick = { selected = variant },
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(variant.label)
+                                Text(
+                                    "${variant.capability} • ${formatBytes(variant.sizeBytes)}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                                Text(variant.id, style = MaterialTheme.typography.labelSmall)
+                            }
+                            if (variant.id in installed) {
+                                Icon(Icons.Default.CheckCircle, contentDescription = "Installed")
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                enabled = downloadingId.isBlank() && selected.id !in installed,
+                onClick = { onDownload(selected) },
+            ) {
+                if (downloadingId == selected.id) {
+                    CircularProgressIndicator()
+                } else {
+                    Text(if (selected.id in installed) "Installed" else "Download to host")
+                }
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) { Text("Close") }
+        },
+    )
 }
 
 @Composable
@@ -345,6 +444,10 @@ data class ModelsState(
     val error: String? = null,
     val variantModel: HuggingFaceRepository.Model? = null,
     val modelsTreeUri: String = "",
+    val remoteHostUrl: String = "",
+    val remoteInstalled: Set<String> = emptySet(),
+    val remoteDownloadingId: String = "",
+    val remoteVariantDialog: Boolean = false,
 )
 
 class ModelsViewModel(private val context: android.content.Context) : ViewModel() {
@@ -361,16 +464,63 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
             settings.flow.collect { value ->
                 huggingFaceToken = value.engines["huggingface"]?.get("token").orEmpty()
                 modelsTreeUri = value.modelsTreeUri
+                val hostChanged = _state.value.remoteHostUrl != value.remoteHostUrl.trimEnd('/')
                 _state.update {
                     it.copy(
                         selectedModelId = value.selectedModelId,
                         modelsTreeUri = value.modelsTreeUri,
                         installed = repository().installed(),
+                        remoteHostUrl = value.remoteHostUrl.trimEnd('/'),
                     )
                 }
+                if (hostChanged && value.remoteHostUrl.isNotBlank()) refreshRemoteInstalled()
             }
         }
-        search()
+    }
+
+    fun openRemoteVariants() {
+        _state.update { it.copy(remoteVariantDialog = true, error = null) }
+        refreshRemoteInstalled()
+    }
+
+    fun closeRemoteVariants() {
+        if (_state.value.remoteDownloadingId.isBlank()) {
+            _state.update { it.copy(remoteVariantDialog = false) }
+        }
+    }
+
+    fun downloadRemote(variant: RemoteModelVariant) {
+        val host = _state.value.remoteHostUrl
+        if (host.isBlank()) {
+            _state.update { it.copy(error = "Set and enable the engine-host address in Settings") }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(remoteDownloadingId = variant.id, error = null) }
+            runCatching {
+                EngineHostClient(host).downloadVoiceModel(variant.id)
+            }.onSuccess {
+                _state.update {
+                    it.copy(
+                        remoteDownloadingId = "",
+                        remoteInstalled = it.remoteInstalled + variant.id,
+                    )
+                }
+            }.onFailure { error ->
+                _state.update { it.copy(remoteDownloadingId = "", error = error.message) }
+            }
+        }
+    }
+
+    private fun refreshRemoteInstalled() {
+        val host = _state.value.remoteHostUrl
+        if (host.isBlank()) return
+        viewModelScope.launch {
+            runCatching { ModelRepository(host).listLocalModels() }
+                .onSuccess { models ->
+                    _state.update { state -> state.copy(remoteInstalled = models.map { it.id }.toSet()) }
+                }
+        }
     }
 
     fun setQuery(value: String) {
