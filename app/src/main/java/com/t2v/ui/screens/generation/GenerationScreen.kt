@@ -124,14 +124,28 @@ fun GenerationScreen(
                 }
             }
 
-            if (state.audiobookId != null) {
+            if (state.progress.phase == GenerationPipeline.Progress.Phase.Failed) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text("Generation failed", style = MaterialTheme.typography.titleMedium)
+                        Text(state.progress.error ?: "Unknown generation error")
+                    }
+                }
+            }
+
+            if (
+                state.audiobookId != null &&
+                state.progress.phase == GenerationPipeline.Progress.Phase.Completed
+            ) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Column(Modifier.padding(16.dp)) {
                         Text("Audiobook ready", style = MaterialTheme.typography.titleMedium)
-                        Text(state.progress.error ?: "OK")
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),

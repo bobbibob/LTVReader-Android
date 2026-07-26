@@ -103,4 +103,25 @@ class AudioMixerTest {
             output.delete()
         }
     }
+
+    @Test
+    fun `silence can match a 24 kHz TTS result`() {
+        val speech = kotlin.io.path.createTempFile(suffix = ".wav").toFile()
+        val silence = kotlin.io.path.createTempFile(suffix = ".wav").toFile()
+        val output = kotlin.io.path.createTempFile(suffix = ".wav").toFile()
+        try {
+            AudioEncoder.writeWav(speech, AudioChunk(shortArrayOf(100, 200), 24000, 1))
+            AudioEncoder.writeSilence(silence, durationMs = 100, sampleRate = 24000, channels = 1)
+
+            AudioEncoder.concatWav(listOf(speech, silence), output)
+
+            val (_, result) = AudioEncoder.readWav(output)
+            assertEquals(24000, result.sampleRate)
+            assertEquals(2402, result.samples.size)
+        } finally {
+            speech.delete()
+            silence.delete()
+            output.delete()
+        }
+    }
 }

@@ -132,13 +132,23 @@ class GenerationPipeline(
                 // Между чанками — тишина
                 if (chunk.markupPauseBeforeMs > 0) {
                     val pre = File(outputDir, "pause_pre_%05d.wav".format(idx))
-                    AudioEncoder.writeSilence(pre, chunk.markupPauseBeforeMs)
+                    AudioEncoder.writeSilence(
+                        pre,
+                        chunk.markupPauseBeforeMs,
+                        sampleRate = result.sampleRate,
+                        channels = result.channels,
+                    )
                     segmentWavs += pre
                 }
                 segmentWavs += result.outputFile
                 if (chunk.markupPauseAfterMs != null && chunk.markupPauseAfterMs > 0) {
                     val post = File(outputDir, "pause_post_%05d.wav".format(idx))
-                    AudioEncoder.writeSilence(post, chunk.markupPauseAfterMs)
+                    AudioEncoder.writeSilence(
+                        post,
+                        chunk.markupPauseAfterMs,
+                        sampleRate = result.sampleRate,
+                        channels = result.channels,
+                    )
                     segmentWavs += post
                 }
                 _progress.update { it.copy(done = idx + 1) }
