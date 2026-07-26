@@ -113,6 +113,28 @@ MODEL_CATALOG = {model["id"]: model for model in KNOWN_TTS_MODELS}
 DEFAULT_QWEN_MODEL = "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice"
 QWEN_SPEAKERS = ["Vivian", "Serena", "Uncle_Fu", "Dylan", "Eric", "Ryan", "Aiden", "Ono_Anna", "Sohee"]
 _qwen_models: dict[str, Any] = {}
+_music_models: dict[str, Any] = {}
+MUSIC_MODELS = [
+    {
+        "id": "stabilityai/stable-audio-open-1.0",
+        "name": "Stable Audio Open 1.0",
+        "runtime": "diffusers",
+        "target": "remote-host",
+        "max_seconds": 47,
+        "license": "Stability AI Community License",
+        "commercial_note": "Commercial use permitted subject to the Community License revenue limit.",
+    },
+    {
+        "id": "facebook/musicgen-small",
+        "name": "MusicGen Small",
+        "runtime": "transformers",
+        "target": "remote-host",
+        "max_seconds": 30,
+        "license": "CC-BY-NC 4.0 weights",
+        "commercial_note": "Non-commercial use only.",
+    },
+]
+MUSIC_MODEL_CATALOG = {model["id"]: model for model in MUSIC_MODELS}
 
 
 def require_supported_model(repo_id: str) -> dict[str, Any]:
@@ -124,6 +146,53 @@ def require_supported_model(repo_id: str) -> dict[str, Any]:
 
 def qwen_runtime_available() -> bool:
     return importlib.util.find_spec("qwen_tts") is not None
+
+
+def generate_stable_audio(body: "MusicGenerateBody", seconds: int) -> tuple[Any, int]:
+    if importlib.util.find_spec("diffusers") is None:
+        raise HTTPException(503, "Music runtime unavailable; install requirements-music.txt")
+    import torch
+    from diffusers import StableAudioPipeline
+
+    model_id = "stabilityai/stable-audio-open-1.0"
+    pipeline = _music_models.get(model_id)
+    if pipeline is None:
+        dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+        pipeline = StableAudioPipeline.from_pretrained(model_id, torch_dtype=dtype)
+        pipeline = pipeline.to("cuda" if torch.cuda.is_available() else "cpu")
+        _music_models[model_id] = pipeline
+    result = pipeline(
+        body.prompt,
+        negative_prompt=body.negative_prompt,
+        audio_end_in_s=float(seconds),
+        num_inference_steps=100,
+    )
+    return result.audios[0].T.float().cpu().numpy(), pipeline.vae.sampling_rate
+
+
+def generate_musicgen(body: "MusicGenerateBody", seconds: int) -> tuple[Any, int]:
+    if importlib.util.find_spec("transformers") is None:
+        raise HTTPException(503, "Music runtime unavailable; install requirements-music.txt")
+    import torch
+    from transformers import AutoProcessor, MusicgenForConditionalGeneration
+
+    model_id = "facebook/musicgen-small"
+    cached = _music_models.get(model_id)
+    if cached is None:
+        processor = AutoProcessor.from_pretrained(model_id)
+        model = MusicgenForConditionalGeneration.from_pretrained(model_id)
+        if torch.cuda.is_available():
+            model = model.to("cuda")
+        cached = (processor, model)
+        _music_models[model_id] = cached
+    processor, model = cached
+    inputs = processor(text=[body.prompt], padding=True, return_tensors="pt")
+    if torch.cuda.is_available():
+        inputs = {key: value.to("cuda") for key, value in inputs.items()}
+    sample_rate = model.config.audio_encoder.sampling_rate
+    frame_rate = model.config.audio_encoder.frame_rate
+    audio = model.generate(**inputs, max_new_tokens=seconds * frame_rate)
+    return audio[0, 0].detach().float().cpu().numpy(), sample_rate
 
 
 def load_qwen_model(model_id: str) -> Any:
@@ -232,6 +301,13 @@ class DownloadBody(BaseModel):
     files: list[str] = []  # пустые = скачать все основные
 
 
+class MusicGenerateBody(BaseModel):
+    model_id: str = "stabilityai/stable-audio-open-1.0"
+    prompt: str
+    negative_prompt: str = "vocals, speech, voice, distortion"
+    seconds: int = 30
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="LTV Engine Host", version="1.2.1")
 
@@ -247,7 +323,9 @@ def create_app() -> FastAPI:
                 "qwen_tts": qwen_runtime_available(),
                 "ollama_tts": False,
                 "arbitrary_huggingface_models": False,
+                "music_generation": importlib.util.find_spec("diffusers") is not None,
             },
+            "music_models": [model["id"] for model in MUSIC_MODELS],
         }
 
     @app.get("/engines")
@@ -361,6 +439,35 @@ def create_app() -> FastAPI:
             "models": KNOWN_TTS_MODELS,
             "installed": installed,
         }
+
+    @app.get("/music/models")
+    def list_music_models() -> list[dict[str, Any]]:
+        return MUSIC_MODELS
+
+    @app.post("/music/generate")
+    def generate_music(body: MusicGenerateBody) -> FileResponse:
+        model_info = MUSIC_MODEL_CATALOG.get(body.model_id)
+        if model_info is None:
+            raise HTTPException(404, "Music model is not in the verified catalog")
+        if not body.prompt.strip():
+            raise HTTPException(422, "Music prompt is required")
+        seconds = min(max(body.seconds, 1), model_info["max_seconds"])
+        try:
+            if body.model_id == "stabilityai/stable-audio-open-1.0":
+                audio, sample_rate = generate_stable_audio(body, seconds)
+            else:
+                audio, sample_rate = generate_musicgen(body, seconds)
+            output_dir = MODELS_DIR / ".music"
+            output_dir.mkdir(parents=True, exist_ok=True)
+            output = output_dir / f"music_{int(time.time() * 1000)}.wav"
+            import soundfile as sf
+            sf.write(output, audio, sample_rate)
+            return FileResponse(output, media_type="audio/wav", filename=output.name)
+        except HTTPException:
+            raise
+        except Exception as exc:
+            log.exception("Music generation failed")
+            raise HTTPException(500, f"Music generation failed: {exc}") from exc
 
     @app.get("/models/{repo_id:path}/files")
     def list_repo_files(repo_id: str) -> dict[str, Any]:

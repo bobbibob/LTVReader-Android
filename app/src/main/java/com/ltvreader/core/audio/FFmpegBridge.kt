@@ -117,24 +117,28 @@ object FFmpegBridge {
         voice: File,
         music: File,
         output: File,
+        voiceVolumeDb: Double = 0.0,
         musicVolumeDb: Double = -12.0,
         duckingDb: Double = -6.0,
         format: String = "mp3",
         bitrate: String = "192k",
     ): File = withContext(Dispatchers.IO) {
         val target = File(output.parentFile, "${output.nameWithoutExtension}.${format}")
-        val filter = "[1:a]volume=${"%.2f".format(musicVolumeDb)}dB[music];" +
-            "[0:a][music]sidechaincompress=threshold=0.05:ratio=8:attack=20:release=1000:" +
+        val filter = "[0:a]volume=${"%.2f".format(voiceVolumeDb)}dB[voice];" +
+            "[1:a]volume=${"%.2f".format(musicVolumeDb)}dB[music];" +
+            "[voice][music]sidechaincompress=threshold=0.05:ratio=8:attack=20:release=1000:" +
             "makeup=${"%.2f".format(-duckingDb)}[ducked];" +
             "[ducked]aresample=44100[out]"
         val cmd = listOf(
             "-y",
             "-i", voice.absolutePath,
+            "-stream_loop", "-1",
             "-i", music.absolutePath,
             "-filter_complex", filter,
             "-map", "[out]",
             "-c:a", if (format == "mp3") "libmp3lame" else "pcm_s16le",
             "-b:a", bitrate,
+            "-shortest",
             target.absolutePath,
         )
         run(context, cmd)

@@ -115,6 +115,33 @@ class EngineHostClient(
         }
     }
 
+    suspend fun generateMusic(
+        modelId: String,
+        prompt: String,
+        seconds: Int,
+        outputFile: File,
+    ): Unit = withContext(Dispatchers.IO) {
+        val body = mapOf(
+            "model_id" to modelId,
+            "prompt" to prompt,
+            "seconds" to seconds,
+        )
+        val request = Request.Builder()
+            .url("$baseUrl/music/generate")
+            .post(encodeJson(body).toRequestBody(JSON_MEDIA))
+            .build()
+        http.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                error("Music generation failed: HTTP ${response.code} ${response.body?.string().orEmpty().take(200)}")
+            }
+            val responseBody = response.body ?: error("Music service returned no audio")
+            outputFile.parentFile?.mkdirs()
+            responseBody.byteStream().use { input ->
+                outputFile.outputStream().use { output -> input.copyTo(output, 128 * 1024) }
+            }
+        }
+    }
+
     suspend fun preloadEngine(engineId: String, options: Map<String, String>) = withContext(Dispatchers.IO) {
         val body = mapOf("options" to options)
         postJsonText("/engines/$engineId/preload", body)
