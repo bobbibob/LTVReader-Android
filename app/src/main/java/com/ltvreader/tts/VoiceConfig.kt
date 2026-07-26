@@ -43,6 +43,8 @@ data class VoiceInfo(
     val isLocal: Boolean = false,
     val sampleRate: Int = 22050,
     val tags: List<String> = emptyList(),
+    val downloadModelId: String? = null,
+    val downloadSizeBytes: Long = -1,
 )
 
 /**

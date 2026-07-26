@@ -203,6 +203,8 @@ def create_app() -> FastAPI:
                 "display_name": speaker,
                 "language": "multilingual",
                 "sample_rate": 24000,
+                "download_model_id": DEFAULT_QWEN_MODEL,
+                "download_size_bytes": 1800 * 1024 * 1024,
             }
             for speaker in QWEN_SPEAKERS
         ]

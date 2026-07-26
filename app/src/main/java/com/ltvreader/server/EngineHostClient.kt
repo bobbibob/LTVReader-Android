@@ -59,7 +59,22 @@ class EngineHostClient(
                 previewUrl = stringField(v, "preview_url"),
                 isLocal = false,
                 sampleRate = intField(v, "sample_rate") ?: 22050,
+                downloadModelId = stringField(v, "download_model_id"),
+                downloadSizeBytes = longField(v, "download_size_bytes") ?: -1,
             )
+        }
+    }
+
+    suspend fun downloadVoiceModel(modelId: String): Unit = withContext(Dispatchers.IO) {
+        val body = """{"files":[]}""".toRequestBody(JSON_MEDIA)
+        val request = Request.Builder()
+            .url("$baseUrl/models/$modelId/download")
+            .post(body)
+            .build()
+        http.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                error("Voice model download failed: HTTP ${response.code}")
+            }
         }
     }
 
@@ -146,6 +161,11 @@ class EngineHostClient(
     private fun intField(obj: JsonObject, key: String): Int? {
         val prim = obj[key] as? kotlinx.serialization.json.JsonPrimitive ?: return null
         return prim.content.toIntOrNull()
+    }
+
+    private fun longField(obj: JsonObject, key: String): Long? {
+        val prim = obj[key] as? kotlinx.serialization.json.JsonPrimitive ?: return null
+        return prim.content.toLongOrNull()
     }
 
     private fun kotlinx.serialization.json.JsonPrimitive.contentOrEmpty(): String? =
