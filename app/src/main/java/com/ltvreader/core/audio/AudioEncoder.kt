@@ -82,7 +82,7 @@ object AudioEncoder {
                         bitsPerSample = readLeShort() and 0xFFFF
                         require(bitsPerSample == 16) { "Only 16-bit PCM is supported" }
                         val extraFmt = size - 16
-                        if (extraFmt > 0) raf.skipBytes(extraFmt.toLong())
+                        if (extraFmt > 0) raf.skipBytes(extraFmt)
                     }
                     "data" -> {
                         dataOffset = raf.filePointer.toInt()
@@ -94,7 +94,7 @@ object AudioEncoder {
                         val info = WavInfo(sampleRate, channels, bitsPerSample, dataOffset, dataSize)
                         return info to AudioChunk(samples, sampleRate, channels)
                     }
-                    else -> raf.skipBytes(size.toLong())
+                    else -> raf.skipBytes(size)
                 }
             }
             error("WAV file has no 'data' subchunk")
