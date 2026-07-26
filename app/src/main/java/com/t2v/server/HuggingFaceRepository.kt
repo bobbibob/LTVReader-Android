@@ -51,7 +51,14 @@ class HuggingFaceRepository(
         val files: List<ModelFile>,
     ) {
         val totalSizeBytes: Long
-            get() = files.map { it.sizeBytes }.filter { it > 0 }.sum()
+            get() = files
+                .filterNot {
+                    it.path == ".gitattributes" ||
+                        it.path.equals("README.md", ignoreCase = true)
+                }
+                .takeIf { selected -> selected.isNotEmpty() && selected.all { it.sizeBytes > 0 } }
+                ?.sumOf { it.sizeBytes }
+                ?: -1L
 
         val compatibleFiles: List<ModelFile>
             get() = files.filter { it.isTtsArtifact }
@@ -123,7 +130,9 @@ class HuggingFaceRepository(
             .addPathSegments(repoId.trim('/'))
             .addPathSegment("revision")
             .addPathSegment(revisionFor(repoId))
-            .addQueryParameter("files_metadata", "true")
+            // Hugging Face exposes per-file sizes (including LFS blobs) only
+            // when the model-info endpoint is requested with blobs=true.
+            .addQueryParameter("blobs", "true")
             .build()
         val request = authorized(Request.Builder().url(url)).get().build()
         http.newCall(request).execute().use { response ->
@@ -162,8 +171,12 @@ class HuggingFaceRepository(
         }.distinctBy { it.path }
         val directory = directoryFor(model.id)
         directory.mkdirs()
-        val knownTotal = files.map { it.sizeBytes }.filter { it > 0 }.sum()
+        val knownTotal = files
+            .takeIf { selected -> selected.all { it.sizeBytes > 0 } }
+            ?.sumOf { it.sizeBytes }
+            ?: -1L
         var completedBytes = 0L
+        onProgress(0L, knownTotal)
 
         try {
             for (file in files) {
@@ -182,7 +195,6 @@ class HuggingFaceRepository(
                         error("Download ${file.path} failed: HTTP ${response.code}")
                     }
                     val body = response.body ?: error("Empty response for ${file.path}")
-                    val currentSize = body.contentLength().takeIf { it > 0 } ?: file.sizeBytes
                     body.byteStream().use { input ->
                         partial.outputStream().use { outputStream ->
                             val buffer = ByteArray(128 * 1024)
@@ -193,8 +205,7 @@ class HuggingFaceRepository(
                                 if (read < 0) break
                                 outputStream.write(buffer, 0, read)
                                 fileBytes += read
-                                val total = if (knownTotal > 0) knownTotal else currentSize
-                                onProgress(completedBytes + fileBytes, total)
+                                onProgress(completedBytes + fileBytes, knownTotal)
                             }
                         }
                     }

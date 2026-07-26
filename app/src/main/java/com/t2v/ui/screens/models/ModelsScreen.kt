@@ -108,11 +108,15 @@ fun ModelsScreen(
                     when {
                         state.loadingCatalog -> CircularProgressIndicator()
                         state.downloading -> {
-                            LinearProgressIndicator(
-                                progress = { state.downloadProgress.coerceIn(0f, 1f) },
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                            Text("${(state.downloadProgress * 100).toInt()}%")
+                            if (state.downloadTotalBytes > 0) {
+                                LinearProgressIndicator(
+                                    progress = { state.downloadProgress },
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            } else {
+                                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                            }
+                            Text(downloadProgressText(state.downloadedBytes, state.downloadTotalBytes))
                             OutlinedButton(onClick = vm::cancelDownload) {
                                 Text(stringResource(R.string.models_cancel_download))
                             }
@@ -205,6 +209,8 @@ data class ModelsState(
     val loadingCatalog: Boolean = true,
     val downloading: Boolean = false,
     val downloadProgress: Float = 0f,
+    val downloadedBytes: Long = 0L,
+    val downloadTotalBytes: Long = -1L,
     val error: String? = null,
 ) {
     val kokoroInstalled: Boolean
@@ -255,11 +261,29 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
         val model = _state.value.kokoroModel ?: return
         val variant = model.variants.firstOrNull() ?: return
         downloadJob = viewModelScope.launch {
-            _state.update { it.copy(downloading = true, downloadProgress = 0f, error = null) }
+            _state.update {
+                it.copy(
+                    downloading = true,
+                    downloadProgress = 0f,
+                    downloadedBytes = 0L,
+                    downloadTotalBytes = model.totalSizeBytes,
+                    error = null,
+                )
+            }
             runCatching {
                 repository().install(model, variant) { downloaded, total ->
-                    val progress = if (total > 0) downloaded.toFloat() / total else 0f
-                    _state.update { it.copy(downloadProgress = progress) }
+                    val progress = if (total > 0) {
+                        (downloaded.toDouble() / total.toDouble()).toFloat().coerceIn(0f, 1f)
+                    } else {
+                        0f
+                    }
+                    _state.update {
+                        it.copy(
+                            downloadProgress = progress,
+                            downloadedBytes = downloaded.coerceAtLeast(0L),
+                            downloadTotalBytes = total,
+                        )
+                    }
                 }
             }.onSuccess {
                 _state.update {
@@ -267,11 +291,19 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
                         installed = repository().installed(),
                         downloading = false,
                         downloadProgress = 0f,
+                        downloadedBytes = 0L,
+                        downloadTotalBytes = -1L,
                     )
                 }
             }.onFailure { error ->
                 _state.update {
-                    it.copy(downloading = false, downloadProgress = 0f, error = error.message)
+                    it.copy(
+                        downloading = false,
+                        downloadProgress = 0f,
+                        downloadedBytes = 0L,
+                        downloadTotalBytes = -1L,
+                        error = error.message,
+                    )
                 }
             }
         }
@@ -280,7 +312,14 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
     fun cancelDownload() {
         downloadJob?.cancel()
         downloadJob = null
-        _state.update { it.copy(downloading = false, downloadProgress = 0f) }
+        _state.update {
+            it.copy(
+                downloading = false,
+                downloadProgress = 0f,
+                downloadedBytes = 0L,
+                downloadTotalBytes = -1L,
+            )
+        }
     }
 
     fun setModelsFolder(uri: String) {
@@ -311,8 +350,28 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
 
 private fun formatBytes(bytes: Long): String {
     if (bytes <= 0) return "size unknown"
-    val mb = bytes / (1024.0 * 1024.0)
-    return String.format(Locale.US, "%.1f MB", mb)
+    val unit = when {
+        bytes >= 1_000_000_000L -> "GB" to 1_000_000_000.0
+        bytes >= 1_000_000L -> "MB" to 1_000_000.0
+        bytes >= 1_000L -> "KB" to 1_000.0
+        else -> "B" to 1.0
+    }
+    val value = bytes / unit.second
+    return if (unit.first == "B") {
+        "$bytes B"
+    } else {
+        String.format(Locale.US, "%.1f %s", value, unit.first)
+    }
+}
+
+internal fun downloadProgressText(downloadedBytes: Long, totalBytes: Long): String {
+    val downloaded = formatBytes(downloadedBytes.coerceAtLeast(0L))
+        .replace("size unknown", "0 B")
+    if (totalBytes <= 0) return downloaded
+    val percent = ((downloadedBytes.coerceAtLeast(0L).toDouble() / totalBytes) * 100)
+        .toInt()
+        .coerceIn(0, 100)
+    return "$percent% • $downloaded / ${formatBytes(totalBytes)}"
 }
 
 class ModelsViewModelFactory(
