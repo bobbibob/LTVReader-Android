@@ -8,6 +8,16 @@ on:
   workflow_dispatch:
 
 jobs:
+  server-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate engine-host syntax
+        run: python -m py_compile server-host/engine_host.py
+
   test:
     runs-on: ubuntu-latest
     steps:

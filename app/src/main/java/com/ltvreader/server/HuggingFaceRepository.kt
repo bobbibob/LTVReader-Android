@@ -64,6 +64,7 @@ class HuggingFaceRepository(
         .build()
 
     suspend fun search(query: String, limit: Int = 30): List<Model> = withContext(Dispatchers.IO) {
+        if (VERIFIED_ANDROID_MODELS.isEmpty()) return@withContext emptyList()
         val urlBuilder = "https://huggingface.co/api/models".toHttpUrl().newBuilder()
             .addQueryParameter("filter", "text-to-speech")
             .addQueryParameter("limit", limit.coerceIn(1, 100).toString())
@@ -78,10 +79,14 @@ class HuggingFaceRepository(
                 error("Hugging Face search failed: HTTP ${response.code}")
             }
             parseModels(response.body?.string().orEmpty())
+                .filter { it.id in VERIFIED_ANDROID_MODELS }
         }
     }
 
     suspend fun model(repoId: String): Model = withContext(Dispatchers.IO) {
+        require(repoId in VERIFIED_ANDROID_MODELS) {
+            "This repository has no verified Android TTS runtime"
+        }
         val url = "https://huggingface.co/api/models".toHttpUrl().newBuilder()
             .addPathSegments(repoId.trim('/'))
             .addQueryParameter("files_metadata", "true")
@@ -101,6 +106,9 @@ class HuggingFaceRepository(
         files: List<ModelFile> = model.compatibleFiles,
         onProgress: (downloaded: Long, total: Long) -> Unit = { _, _ -> },
     ): InstalledModel = withContext(Dispatchers.IO) {
+        require(model.id in VERIFIED_ANDROID_MODELS) {
+            "Model ${model.id} is not verified for execution on Android"
+        }
         require(files.isNotEmpty()) { "No supported TTS model files found in ${model.id}" }
         val directory = directoryFor(model.id)
         directory.mkdirs()
@@ -247,6 +255,12 @@ class HuggingFaceRepository(
 
     companion object {
         private const val MANIFEST = ".ltv-model.json"
+        /**
+         * A model is added only together with an Android inference adapter and
+         * an instrumentation test for its exact repository/revision.
+         * GGUF/ONNX/SafeTensors extensions alone never qualify a model.
+         */
+        private val VERIFIED_ANDROID_MODELS: Set<String> = emptySet()
         private val SUPPORTED_EXTENSIONS = setOf(
             "onnx", "bin", "json", "txt", "model", "safetensors", "pt", "pth",
             "yaml", "yml", "tokens", "vocab", "config",

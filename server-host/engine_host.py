@@ -20,6 +20,7 @@ import logging
 import os
 import re
 import shutil
+import importlib.util
 import time
 from pathlib import Path
 from typing import Any
@@ -53,49 +54,106 @@ def save_models_db(db: dict) -> None:
     MODELS_DB.write_text(json.dumps(db, indent=2))
 
 
-# Каталог известных TTS-моделей (можно расширять)
+# Закрытый каталог: каждая запись привязана к реализованному runtime.
+# Произвольные Hugging Face репозитории намеренно не принимаются.
 KNOWN_TTS_MODELS = [
     {
-        "id": "onnx-community/Kokoro-82M",
-        "name": "Kokoro 82M (ONNX)",
-        "engine": "kokoro",
-        "size_mb": 175,
-        "languages": ["en-us", "en-gb", "es", "fr", "it", "pt", "ja", "zh"],
-        "description": "Kokoro-82M — компактная (~150 МБ) высококачественная TTS. 24 kHz, 50+ голосов. Open source (Apache 2.0).",
-        "tags": ["english", "multilingual", "fast", "local", "onnx"],
-        "files": ["kokoro-v0_19.onnx", "voices.bin", "config.json"],
-    },
-    {
-        "id": "rhasspy/piper-voices",
-        "name": "Piper Voices (60+ voices)",
-        "engine": "piper",
-        "size_mb": 65,
-        "languages": ["en", "de", "fr", "es", "ru", "it", "pt", "uk", "pl", "nl"],
-        "description": "Коллекция голосов Piper. Скачиваются по одному — выберите нужные.",
-        "tags": ["english", "german", "french", "spanish", "russian", "local", "fast"],
-        "files": [],  # много файлов
-    },
-    {
-        "id": "resemble-ai/chatterbox",
-        "name": "Chatterbox TTS",
-        "engine": "chatterbox",
-        "size_mb": 1100,
-        "languages": ["en"],
-        "description": "Chatterbox — voice cloning + TTS от Resemble AI. Тяжёлая модель, требует GPU.",
-        "tags": ["voice-cloning", "english", "expressive"],
-        "files": ["model.safetensors", "config.json"],
-    },
-    {
-        "id": "Qwen/Qwen2.5-Omni-7B",
-        "name": "Qwen2.5-Omni TTS",
+        "id": "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice",
+        "name": "Qwen3 TTS 0.6B CustomVoice",
         "engine": "qwen",
-        "size_mb": 15000,
-        "languages": ["en", "zh", "ja", "ko", "es", "fr", "de", "ru", "ar"],
-        "description": "Qwen2.5-Omni — мультимодальная модель с TTS. Очень большая.",
-        "tags": ["multilingual", "large", "experimental"],
-        "files": ["model-00000-of-00004.safetensors"],
+        "runtime": "qwen-tts",
+        "target": "remote-host",
+        "size_mb": 1800,
+        "languages": ["zh", "en", "ja", "ko", "de", "fr", "ru", "pt", "es", "it"],
+        "description": "Official compact Qwen3-TTS model with nine built-in voices.",
+        "tags": ["official", "multilingual", "custom-voice", "remote-only"],
+        "files": [],
+    },
+    {
+        "id": "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+        "name": "Qwen3 TTS 1.7B CustomVoice",
+        "engine": "qwen",
+        "runtime": "qwen-tts",
+        "target": "remote-host",
+        "size_mb": 4200,
+        "languages": ["zh", "en", "ja", "ko", "de", "fr", "ru", "pt", "es", "it"],
+        "description": "Official full-size Qwen3-TTS model with instruction-controlled voices.",
+        "tags": ["official", "multilingual", "custom-voice", "remote-only"],
+        "files": [],
     },
 ]
+MODEL_CATALOG = {model["id"]: model for model in KNOWN_TTS_MODELS}
+DEFAULT_QWEN_MODEL = "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice"
+QWEN_SPEAKERS = ["Vivian", "Serena", "Uncle_Fu", "Dylan", "Eric", "Ryan", "Aiden", "Ono_Anna", "Sohee"]
+_qwen_models: dict[str, Any] = {}
+
+
+def require_supported_model(repo_id: str) -> dict[str, Any]:
+    model = MODEL_CATALOG.get(repo_id)
+    if model is None:
+        raise HTTPException(404, "Model is not in the verified LTV compatibility catalog")
+    return model
+
+
+def qwen_runtime_available() -> bool:
+    return importlib.util.find_spec("qwen_tts") is not None
+
+
+def load_qwen_model(model_id: str) -> Any:
+    require_supported_model(model_id)
+    if not qwen_runtime_available():
+        raise HTTPException(503, "Qwen runtime unavailable; install requirements-qwen.txt")
+    if model_id in _qwen_models:
+        return _qwen_models[model_id]
+
+    import torch
+    from qwen_tts import Qwen3TTSModel
+
+    local_dir = MODELS_DIR / model_id.replace("/", "_")
+    source = str(local_dir) if local_dir.is_dir() and any(local_dir.iterdir()) else model_id
+    cuda = torch.cuda.is_available()
+    kwargs: dict[str, Any] = {
+        "device_map": "cuda:0" if cuda else "cpu",
+        "dtype": torch.bfloat16 if cuda else torch.float32,
+    }
+    if cuda:
+        kwargs["attn_implementation"] = "sdpa"
+    try:
+        model = Qwen3TTSModel.from_pretrained(source, **kwargs)
+    except Exception as exc:
+        log.exception("Qwen model loading failed")
+        raise HTTPException(503, f"Qwen model loading failed: {exc}") from exc
+    _qwen_models[model_id] = model
+    return model
+
+
+def synthesize_qwen(body: "SynthesizeBody") -> FileResponse:
+    import soundfile as sf
+
+    model_id = str(body.options.get("model_id", DEFAULT_QWEN_MODEL))
+    model = load_qwen_model(model_id)
+    speaker = body.voice or str(body.options.get("speaker", "Ryan"))
+    if speaker not in QWEN_SPEAKERS:
+        raise HTTPException(422, f"Unsupported Qwen speaker: {speaker}")
+    language = body.lang or str(body.options.get("language", "Auto"))
+    instruct = str(body.options.get("instruct", ""))
+    try:
+        wavs, sample_rate = model.generate_custom_voice(
+            text=body.text,
+            language=language,
+            speaker=speaker,
+            instruct=instruct,
+        )
+        output_dir = MODELS_DIR / ".output"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output = output_dir / f"qwen_{int(time.time() * 1000)}.wav"
+        sf.write(output, wavs[0], sample_rate)
+        return FileResponse(output, media_type="audio/wav", filename=output.name)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        log.exception("Qwen synthesis failed")
+        raise HTTPException(500, f"Qwen synthesis failed: {exc}") from exc
 
 
 # ============== API Endpoints ==============
@@ -124,13 +182,42 @@ def create_app() -> FastAPI:
             "version": "1.2.1",
             "models_dir": str(MODELS_DIR),
             "known_models": [m["id"] for m in KNOWN_TTS_MODELS],
+            "capabilities": {
+                "qwen_tts": qwen_runtime_available(),
+                "ollama_tts": False,
+                "arbitrary_huggingface_models": False,
+            },
         }
 
     @app.get("/engines")
-    def engines() -> dict[str, list[str]]:
-        return {
-            "engines": ["kokoro", "piper", "chatterbox", "qwen", "omnivoice", "remote:piper", "remote:chatterbox", "remote:qwen", "remote:omnivoice"],
-        }
+    def engines() -> list[str]:
+        return ["qwen"] if qwen_runtime_available() else []
+
+    @app.get("/engines/qwen/voices")
+    def qwen_voices() -> list[dict[str, Any]]:
+        if not qwen_runtime_available():
+            raise HTTPException(503, "Qwen runtime unavailable; install requirements-qwen.txt")
+        return [
+            {
+                "id": speaker,
+                "display_name": speaker,
+                "language": "multilingual",
+                "sample_rate": 24000,
+            }
+            for speaker in QWEN_SPEAKERS
+        ]
+
+    @app.post("/engines/qwen/preload")
+    def preload_qwen(body: dict[str, Any]) -> dict[str, str]:
+        model_id = str(body.get("options", {}).get("model_id", DEFAULT_QWEN_MODEL))
+        require_supported_model(model_id)
+        load_qwen_model(model_id)
+        return {"status": "ready", "model_id": model_id}
+
+    @app.post("/engines/qwen/unload")
+    def unload_qwen() -> dict[str, str]:
+        _qwen_models.clear()
+        return {"status": "unloaded"}
 
     # --- Каталог моделей ---
     @app.get("/models")
@@ -145,6 +232,7 @@ def create_app() -> FastAPI:
     @app.get("/models/{repo_id:path}/files")
     def list_repo_files(repo_id: str) -> dict[str, Any]:
         """Получить список файлов в HuggingFace репо (через huggingface_hub)."""
+        require_supported_model(repo_id)
         try:
             from huggingface_hub import list_repo_files
             files = list_repo_files(repo_id, token=HF_TOKEN or None)
@@ -158,6 +246,7 @@ def create_app() -> FastAPI:
     @app.get("/models/{repo_id:path}/file/{file_path:path}")
     def download_model_file(repo_id: str, file_path: str) -> FileResponse:
         """Serve a previously downloaded model file to the Android app."""
+        require_supported_model(repo_id)
         root = (MODELS_DIR / repo_id.replace("/", "_")).resolve()
         target = (root / file_path).resolve()
         if root not in target.parents or not target.is_file():
@@ -167,6 +256,7 @@ def create_app() -> FastAPI:
     @app.post("/models/{repo_id:path}/download")
     def download_model(repo_id: str, body: DownloadBody) -> dict[str, Any]:
         """Скачать файлы модели из HuggingFace на локальный диск сервера."""
+        model_info = require_supported_model(repo_id)
         try:
             from huggingface_hub import hf_hub_download, snapshot_download
         except ImportError:
@@ -177,8 +267,7 @@ def create_app() -> FastAPI:
         model_dir.mkdir(parents=True, exist_ok=True)
 
         # Найти информацию о модели
-        model_info = next((m for m in KNOWN_TTS_MODELS if m["id"] == repo_id), None)
-        default_files = model_info.get("files", []) if model_info else []
+        default_files = model_info.get("files", [])
 
         try:
             if body.files:
@@ -247,6 +336,7 @@ def create_app() -> FastAPI:
 
     @app.delete("/local-models/{model_id:path}")
     def delete_local_model(model_id: str) -> dict[str, Any]:
+        require_supported_model(model_id)
         model_dir = MODELS_DIR / model_id.replace("/", "_")
         if not model_dir.exists():
             raise HTTPException(404, f"Model not found: {model_id}")
@@ -256,6 +346,9 @@ def create_app() -> FastAPI:
     # --- Синтез через движки (как раньше) ---
     @app.post("/synthesize")
     def synthesize(body: SynthesizeBody) -> FileResponse:
+        if body.engine_id == "qwen":
+            return synthesize_qwen(body)
+
         from app.core.settings_manager import SettingsManager
         from app.tts.registry import TTS_ENGINES
         from pathlib import Path
