@@ -102,7 +102,28 @@ fun ModelsScreen(
                     }
                 }
             }
-            Text("Verified engine-host models", style = MaterialTheme.typography.titleMedium)
+            Text("Remote server models", style = MaterialTheme.typography.titleMedium)
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text(
+                        "These models do not run inside the Android app.",
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Text(
+                        "Qwen3-TTS, MMS-TTS and Chatterbox are downloaded and executed by " +
+                            "engine-host on a separate computer. T2V receives the generated audio.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    if (!state.remoteHostConfigured) {
+                        Button(onClick = { nav.navigate(com.t2v.ui.navigation.Routes.Settings) }) {
+                            Text("Configure engine-host")
+                        }
+                    }
+                }
+            }
             REMOTE_MODEL_FAMILIES.forEach { family ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -115,7 +136,7 @@ fun ModelsScreen(
                         Text(family.name, style = MaterialTheme.typography.titleMedium)
                         Text(family.description, style = MaterialTheme.typography.bodySmall)
                         Text(
-                            "${family.variants.size} variant(s) • installed on engine-host",
+                            "${family.variants.size} variant(s) • remote server",
                             style = MaterialTheme.typography.bodySmall,
                         )
                         Button(
@@ -128,12 +149,17 @@ fun ModelsScreen(
                 }
             }
             Text(
-                if (state.remoteHostUrl.isBlank()) {
-                    "Set the engine-host address in Settings before downloading"
-                } else {
-                    "Host: ${state.remoteHostUrl}"
+                when {
+                    !state.remoteHostEnabled -> "Engine-host is disabled in Settings"
+                    state.remoteHostUrl.isBlank() -> "Engine-host address is not configured"
+                    else -> "Engine-host: ${state.remoteHostUrl}"
                 },
-                style = MaterialTheme.typography.bodySmall,
+                color = if (state.remoteHostConfigured) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    MaterialTheme.colorScheme.error
+                },
+                style = MaterialTheme.typography.bodyMedium,
             )
 
             state.error?.let {
@@ -144,8 +170,13 @@ fun ModelsScreen(
                     family = family,
                     installed = state.remoteInstalled,
                     downloadingId = state.remoteDownloadingId,
+                    hostConfigured = state.remoteHostConfigured,
                     onDismiss = vm::closeRemoteVariants,
                     onDownload = vm::downloadRemote,
+                    onConfigureHost = {
+                        vm.closeRemoteVariants()
+                        nav.navigate(com.t2v.ui.navigation.Routes.Settings)
+                    },
                 )
             }
             state.variantModel?.let { model ->
@@ -235,8 +266,10 @@ private fun RemoteVariantDialog(
     family: RemoteModelFamily,
     installed: Set<String>,
     downloadingId: String,
+    hostConfigured: Boolean,
     onDismiss: () -> Unit,
     onDownload: (RemoteModelVariant) -> Unit,
+    onConfigureHost: () -> Unit,
 ) {
     var selected by androidx.compose.runtime.remember {
         androidx.compose.runtime.mutableStateOf(family.variants.first())
@@ -278,7 +311,7 @@ private fun RemoteVariantDialog(
         },
         confirmButton = {
             Button(
-                enabled = downloadingId.isBlank() && selected.id !in installed,
+                enabled = hostConfigured && downloadingId.isBlank() && selected.id !in installed,
                 onClick = { onDownload(selected) },
             ) {
                 if (downloadingId == selected.id) {
@@ -289,7 +322,11 @@ private fun RemoteVariantDialog(
             }
         },
         dismissButton = {
-            OutlinedButton(onClick = onDismiss) { Text("Close") }
+            if (hostConfigured) {
+                OutlinedButton(onClick = onDismiss) { Text("Close") }
+            } else {
+                OutlinedButton(onClick = onConfigureHost) { Text("Configure server") }
+            }
         },
     )
 }
@@ -458,10 +495,14 @@ data class ModelsState(
     val variantModel: HuggingFaceRepository.Model? = null,
     val modelsTreeUri: String = "",
     val remoteHostUrl: String = "",
+    val remoteHostEnabled: Boolean = false,
     val remoteInstalled: Set<String> = emptySet(),
     val remoteDownloadingId: String = "",
     val remoteVariantFamily: RemoteModelFamily? = null,
-)
+) {
+    val remoteHostConfigured: Boolean
+        get() = remoteHostEnabled && remoteHostUrl.isNotBlank()
+}
 
 class ModelsViewModel(private val context: android.content.Context) : ViewModel() {
     private val settings = AppContainer.settings(context)
@@ -477,16 +518,26 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
             settings.flow.collect { value ->
                 huggingFaceToken = value.engines["huggingface"]?.get("token").orEmpty()
                 modelsTreeUri = value.modelsTreeUri
-                val hostChanged = _state.value.remoteHostUrl != value.remoteHostUrl.trimEnd('/')
+                val normalizedHost = value.remoteHostUrl.trim().trimEnd('/')
+                val hostChanged = _state.value.remoteHostUrl != normalizedHost ||
+                    _state.value.remoteHostEnabled != value.remoteHostEnabled
                 _state.update {
                     it.copy(
                         selectedModelId = value.selectedModelId,
                         modelsTreeUri = value.modelsTreeUri,
                         installed = repository().installed(),
-                        remoteHostUrl = value.remoteHostUrl.trimEnd('/'),
+                        remoteHostUrl = normalizedHost,
+                        remoteHostEnabled = value.remoteHostEnabled,
+                        remoteInstalled = if (value.remoteHostEnabled && normalizedHost.isNotBlank()) {
+                            it.remoteInstalled
+                        } else {
+                            emptySet()
+                        },
                     )
                 }
-                if (hostChanged && value.remoteHostUrl.isNotBlank()) refreshRemoteInstalled()
+                if (hostChanged && value.remoteHostEnabled && normalizedHost.isNotBlank()) {
+                    refreshRemoteInstalled()
+                }
             }
         }
     }
@@ -503,9 +554,12 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
     }
 
     fun downloadRemote(variant: RemoteModelVariant) {
-        val host = _state.value.remoteHostUrl
-        if (host.isBlank()) {
-            _state.update { it.copy(error = "Set and enable the engine-host address in Settings") }
+        val current = _state.value
+        val host = current.remoteHostUrl
+        if (!current.remoteHostConfigured) {
+            _state.update {
+                it.copy(error = "Configure and enable engine-host in Settings. This model runs on the server, not on Android.")
+            }
             return
         }
         viewModelScope.launch {
@@ -526,8 +580,9 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
     }
 
     private fun refreshRemoteInstalled() {
-        val host = _state.value.remoteHostUrl
-        if (host.isBlank()) return
+        val current = _state.value
+        val host = current.remoteHostUrl
+        if (!current.remoteHostConfigured) return
         viewModelScope.launch {
             runCatching { ModelRepository(host).listLocalModels() }
                 .onSuccess { models ->
