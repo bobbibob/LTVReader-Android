@@ -9,18 +9,28 @@ plugins {
 }
 
 android {
-    namespace = "com.ltvreader"
+    namespace = "com.t2v"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.ltvreader"
+        applicationId = "com.t2v"
         minSdk = 24
         targetSdk = 34
         versionCode = 1
         versionName = "0.1.0"
         vectorDrawables { useSupportLibrary = true }
-        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
+        // FFmpeg CLI is currently verified and packaged only for modern 64-bit ARM.
+        ndk { abiFilters += listOf("arm64-v8a") }
         resourceConfigurations += listOf("en", "ru", "es", "fr", "de", "it", "pt", "zh", "ja", "hi", "ar")
+    }
+
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {
@@ -28,6 +38,7 @@ android {
             isMinifyEnabled = false
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+            signingConfig = signingConfigs.getByName("debug")
         }
         release {
             isMinifyEnabled = true
@@ -57,6 +68,10 @@ android {
     }
 
     packaging {
+        jniLibs {
+            // Runtime.exec is allowed from nativeLibraryDir, unlike writable filesDir on Android 10+.
+            useLegacyPackaging = true
+        }
         resources {
             excludes += listOf(
                 "META-INF/{AL2.0,LGPL2.1}",
@@ -123,9 +138,6 @@ dependencies {
 
     // ffmpeg-kit (https://github.com/Arthenica/ffmpeg-kit) — через JitPack/MavenCentral
 
-
-    // onnxruntime-android (Kokoro TTS, локальный движок)
-    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.19.0")
 
     // NumPy не нужен: всё, что было на numpy, переписано на ручные массивы.
     // Документы: docx4j нет в Android, используем чистый ZIP-парсер для DOCX.

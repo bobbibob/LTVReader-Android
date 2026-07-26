@@ -1,10 +1,5 @@
 # Полезные ссылки
 
-## Оригинал
-- [LocalText2Voice (upstream)](https://github.com/estebanstifli/LocalText2Voice) — оригинальный репозиторий
-- [bobbibob/Text2Voice (fork)](https://github.com/bobbibob/Text2Voice) — форк, с которого сделан порт
-- [AndromedaNova.com](https://andromedanova.com) — сайт автора
-
 ## TTS-движки
 - [Kokoro-ONNX](https://github.com/hexgrad/kokoro-onnx) — локальный движок
 - [Kokoro на HuggingFace](https://huggingface.co/onnxcommunity/Kokoro) — модели
@@ -57,7 +52,5 @@
 - [PERFORMANCE](PERFORMANCE.md) — производительность
 - [COMPARISON](COMPARISON.md) — сравнение с конкурентами
 - [MODELS](MODELS.md) — какие движки выбрать
-- [EN_ENGINE_HOST](EN_ENGINE_HOST.md) — гайд по server-host
 - [MARKETING](MARKETING.md) — продвижение
 - [VERSIONING](VERSIONING.md) — версионирование
-

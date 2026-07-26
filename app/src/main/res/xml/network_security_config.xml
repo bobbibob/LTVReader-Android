@@ -5,7 +5,7 @@
             <certificates src="system" />
         </trust-anchors>
     </base-config>
-    <!-- Разрешаем cleartext только к локальной сети (engine-host) -->
+    <!-- HTTP разрешён для настраиваемых пользователем Custom HTTP API. -->
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">192.168.0.0/16</domain>
         <domain includeSubdomains="true">10.0.0.0/8</domain>

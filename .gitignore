@@ -46,3 +46,4 @@ __pycache__/
 # Models (large files)
 app/src/main/assets/voices/kokoro/*.onnx
 app/src/main/assets/voices/kokoro/*.bin
+app/src/main/jniLibs/

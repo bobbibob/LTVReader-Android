@@ -1,6 +1,6 @@
 # Internals
 
-Описание внутренних компонентов LTV Reader.
+Описание внутренних компонентов T2V.
 
 ## Lifecycle
 
@@ -35,7 +35,7 @@ User → Editor → save() → Room (ProjectEntity)
         TextProcessor.process()  → List<TextChunk>
               ↓
         для каждого chunk:
-              ├─ TTS engine (Kokoro / OpenAI / ElevenLabs / Gemini / Azure / Custom / Remote)
+              ├─ TTS engine (локальный Android или облачный API)
               ├─ AudioEncoder.writeWav() → WAV
               └─ AudioEncoder.writeSilence() для пауз
               ↓
@@ -60,18 +60,6 @@ User → Editor → save() → Room (ProjectEntity)
 | Gemini TTS | облако | `tts/engines/GeminiTtsEngine.kt` |
 | Azure Speech | облако | `tts/engines/AzureTtsEngine.kt` |
 | Custom HTTP | зависит | `tts/engines/CustomHttpTtsEngine.kt` |
-| Piper | через engine-host | `tts/engines/RemoteHostTtsEngine.kt` |
-| Chatterbox | через engine-host | то же |
-| Qwen3 TTS | через engine-host | то же |
-| OmniVoice | через engine-host | то же |
-
-## Engine-host (Python)
-
-`server-host/engine_host.py` поднимает:
-- `engine_host.py` + `http_app.py` из исходного LocalText2Voice
-- дополнительный эндпоинт `/synthesize` для прямого вызова из Android
-
-Android подключается к нему по HTTP через `EngineHostClient.kt`.
 
 ## LTV-разметка
 
@@ -103,4 +91,3 @@ app/src/androidTest/                 # integration (ART)
 ./gradlew :app:testDebugUnitTest
 ./gradlew :app:connectedDebugAndroidTest
 ```
-

@@ -1,4 +1,4 @@
-# LTV Reader — Roadmap
+# T2V — Roadmap
 
 Версии и статус разработки. Текущая итерация — **0.1.0** (alpha).
 
@@ -19,9 +19,7 @@
 - [x] `tts/engines/KokoroTtsEngine` — локально через onnxruntime-android (NNAPI).
 - [x] `tts/engines/OpenAiTtsEngine`, `ElevenLabsTtsEngine`, `GeminiTtsEngine`,
        `AzureTtsEngine`, `CustomHttpTtsEngine` — через OkHttp + kotlinx-serialization.
-- [x] `tts/engines/RemoteHostTtsEngine` — клиент к engine-host.
 - [x] `tts/registry/EngineRegistry` — ленивая фабрика движков.
-- [x] `server/EngineHostClient` — HTTP-клиент (OkHttp).
 - [x] `data/AppDatabase` + 6 DAO + 6 entities (Room).
 - [x] `data/SettingsRepository` — DataStore Preferences.
 - [x] `worker/GenerationPipeline` — полный пайплайн с retry/cancel/progress.
@@ -36,8 +34,7 @@
 - [x] `ui/screens/projects` — список проектов.
 - [x] `ui/screens/review` — список сегментов аудиокниги.
 - [x] `ui/screens/music` — упрощённый микшер (voice + music + ducking).
-- [x] `ui/screens/settings` — общие настройки + remote host + API-ключи.
-- [x] `server-host/engine_host.py` — Python-бэкенд для удалённых движков.
+- [x] `ui/screens/settings` — общие настройки + API-ключи.
 - [x] 11 локализаций strings.xml (en/ru/es/fr/de/it/pt/zh/ja/hi/ar).
 - [x] Манифест с `networkSecurityConfig` (cleartext к LAN).
 - [x] `docs/PORTING.md`, `docs/ROADMAP.md`, `docs/LTV_MARKUP.md`.
@@ -82,10 +79,10 @@
 
 ## ❌ Не будет
 
-- ❌ Локальные Chatterbox / Qwen3 / OmniVoice — слишком тяжёлые модели.
-- ❌ Встроенный Python / MCP / HTTP-сервер — не запустить на Android.
+- ❌ Серверные TTS-движки и отдельный engine-host.
+- ❌ Непроверенные локальные Chatterbox / Qwen3 / OmniVoice.
 - ❌ Faster Whisper — нет билдов ctranslate2 под Android.
-- ❌ LLM-пайплайны — слишком сложно для мобильного клиента, выносится в engine-host.
+- ❌ Встроенный Python / MCP / HTTP-сервер.
 - ❌ Windows-only фичи (CreateDesktopShortcut, UAC, signed installer).
 
 ## Целевые метрики
@@ -106,4 +103,3 @@
 GitHub Releases в виде APK — скачивание через
 [GitHub Actions artifacts](../../actions) или прямой ссылке на .apk.
 Когда/если решим публиковать — см. `docs/DEPLOYMENT.md` (пока draft).
-

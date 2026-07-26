@@ -6,13 +6,12 @@ find . -type d \( -name ".gradle" -o -name "build" -o -name ".idea" -o -name ".g
     grep -vE '\.(gitignore|properties)$' | sort | head -200
 echo ""
 echo "=== File count by area ==="
-echo "core/  : $(find app/src/main/java/com/ltvreader/core -name '*.kt' | wc -l | tr -d ' ')"
-echo "tts/   : $(find app/src/main/java/com/ltvreader/tts -name '*.kt' | wc -l | tr -d ' ')"
-echo "data/  : $(find app/src/main/java/com/ltvreader/data -name '*.kt' | wc -l | tr -d ' ')"
-echo "ui/    : $(find app/src/main/java/com/ltvreader/ui -name '*.kt' | wc -l | tr -d ' ')"
-echo "worker/: $(find app/src/main/java/com/ltvreader/worker -name '*.kt' | wc -l | tr -d ' ')"
+echo "core/  : $(find app/src/main/java/com/t2v/core -name '*.kt' | wc -l | tr -d ' ')"
+echo "tts/   : $(find app/src/main/java/com/t2v/tts -name '*.kt' | wc -l | tr -d ' ')"
+echo "data/  : $(find app/src/main/java/com/t2v/data -name '*.kt' | wc -l | tr -d ' ')"
+echo "ui/    : $(find app/src/main/java/com/t2v/ui -name '*.kt' | wc -l | tr -d ' ')"
+echo "worker/: $(find app/src/main/java/com/t2v/worker -name '*.kt' | wc -l | tr -d ' ')"
 echo "tests  : $(find app/src/test -name '*.kt' | wc -l | tr -d ' ')"
 echo ""
 echo "=== Lines of code ==="
 find app/src -name '*.kt' | xargs wc -l | tail -1
-find server-host -name '*.py' | xargs wc -l | tail -1

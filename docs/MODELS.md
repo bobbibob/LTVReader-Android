@@ -1,19 +1,18 @@
 # TTS-модели
 
-Сводная таблица движков, поддерживаемых LTV Reader напрямую и через remote host.
+T2V поддерживает только модели, запускаемые непосредственно на Android, и облачные API.
 
-| Движок | Тип | Размер модели | Качество | Скорость (RPi 4) | On-device | Через host |
-|---|---|---|---|---|---|---|
-| Piper | local | 15-65 МБ | 7/10 | 0.5x | ⚠️ (ручная сборка) | ✅ |
-| Kokoro | local | 150 МБ | 8/10 | 0.8x (NNAPI) | ✅ | ✅ |
-| OpenAI TTS | cloud | — | 9/10 | — | — | ✅ |
-| ElevenLabs | cloud | — | 10/10 | — | — | ✅ |
-| Gemini TTS | cloud | — | 8.5/10 | — | — | ✅ |
-| Azure Speech | cloud | — | 8.5/10 | — | — | ✅ |
-| Chatterbox | local | 500 МБ + 1 ГБ | 9/10 | 0.3x (CUDA) | ❌ | ✅ |
-| Qwen3 TTS | local | 1 ГБ+ | 9/10 | 0.4x (CUDA) | ❌ | ✅ |
-| OmniVoice | local | 800 МБ | 8.5/10 | 0.3x (CUDA) | ❌ | ✅ |
-| Custom HTTP | depends | — | depends | — | — | ✅ |
+| Движок | Тип | Размер модели | Статус |
+|---|---|---|---|
+| Kokoro | локальный | около 150 МБ | Android-runtime есть; веса не входят в APK |
+| OpenAI TTS | облачный | — | реализован |
+| ElevenLabs | облачный | — | реализован |
+| Gemini TTS | облачный | — | реализован |
+| Azure Speech | облачный | — | реализован |
+| Custom HTTP | облачный | — | реализован |
+
+Qwen3-TTS, Chatterbox, MMS-TTS и OmniVoice не отображаются, пока для конкретной
+ревизии модели не будет реализован и проверен Android-runtime.
 
 ## Рекомендации по выбору
 
@@ -37,4 +36,3 @@
 
 ### Для подкастов с музыкой
 - Любой движок + `AudioMixer.applyMusicDucking()`.
-

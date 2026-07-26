@@ -1,7 +1,7 @@
 # LTV-разметка
 
-Документ описывает поведение разметки в **LTV Reader**, которое полностью
-совместимо с десктопной версией [LocalText2Voice](https://github.com/estebanstifli/LocalText2Voice).
+Документ описывает поведение разметки в **T2V**, которое полностью
+совместимо с десктопной версией [T2V](https://github.com/estebanstifli/T2V).
 См. оригинальный `docs/LTV_MARKUP.md` для углублённых примеров.
 
 ## Синтаксис
@@ -45,7 +45,7 @@ This part is slower and softer.
 
 ## Реализация
 
-- Парсер: `app/src/main/java/com/ltvreader/core/markup/LTVMarkupParser.kt`
+- Парсер: `app/src/main/java/com/t2v/core/markup/LTVMarkupParser.kt`
 - Состояние: `MarkupState` (прикрепляется к каждому `TextChunk`)
-- Подсветка в редакторе: `app/src/main/java/com/ltvreader/ui/markup/MarkupHighlighter.kt`
+- Подсветка в редакторе: `app/src/main/java/com/t2v/ui/markup/MarkupHighlighter.kt`
 

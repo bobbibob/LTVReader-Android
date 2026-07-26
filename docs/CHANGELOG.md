@@ -1,6 +1,6 @@
 # Changelog
 
-Все значимые изменения в LTV Reader документируются здесь.
+Все значимые изменения в T2V документируются здесь.
 
 ## [0.1.0] - 2026-07-23
 
@@ -14,7 +14,17 @@
 - Data: Room (AppDatabase + 6 entities + 6 DAOs), DataStore Settings.
 - UI: 7 экранов (Editor, Generation, Review, Music Mix, Voices,
   Projects, Settings) на Jetpack Compose + Material 3.
-- Server host: Python FastAPI бэкенд (`server-host/engine_host.py`).
+- Локальный Kokoro через sherpa-onnx Android runtime.
+- Точный размер Kokoro из Hugging Face и прогресс загрузки в процентах и байтах.
+- Стабильная debug-подпись APK между GitHub Actions сборками для обновления без потери данных.
+- Паузы наследуют PCM-формат TTS, поэтому Kokoro 24 кГц корректно собирается в итоговый WAV.
+- Ошибка генерации отображается отдельно и больше не помечается как готовая аудиокнига.
+- Debug-вариант явно использует постоянный CI-keystore; сертификат APK проверяется в workflow.
+- Экран генерации прокручивается и показывает плеер итогового WAV; плеер также добавлен в Review.
+- Четыре русских локальных Piper/VITS-голоса: Ирина, Денис, Дмитрий и Руслан.
+- Загрузка и безопасная распаковка официальных Android-пакетов русских голосов с прогрессом.
+- ElevenLabs Instant Voice Clone: выбор записи, подтверждение прав, создание и выбор клона.
+- Выбранный в галерее ElevenLabs голос теперь действительно передаётся в URL синтеза.
 - 11 локалей strings.xml: en, ru, es, fr, de, it, pt, zh, ja, hi, ar.
 - Документация: README, PORTING, ROADMAP, LTV_MARKUP, QUICKSTART,
   INTERNALS, ARCHITECTURE, CHANGELOG.
@@ -24,7 +34,6 @@
 ### Not included
 - Реальный G2P для Kokoro (используется ASCII-fallback).
 - Faster Whisper verification.
-- Локальные Chatterbox/Qwen3/OmniVoice (только через remote host).
+- Непроверенные локальные Chatterbox/Qwen3/OmniVoice.
 - Импорт DOCX через Apache POI (используется ручной ZIP-парсер).
 - Background WorkManager (каркас GenerationService есть).
-

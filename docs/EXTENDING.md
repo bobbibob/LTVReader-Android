@@ -1,8 +1,8 @@
-# Расширение LTV Reader
+# Расширение T2V
 
 ## Добавить новый TTS-движок
 
-1. Создайте `app/src/main/java/com/ltvreader/tts/engines/MyEngine.kt`:
+1. Создайте `app/src/main/java/com/t2v/tts/engines/MyEngine.kt`:
 
 ```kotlin
 class MyTtsEngine(

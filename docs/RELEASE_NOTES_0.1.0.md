@@ -3,7 +3,7 @@
 **Дата**: 2026-07-23
 **Кодовое имя**: First Light
 
-Первая публичная alpha-версия LTV Reader. Содержит MVP для превращения
+Первая публичная alpha-версия T2V. Содержит MVP для превращения
 длинного текста в MP3-аудиокниги с TTS.
 
 ## Что внутри
@@ -76,7 +76,7 @@
 
 ## Благодарности
 
-- [estebanstifli](https://github.com/estebanstifli) — оригинальный LocalText2Voice.
+- [estebanstifli](https://github.com/estebanstifli) — оригинальный T2V.
 - [bobbibob](https://github.com/bobbibob) — форк, послуживший основой.
 - [hexgrad](https://github.com/hexgrad) — Kokoro-ONNX.
 - [Arthenica](https://github.com/Arthenica) — ffmpeg-kit.

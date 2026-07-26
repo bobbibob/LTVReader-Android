@@ -4,11 +4,11 @@
 -keepclassmembers class **$$serializer {
     *;
 }
--keep,includedescriptorclasses class com.ltvreader.**$$serializer { *; }
--keepclassmembers class com.ltvreader.** {
+-keep,includedescriptorclasses class com.t2v.**$$serializer { *; }
+-keepclassmembers class com.t2v.** {
     *** Companion;
 }
--keepclasseswithmembers class com.ltvreader.** {
+-keepclasseswithmembers class com.t2v.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
 

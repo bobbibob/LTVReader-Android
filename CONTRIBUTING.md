@@ -1,6 +1,6 @@
 # Contributing
 
-Спасибо за интерес к LTV Reader! Мы рады любому вкладу.
+Спасибо за интерес к T2V! Мы рады любому вкладу.
 
 ## Как внести вклад
 
@@ -13,8 +13,8 @@
 
 ```bash
 # 1. Fork + clone
-git clone https://github.com/yourname/ltvreader-android.git
-cd ltvreader-android
+git clone https://github.com/yourname/t2v-android.git
+cd t2v-android
 
 # 2. Создать ветку
 git checkout -b feature/awesome

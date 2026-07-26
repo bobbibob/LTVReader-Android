@@ -22,13 +22,13 @@
 ## Запуск
 
 ### Приложение крашится при старте
-- Проверьте `adb logcat | grep ltvreader` — там будет stacktrace.
+- Проверьте `adb logcat | grep t2v` — там будет stacktrace.
 - Убедитесь, что `LTVApplication` зарегистрирован в `AndroidManifest.xml`
   (`android:name=".app.LTVApplication"`).
 
 ### "Engine not found" при выборе
 - Установите API-ключ в Settings → TTS engines.
-- Или включите remote host и убедитесь, что engine-host запущен.
+- Для локального режима убедитесь, что модель полностью скачана на устройство.
 
 ### "Network error" при генерации через облачный движок
 - Проверьте интернет.
@@ -71,4 +71,3 @@
 - Уменьшите chunk size.
 - Отключите превью waveform во время генерации.
 - Используйте менее тяжёлый движок (Piper или Kokoro вместо Qwen3).
-

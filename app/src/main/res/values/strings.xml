@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">LTV Reader</string>
+    <string name="app_name">T2V</string>
 
     <!-- Главное меню -->
     <string name="nav_editor">Editor</string>
@@ -61,11 +61,6 @@
     <string name="engine_gemini">Google Gemini TTS</string>
     <string name="engine_azure">Azure Speech</string>
     <string name="engine_custom_http">Custom HTTP</string>
-    <string name="engine_remote_host">Remote engine host</string>
-    <string name="engine_piper_remote">Piper (via remote host)</string>
-    <string name="engine_chatterbox_remote">Chatterbox (via remote host)</string>
-    <string name="engine_qwen_remote">Qwen3 TTS (via remote host)</string>
-    <string name="engine_omnivoice_remote">OmniVoice (via remote host)</string>
 
     <!-- Music mix -->
     <string name="mix_title">Audio Mix</string>
@@ -89,7 +84,6 @@
     <string name="settings_general">General</string>
     <string name="settings_engines">TTS engines</string>
     <string name="settings_voice_gallery">Voice gallery</string>
-    <string name="settings_remote_host">Remote engine host</string>
     <string name="settings_normalization">Text normalization</string>
     <string name="settings_about">About</string>
     <string name="settings_language">Interface language</string>
@@ -149,4 +143,9 @@
     <string name="models_active">✓ Active</string>
     <string name="models_unknown_engine">Unknown engine</string>
     <string name="models_hf_token_required">Set HF_TOKEN env var for private repos</string>
+    <string name="models_hf_search">Search Hugging Face TTS models</string>
+    <string name="models_hf_repo">Repository ID, for example owner/model</string>
+    <string name="models_hf_search_action">Search</string>
+    <string name="models_hf_open_repo">Open repository</string>
+    <string name="models_cancel_download">Cancel download</string>
 </resources>

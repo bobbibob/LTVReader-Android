@@ -8,16 +8,16 @@
 2. Создать приложение в Google Play Console.
 3. Сгенерировать ключ подписи:
    ```bash
-   keytool -genkey -v -keystore ltvreader.keystore \
-     -alias ltvreader -keyalg RSA -keysize 2048 -validity 10000
+   keytool -genkey -v -keystore t2v.keystore \
+     -alias t2v -keyalg RSA -keysize 2048 -validity 10000
    ```
 4. Положить keystore в безопасное место (НЕ коммитить).
 5. Настроить `~/.gradle/gradle.properties`:
    ```properties
-   LTVREADER_UPLOAD_STORE_FILE=path/to/ltvreader.keystore
-   LTVREADER_UPLOAD_KEY_ALIAS=ltvreader
-   LTVREADER_UPLOAD_STORE_PASSWORD=****
-   LTVREADER_UPLOAD_KEY_PASSWORD=****
+   T2V_UPLOAD_STORE_FILE=path/to/t2v.keystore
+   T2V_UPLOAD_KEY_ALIAS=t2v
+   T2V_UPLOAD_STORE_PASSWORD=****
+   T2V_UPLOAD_KEY_PASSWORD=****
    ```
 
 ### Сборка release-AAB
