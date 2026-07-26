@@ -58,6 +58,7 @@
         android:usesCleartextTraffic="true"
         android:networkSecurityConfig="@xml/network_security_config"
         android:enableOnBackInvokedCallback="true"
+        android:extractNativeLibs="true"
         android:theme="@style/Theme.LTVReader"
         tools:targetApi="34">
 

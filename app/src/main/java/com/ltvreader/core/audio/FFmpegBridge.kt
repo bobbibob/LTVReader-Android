@@ -4,7 +4,6 @@ import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.FileOutputStream
 
 /**
  * Тонкая обёртка вокруг FFmpeg для Android.
@@ -21,29 +20,26 @@ import java.io.FileOutputStream
  */
 object FFmpegBridge {
 
-    /** Возвращает путь к FFmpeg-бинарю, при необходимости распаковывая его из assets. */
+    /** Returns the read-only executable packaged in the APK native library directory. */
     @Volatile private var ffmpegPath: String? = null
 
     suspend fun ensure(context: Context): String = withContext(Dispatchers.IO) {
         ffmpegPath?.let { return@withContext it }
-        val abi = android.os.Build.SUPPORTED_ABIS.firstOrNull() ?: "arm64-v8a"
-        val exeName = if (abi.startsWith("arm")) "ffmpeg-$abi" else "ffmpeg-x86_64"
-        val cached = File(context.filesDir, "ffmpeg/$exeName")
-        if (!cached.exists()) {
-            cached.parentFile?.mkdirs()
-            val assetPath = "ffmpeg/$abi/ffmpeg"
-            runCatching {
-                context.assets.open(assetPath).use { input ->
-                    FileOutputStream(cached).use { output -> input.copyTo(output) }
-                }
-            }.onFailure {
-                throw RuntimeException("FFmpeg binary not found for $abi. " +
-                    "Place ffmpeg in app/src/main/assets/ffmpeg/$abi/ffmpeg")
-            }
+        val abi = android.os.Build.SUPPORTED_ABIS.firstOrNull().orEmpty()
+        require(abi == "arm64-v8a") { "FFmpeg is not available for device ABI: $abi" }
+        val executable = File(context.applicationInfo.nativeLibraryDir, "libffmpeg_exec.so")
+        require(executable.isFile && executable.length() > 1_000_000) {
+            "Verified FFmpeg executable is missing from the APK"
         }
-        cached.setExecutable(true)
-        ffmpegPath = cached.absolutePath
-        cached.absolutePath
+        val probe = ProcessBuilder(executable.absolutePath, "-version")
+            .redirectErrorStream(true)
+            .start()
+        val version = probe.inputStream.bufferedReader().readLine().orEmpty()
+        require(probe.waitFor() == 0 && version.startsWith("ffmpeg version")) {
+            "Packaged FFmpeg failed its startup check"
+        }
+        ffmpegPath = executable.absolutePath
+        executable.absolutePath
     }
 
     /**

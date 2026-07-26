@@ -1,35 +1,12 @@
-# FFmpeg binaries
+# FFmpeg executable
 
-Положите сюда скомпилированные FFmpeg-бинарники:
+FFmpeg не хранится в Git и не распаковывается в `filesDir`: Android 10+
+запрещает запуск изменяемых файлов приложения.
 
-```
-ffmpeg/
-├── arm64-v8a/ffmpeg
-├── armeabi-v7a/ffmpeg
-└── x86_64/ffmpeg
-```
+GitHub Actions собирает закреплённый FFmpeg 7.1.1 из официального репозитория
+скриптом `tools/build_ffmpeg_android.sh`, проверяет commit и помещает executable
+под именем `libffmpeg_exec.so` в `jniLibs/arm64-v8a`. Gradle извлекает его в
+read-only `nativeLibraryDir`, откуда `FFmpegBridge` может безопасно выполнить
+его через `ProcessBuilder`.
 
-## Где взять
-
-1. **Termux** (нативная сборка через Android NDK): https://github.com/termux/termux-packages
-2. **ffmpeg-android-maker** (готовые AAR): https://github.com/Javernaut/ffmpeg-android-maker
-3. **niccokunzmann/ffmpeg-kit** (форк): https://github.com/niccokunzmann/ffmpeg-kit
-
-Минимальная сборка (без внешних кодеков):
-```bash
-./configure \
-  --enable-cross-compile \
-  --target-os=linux \
-  --arch=aarch64 \
-  --cross-prefix=$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm- \
-  --sysroot=$NDK/toolchains/llvm/prebuilt/linux-x86_64/sysroot/ \
-  --enable-shared \
-  --disable-static \
-  --enable-libmp3lame \
-  --enable-libvorbis \
-  --enable-libfdk-aac
-make -j8
-```
-
-Размер бинарника: ~10-30 МБ на ABI.
-
+На текущем этапе APK поддерживает только `arm64-v8a`.

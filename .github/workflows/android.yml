@@ -27,6 +27,27 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: android-actions/setup-android@v3
+      - name: Install Android NDK
+        run: sdkmanager --install "ndk;27.2.12479018"
+      - name: Restore verified FFmpeg executable
+        uses: actions/cache@v4
+        with:
+          path: app/src/main/jniLibs/arm64-v8a/libffmpeg_exec.so
+          key: ffmpeg-android-arm64-n7.1.1-${{ hashFiles('tools/build_ffmpeg_android.sh') }}
+      - name: Build FFmpeg for Android
+        if: hashFiles('app/src/main/jniLibs/arm64-v8a/libffmpeg_exec.so') == ''
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.2.12479018
+        run: bash tools/build_ffmpeg_android.sh
+      - name: Verify FFmpeg executable
+        run: |
+          test -s app/src/main/jniLibs/arm64-v8a/libffmpeg_exec.so
+          file app/src/main/jniLibs/arm64-v8a/libffmpeg_exec.so
+      - name: Upload FFmpeg executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-android-arm64
+          path: app/src/main/jniLibs/arm64-v8a/libffmpeg_exec.so
       - name: Make gradlew executable
         run: chmod +x ./gradlew
       - name: Run unit tests
@@ -48,10 +69,17 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: android-actions/setup-android@v3
+      - name: Download verified FFmpeg executable
+        uses: actions/download-artifact@v4
+        with:
+          name: ffmpeg-android-arm64
+          path: app/src/main/jniLibs/arm64-v8a
       - name: Make gradlew executable
         run: chmod +x ./gradlew
       - name: Build debug APK
         run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
+      - name: Verify FFmpeg is packaged
+        run: unzip -l app/build/outputs/apk/debug/app-debug.apk | grep 'lib/arm64-v8a/libffmpeg_exec.so'
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:

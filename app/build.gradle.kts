@@ -19,7 +19,8 @@ android {
         versionCode = 1
         versionName = "0.1.0"
         vectorDrawables { useSupportLibrary = true }
-        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
+        // FFmpeg CLI is currently verified and packaged only for modern 64-bit ARM.
+        ndk { abiFilters += listOf("arm64-v8a") }
         resourceConfigurations += listOf("en", "ru", "es", "fr", "de", "it", "pt", "zh", "ja", "hi", "ar")
     }
 
@@ -57,6 +58,10 @@ android {
     }
 
     packaging {
+        jniLibs {
+            // Runtime.exec is allowed from nativeLibraryDir, unlike writable filesDir on Android 10+.
+            useLegacyPackaging = true
+        }
         resources {
             excludes += listOf(
                 "META-INF/{AL2.0,LGPL2.1}",
