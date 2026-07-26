@@ -20,6 +20,7 @@
 - Паузы наследуют PCM-формат TTS, поэтому Kokoro 24 кГц корректно собирается в итоговый WAV.
 - Ошибка генерации отображается отдельно и больше не помечается как готовая аудиокнига.
 - Debug-вариант явно использует постоянный CI-keystore; сертификат APK проверяется в workflow.
+- Экран генерации прокручивается и показывает плеер итогового WAV; плеер также добавлен в Review.
 - 11 локалей strings.xml: en, ru, es, fr, de, it, pt, zh, ja, hi, ar.
 - Документация: README, PORTING, ROADMAP, LTV_MARKUP, QUICKSTART,
   INTERNALS, ARCHITECTURE, CHANGELOG.

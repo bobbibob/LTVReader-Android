@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.PlayArrow
@@ -37,6 +39,7 @@ import com.t2v.R
 import com.t2v.app.AppContainer
 import com.t2v.tts.EngineInfo
 import com.t2v.tts.VoiceConfig
+import com.t2v.ui.components.AudioPlaybackBar
 import com.t2v.ui.components.LTVScaffold
 import com.t2v.worker.GenerationPipeline
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -64,7 +67,11 @@ fun GenerationScreen(
         onBack = { nav.popBackStack() },
     ) { padding: PaddingValues ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Card(modifier = Modifier.fillMaxWidth()) {
@@ -146,6 +153,12 @@ fun GenerationScreen(
                 ) {
                     Column(Modifier.padding(16.dp)) {
                         Text("Audiobook ready", style = MaterialTheme.typography.titleMedium)
+                        AudioPlaybackBar(
+                            audioFile = java.io.File(
+                                context.filesDir,
+                                "audiobooks/${state.audiobookId}/audiobook.wav",
+                            ),
+                        )
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),

@@ -27,12 +27,14 @@ import androidx.navigation.NavController
 import com.t2v.R
 import com.t2v.app.AppContainer
 import com.t2v.data.SegmentEntity
+import com.t2v.ui.components.AudioPlaybackBar
 import com.t2v.ui.components.LTVScaffold
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.File
 
 @Composable
 fun ReviewScreen(
@@ -52,6 +54,7 @@ fun ReviewScreen(
         ) {
             Text("Audiobook #$audiobookId", style = MaterialTheme.typography.titleMedium)
             Text("Segments: ${state.segments.size}", style = MaterialTheme.typography.bodyMedium)
+            AudioPlaybackBar(audioFile = state.audioPath?.let(::File))
             LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.weight(1f)) {
                 items(state.segments, key = { it.id }) { s -> SegmentRow(s) }
             }
@@ -73,7 +76,10 @@ private fun SegmentRow(s: SegmentEntity) {
     }
 }
 
-data class ReviewState(val segments: List<SegmentEntity> = emptyList())
+data class ReviewState(
+    val segments: List<SegmentEntity> = emptyList(),
+    val audioPath: String? = null,
+)
 
 class ReviewViewModel(
     private val context: android.content.Context,
@@ -85,7 +91,8 @@ class ReviewViewModel(
     init {
         viewModelScope.launch {
             val segs = db.segments().listForAudiobook(audiobookId)
-            _state.update { it.copy(segments = segs) }
+            val audioPath = db.audiobooks().byId(audiobookId)?.outputPath
+            _state.update { it.copy(segments = segs, audioPath = audioPath) }
         }
     }
 }
