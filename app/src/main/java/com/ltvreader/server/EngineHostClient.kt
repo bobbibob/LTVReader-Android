@@ -9,6 +9,7 @@ import kotlinx.serialization.json.JsonObject
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
 import java.util.concurrent.TimeUnit
@@ -55,12 +56,13 @@ class EngineHostClient(
                 displayName = stringField(v, "display_name") ?: id,
                 language = stringField(v, "language") ?: "en",
                 gender = stringField(v, "gender").orEmpty(),
-                engineId = engineId,
+                engineId = "remote:$engineId",
                 previewUrl = stringField(v, "preview_url"),
                 isLocal = false,
                 sampleRate = intField(v, "sample_rate") ?: 22050,
                 downloadModelId = stringField(v, "download_model_id"),
                 downloadSizeBytes = longField(v, "download_size_bytes") ?: -1,
+                isCloned = booleanField(v, "is_cloned") ?: false,
             )
         }
     }
@@ -75,6 +77,41 @@ class EngineHostClient(
             if (!response.isSuccessful) {
                 error("Voice model download failed: HTTP ${response.code}")
             }
+        }
+    }
+
+    suspend fun createVoiceClone(
+        name: String,
+        transcript: String,
+        language: String,
+        modelId: String,
+        fileName: String,
+        audio: ByteArray,
+    ): Unit = withContext(Dispatchers.IO) {
+        val body = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("name", name)
+            .addFormDataPart("transcript", transcript)
+            .addFormDataPart("language", language)
+            .addFormDataPart("model_id", modelId)
+            .addFormDataPart(
+                "audio",
+                fileName,
+                audio.toRequestBody("application/octet-stream".toMediaType()),
+            )
+            .build()
+        val request = Request.Builder().url("$baseUrl/voice-clones").post(body).build()
+        http.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                error("Voice cloning failed: HTTP ${response.code} ${response.body?.string().orEmpty().take(200)}")
+            }
+        }
+    }
+
+    suspend fun deleteVoiceClone(cloneId: String): Unit = withContext(Dispatchers.IO) {
+        val request = Request.Builder().url("$baseUrl/voice-clones/$cloneId").delete().build()
+        http.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) error("Delete voice clone failed: HTTP ${response.code}")
         }
     }
 
@@ -166,6 +203,11 @@ class EngineHostClient(
     private fun longField(obj: JsonObject, key: String): Long? {
         val prim = obj[key] as? kotlinx.serialization.json.JsonPrimitive ?: return null
         return prim.content.toLongOrNull()
+    }
+
+    private fun booleanField(obj: JsonObject, key: String): Boolean? {
+        val prim = obj[key] as? kotlinx.serialization.json.JsonPrimitive ?: return null
+        return prim.content.toBooleanStrictOrNull()
     }
 
     private fun kotlinx.serialization.json.JsonPrimitive.contentOrEmpty(): String? =

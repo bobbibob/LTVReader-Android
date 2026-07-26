@@ -46,7 +46,14 @@ class EngineRegistry(
         if (hostClientProvider() != null) {
             add(EngineInfo("remote:piper", "Piper (via remote host)", EngineInfo.EngineKind.Remote))
             add(EngineInfo("remote:chatterbox", "Chatterbox (via remote host)", EngineInfo.EngineKind.Remote))
-            add(EngineInfo("remote:qwen", "Qwen3 TTS (via remote host)", EngineInfo.EngineKind.Remote))
+            add(
+                EngineInfo(
+                    "remote:qwen",
+                    "Qwen3 TTS (via remote host)",
+                    EngineInfo.EngineKind.Remote,
+                    supportsCloning = true,
+                ),
+            )
             add(EngineInfo("remote:omnivoice", "OmniVoice (via remote host)", EngineInfo.EngineKind.Remote))
         }
     }

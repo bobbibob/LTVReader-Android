@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Any
 
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
@@ -39,6 +39,7 @@ HF_TOKEN = os.environ.get("HF_TOKEN", "")  # для приватных репо
 MODELS_DIR = Path(os.environ.get("LTV_MODELS_DIR", "./models")).resolve()
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
 MODELS_DB = MODELS_DIR / ".models.json"
+CLONES_DIR = MODELS_DIR / ".voice-clones"
 
 
 def load_models_db() -> dict:
@@ -79,6 +80,32 @@ KNOWN_TTS_MODELS = [
         "languages": ["zh", "en", "ja", "ko", "de", "fr", "ru", "pt", "es", "it"],
         "description": "Official full-size Qwen3-TTS model with instruction-controlled voices.",
         "tags": ["official", "multilingual", "custom-voice", "remote-only"],
+        "files": [],
+    },
+    {
+        "id": "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+        "name": "Qwen3 TTS 0.6B Voice Cloning",
+        "engine": "qwen",
+        "runtime": "qwen-tts",
+        "target": "remote-host",
+        "capabilities": ["voice-cloning"],
+        "size_mb": 1800,
+        "languages": ["zh", "en", "ja", "ko", "de", "fr", "ru", "pt", "es", "it"],
+        "description": "Official compact Qwen3-TTS Base model for voice cloning.",
+        "tags": ["official", "multilingual", "voice-cloning", "remote-only"],
+        "files": [],
+    },
+    {
+        "id": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+        "name": "Qwen3 TTS 1.7B Voice Cloning",
+        "engine": "qwen",
+        "runtime": "qwen-tts",
+        "target": "remote-host",
+        "capabilities": ["voice-cloning"],
+        "size_mb": 4200,
+        "languages": ["zh", "en", "ja", "ko", "de", "fr", "ru", "pt", "es", "it"],
+        "description": "Official full-size Qwen3-TTS Base model for voice cloning.",
+        "tags": ["official", "multilingual", "voice-cloning", "remote-only"],
         "files": [],
     },
 ]
@@ -130,6 +157,8 @@ def load_qwen_model(model_id: str) -> Any:
 def synthesize_qwen(body: "SynthesizeBody") -> FileResponse:
     import soundfile as sf
 
+    if body.voice.startswith("clone:"):
+        return synthesize_qwen_clone(body, body.voice.removeprefix("clone:"))
     model_id = str(body.options.get("model_id", DEFAULT_QWEN_MODEL))
     model = load_qwen_model(model_id)
     speaker = body.voice or str(body.options.get("speaker", "Ryan"))
@@ -154,6 +183,38 @@ def synthesize_qwen(body: "SynthesizeBody") -> FileResponse:
     except Exception as exc:
         log.exception("Qwen synthesis failed")
         raise HTTPException(500, f"Qwen synthesis failed: {exc}") from exc
+
+
+def clone_metadata(clone_id: str) -> tuple[dict[str, Any], Path]:
+    if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,63}", clone_id):
+        raise HTTPException(400, "Invalid clone id")
+    directory = CLONES_DIR / clone_id
+    metadata = directory / "clone.json"
+    if not metadata.is_file():
+        raise HTTPException(404, "Voice clone not found")
+    return json.loads(metadata.read_text()), directory
+
+
+def synthesize_qwen_clone(body: "SynthesizeBody", clone_id: str) -> FileResponse:
+    import soundfile as sf
+
+    metadata, directory = clone_metadata(clone_id)
+    model = load_qwen_model(metadata["model_id"])
+    try:
+        wavs, sample_rate = model.generate_voice_clone(
+            text=body.text,
+            language=body.lang or "Auto",
+            ref_audio=str(directory / metadata["audio_file"]),
+            ref_text=metadata["transcript"],
+        )
+        output_dir = MODELS_DIR / ".output"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output = output_dir / f"qwen_clone_{int(time.time() * 1000)}.wav"
+        sf.write(output, wavs[0], sample_rate)
+        return FileResponse(output, media_type="audio/wav", filename=output.name)
+    except Exception as exc:
+        log.exception("Qwen clone synthesis failed")
+        raise HTTPException(500, f"Qwen clone synthesis failed: {exc}") from exc
 
 
 # ============== API Endpoints ==============
@@ -197,7 +258,7 @@ def create_app() -> FastAPI:
     def qwen_voices() -> list[dict[str, Any]]:
         if not qwen_runtime_available():
             raise HTTPException(503, "Qwen runtime unavailable; install requirements-qwen.txt")
-        return [
+        built_in = [
             {
                 "id": speaker,
                 "display_name": speaker,
@@ -208,6 +269,76 @@ def create_app() -> FastAPI:
             }
             for speaker in QWEN_SPEAKERS
         ]
+        if CLONES_DIR.is_dir():
+            for directory in CLONES_DIR.iterdir():
+                metadata = directory / "clone.json"
+                if not metadata.is_file():
+                    continue
+                item = json.loads(metadata.read_text())
+                built_in.append({
+                    "id": f"clone:{item['id']}",
+                    "display_name": item["name"],
+                    "language": item.get("language", "multilingual"),
+                    "sample_rate": 24000,
+                    "is_cloned": True,
+                })
+        return built_in
+
+    @app.get("/voice-clones")
+    def list_voice_clones() -> list[dict[str, Any]]:
+        if not CLONES_DIR.is_dir():
+            return []
+        result = []
+        for directory in CLONES_DIR.iterdir():
+            metadata = directory / "clone.json"
+            if metadata.is_file():
+                result.append(json.loads(metadata.read_text()))
+        return sorted(result, key=lambda item: item["name"].lower())
+
+    @app.post("/voice-clones")
+    async def create_voice_clone(
+        name: str = Form(...),
+        transcript: str = Form(...),
+        language: str = Form("Auto"),
+        model_id: str = Form("Qwen/Qwen3-TTS-12Hz-0.6B-Base"),
+        audio: UploadFile = File(...),
+    ) -> dict[str, Any]:
+        model = require_supported_model(model_id)
+        if "voice-cloning" not in model.get("capabilities", []):
+            raise HTTPException(422, "Selected model does not support voice cloning")
+        if not name.strip() or not transcript.strip():
+            raise HTTPException(422, "Name and exact reference transcript are required")
+        clone_id = re.sub(r"[^a-z0-9_-]+", "-", name.lower()).strip("-")[:64]
+        if not clone_id:
+            raise HTTPException(422, "Voice name must contain letters or numbers")
+        suffix = Path(audio.filename or "reference.wav").suffix.lower()
+        if suffix not in {".wav", ".mp3", ".flac", ".m4a", ".ogg"}:
+            raise HTTPException(422, "Unsupported reference audio format")
+        CLONES_DIR.mkdir(parents=True, exist_ok=True)
+        directory = CLONES_DIR / clone_id
+        if directory.exists():
+            raise HTTPException(409, "A voice clone with this name already exists")
+        directory.mkdir()
+        audio_name = f"reference{suffix}"
+        with (directory / audio_name).open("wb") as output:
+            shutil.copyfileobj(audio.file, output)
+        metadata = {
+            "id": clone_id,
+            "name": name.strip(),
+            "transcript": transcript.strip(),
+            "language": language,
+            "model_id": model_id,
+            "audio_file": audio_name,
+            "created_at": int(time.time()),
+        }
+        (directory / "clone.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2))
+        return metadata
+
+    @app.delete("/voice-clones/{clone_id}")
+    def delete_voice_clone(clone_id: str) -> dict[str, str]:
+        _, directory = clone_metadata(clone_id)
+        shutil.rmtree(directory)
+        return {"deleted": clone_id}
 
     @app.post("/engines/qwen/preload")
     def preload_qwen(body: dict[str, Any]) -> dict[str, str]:

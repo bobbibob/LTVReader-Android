@@ -45,6 +45,7 @@ data class VoiceInfo(
     val tags: List<String> = emptyList(),
     val downloadModelId: String? = null,
     val downloadSizeBytes: Long = -1,
+    val isCloned: Boolean = false,
 )
 
 /**

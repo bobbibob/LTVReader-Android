@@ -3,6 +3,7 @@
 fastapi>=0.116,<1
 uvicorn[standard]>=0.35,<1
 pydantic>=2,<3
+python-multipart>=0.0.20,<1
 huggingface_hub>=0.24,<1
 # Базовый host не объявляет TTS-движок доступным без его runtime.
 kokoro-onnx>=0.4,<1
