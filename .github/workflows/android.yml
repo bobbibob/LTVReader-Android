@@ -123,10 +123,12 @@ jobs:
               -storepass android \
               -alias androiddebugkey |
               sed -n 's/.*SHA256: //p' |
-              tr -d ':'
+              tr -d ':' |
+              tr 'A-F' 'a-f'
           )"
           apk_sha="$(
-            apksigner verify --print-certs app/build/outputs/apk/debug/app-debug.apk |
+            "$ANDROID_HOME/build-tools/34.0.0/apksigner" \
+              verify --print-certs app/build/outputs/apk/debug/app-debug.apk |
               sed -n 's/Signer #1 certificate SHA-256 digest: //p'
           )"
           test -n "$key_sha"
