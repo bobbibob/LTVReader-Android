@@ -24,7 +24,7 @@ onnxruntime как fallback.
 Microsoft-овский движок инференса ONNX-моделей.
 
 ## WAV
-Несжатый аудиоформат. Используется как промежуточный в LTV Reader.
+Несжатый аудиоформат. Используется как промежуточный в T2V.
 
 ## MP3
 Сжатый аудиоформат. Финальный формат экспорта.
@@ -74,7 +74,7 @@ APK = Android Package. AAB = Android App Bundle (для Google Play).
 Аналог annotation processor для Kotlin. Используется Room.
 
 ## Hilt
-DI-фреймворк от Google. Не используется в LTV Reader (DI вручную через AppContainer).
+DI-фреймворк от Google. Не используется в T2V (DI вручную через AppContainer).
 
 ## WorkManager
 API для отложенных/периодических фоновых задач.
@@ -89,7 +89,7 @@ Kotlin-аналог горутин. Легковесные потоки.
 Kotlin-конструкция для иерархий типов. Используется для MarkupCommand, EngineInfo.EngineKind.
 
 ## LTV (Local Text-to-Voice)
-Внутреннее название разметки LocalText2Voice. Синтаксис `{{...}}`.
+Внутреннее название разметки T2V. Синтаксис `{{...}}`.
 
 ## Engine host
 Python-бэкенд, запускаемый на ПК. Позволяет Android использовать

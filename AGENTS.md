@@ -1,13 +1,13 @@
 # Repository Guidelines
 
-Guidelines for AI agents and human contributors working on **LTV Reader** — an Android port of [LocalText2Voice](https://github.com/estebanstifli/LocalText2Voice). Active development: **v0.1.0-alpha** (CI build #29990160060 in progress, last green: #29977084836).
+Guidelines for AI agents and human contributors working on **T2V**, a standalone Android TTS and audiobook application.
 
 ## Project Structure & Module Organization
 
 ```
 t2v/
 ├── app/                        Android-приложение (Kotlin, Compose)
-│   ├── src/main/java/com/ltvreader/
+│   ├── src/main/java/com/t2v/
 │   │   ├── core/               бизнес-логика (text, markup, audio, subtitle, normalization, project)
 │   │   ├── tts/                TTS-движки (Kokoro, OpenAI, ElevenLabs, Gemini, Azure, Custom, Remote)
 │   │   ├── data/               Room (6 DAO, 6 Entities) + DataStore Settings
@@ -60,7 +60,7 @@ CI: `.github/workflows/android.yml`. Триггер: push в main, PR, или `g
 ## Coding Style & Naming Conventions
 
 - **Kotlin**: официальный стиль JetBrains (4 пробела, без табов). Включите `ktlint` в IDE.
-- **Имена пакетов**: `com.ltvreader.<layer>.<feature>` (`com.ltvreader.tts.engines`).
+- **Имена пакетов**: `com.t2v.<layer>.<feature>` (`com.t2v.tts.engines`).
 - **Классы**: `PascalCase`. ViewModel'и — `XxxViewModel`. Sealed-иерархии — `Xxx`.
 - **Файлы**: имя совпадает с главным классом (`KokoroTtsEngine.kt`).
 - **Composable-функции**: `PascalCase` (как в Material 3).

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">LTV Reader</string>
+    <string name="app_name">T2V</string>
     <string name="nav_editor">编辑器</string>
     <string name="nav_generation">生成</string>
     <string name="nav_review">审核</string>

@@ -1,8 +1,8 @@
-# Портирование LocalText2Voice → LTV Reader (Android)
+# История архитектуры T2V
 
 ## TL;DR
 
-| Аспект | Оригинал (Windows) | LTV Reader (Android) | Статус |
+| Аспект | Предыдущая реализация | T2V (Android) | Статус |
 |---|---|---|---|
 | UI | PySide6, `QStackedWidget`, 14 190 строк | Jetpack Compose, ~3000 строк | ✅ Переписан |
 | TTS-движки локально | 5 (Piper, Kokoro, Chatterbox, Qwen3, OmniVoice) | 1 (Kokoro через ORT Android) | ⚠️ Остальные только через remote host |
@@ -59,7 +59,7 @@
 | `faster_whisper_manager.py` | Нет ctranslate2 для Android | Без верификации; ручной обзор сохранён |
 | `llm/base.py` | litellm | Без LLM-плагинов |
 | `update_manager.py` | Windows-инсталлятор | Google Play |
-| `installer/LocalText2Voice.iss` | InnoSetup | Play Console |
+| `installer/T2V.iss` | InnoSetup | Play Console |
 | `app_data/voices/` GUI-менеджер | Сложно на телефоне | Через экран Voices + скачивание |
 | 4 LTV-разметочных панели | PySide6 | Одна панель + Compose-Chip |
 | `audio_event_timeline.py` timeline (несколько клипов) | Сложный UI | Упрощённый 1 голос + 1 музыка |
@@ -112,4 +112,3 @@
 5. Улучшенный G2P для Kokoro на устройстве (сейчас ASCII-fallback).
 6. Импорт DOCX через Apache POI вместо ручного ZIP-парсера.
 7. Background downloads голосов через WorkManager.
-

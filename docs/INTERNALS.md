@@ -1,6 +1,6 @@
 # Internals
 
-Описание внутренних компонентов LTV Reader.
+Описание внутренних компонентов T2V.
 
 ## Lifecycle
 
@@ -68,7 +68,7 @@ User → Editor → save() → Room (ProjectEntity)
 ## Engine-host (Python)
 
 `server-host/engine_host.py` поднимает:
-- `engine_host.py` + `http_app.py` из исходного LocalText2Voice
+- `engine_host.py` + `http_app.py` из исходного T2V
 - дополнительный эндпоинт `/synthesize` для прямого вызова из Android
 
 Android подключается к нему по HTTP через `EngineHostClient.kt`.

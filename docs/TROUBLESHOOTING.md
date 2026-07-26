@@ -22,7 +22,7 @@
 ## Запуск
 
 ### Приложение крашится при старте
-- Проверьте `adb logcat | grep ltvreader` — там будет stacktrace.
+- Проверьте `adb logcat | grep t2v` — там будет stacktrace.
 - Убедитесь, что `LTVApplication` зарегистрирован в `AndroidManifest.xml`
   (`android:name=".app.LTVApplication"`).
 

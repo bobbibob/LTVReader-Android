@@ -1,4 +1,4 @@
-# Документация LTV Reader
+# Документация T2V
 
 Полный индекс документации.
 
@@ -40,7 +40,7 @@
 ```
 t2v/
 ├── app/                  Android-приложение
-│   ├── src/main/java/com/ltvreader/
+│   ├── src/main/java/com/t2v/
 │   │   ├── core/         бизнес-логика (text, markup, audio)
 │   │   ├── tts/          TTS-движки
 │   │   ├── data/         Room + DataStore

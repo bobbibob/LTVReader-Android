@@ -21,7 +21,7 @@ cd /path/to/t2v
 
 ```bash
 adb install -r app/build/outputs/apk/debug/app-debug.apk
-adb shell am start -n com.ltvreader.debug/com.ltvreader.ui.MainActivity
+adb shell am start -n com.t2v.debug/com.t2v.ui.MainActivity
 ```
 
 ### 4. Включить локальный Kokoro (опционально)
@@ -79,7 +79,7 @@ Android (нужен эмулятор или устройство):
 ```
 t2v/
 ├── app/                          # Android-приложение
-│   ├── src/main/java/com/ltvreader/
+│   ├── src/main/java/com/t2v/
 │   │   ├── core/                 # бизнес-логика (text, markup, audio)
 │   │   ├── tts/                  # TTS-движки
 │   │   ├── data/                 # Room, DataStore

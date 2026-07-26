@@ -35,7 +35,7 @@ TTS зависит от движка:
 ## Q: Где хранятся сгенерированные файлы?
 
 ```
-/data/data/com.ltvreader/files/audiobooks/<id>/
+/data/data/com.t2v/files/audiobooks/<id>/
   ├── seg_00000.wav
   ├── seg_00001.wav
   ├── ...
@@ -47,7 +47,7 @@ TTS зависит от движка:
 
 ## Q: Как добавить новый TTS-движок?
 
-1. Создайте класс в `app/src/main/java/com/ltvreader/tts/engines/MyEngine.kt`,
+1. Создайте класс в `app/src/main/java/com/t2v/tts/engines/MyEngine.kt`,
    реализующий `TtsEngine`.
 2. Зарегистрируйте в `EngineRegistry.createEngine()`.
 3. Добавьте `EngineInfo` в `EngineRegistry.allEngineInfos()`.

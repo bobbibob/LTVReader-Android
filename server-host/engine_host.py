@@ -1,4 +1,4 @@
-"""LocalText2Voice Android companion — engine host.
+"""T2V Android companion — engine host.
 
 Endpoints:
   GET  /info
@@ -422,7 +422,7 @@ def create_app() -> FastAPI:
     @app.get("/info")
     def info() -> dict[str, Any]:
         return {
-            "name": "LocalText2Voice Android Host",
+            "name": "T2V Android Host",
             "version": "1.2.1",
             "models_dir": str(MODELS_DIR),
             "known_models": [m["id"] for m in KNOWN_TTS_MODELS],

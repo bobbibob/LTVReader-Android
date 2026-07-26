@@ -1,10 +1,8 @@
-# LTV Reader — server-host (Python)
+# T2V — server-host (Python)
 
 Это **опциональный** сервер, который запускается на ПК или домашнем сервере.
-Он поднимает тот же `engine_host.py` + `http_app.py`, что и в исходном
-[LocalText2Voice](https://github.com/estebanstifli/LocalText2Voice), и
-добавляет упрощённый эндпоинт `/synthesize` для прямого вызова из
-Android-клиента без очереди задач.
+Он предоставляет каталог совместимых моделей и эндпоинт `/synthesize`
+для прямого вызова из Android-клиента.
 
 ## Зачем
 
@@ -25,7 +23,7 @@ python engine_host.py --port 8765 --allow-lan
 
 ## Использование из Android
 
-В LTV Reader → Settings → Remote host:
+В T2V → Settings → Remote host:
 - URL: `http://192.168.1.10:8765` (IP вашего ПК)
 - Enable: ✓
 

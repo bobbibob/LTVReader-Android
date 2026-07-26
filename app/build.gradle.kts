@@ -9,11 +9,11 @@ plugins {
 }
 
 android {
-    namespace = "com.ltvreader"
+    namespace = "com.t2v"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.ltvreader"
+        applicationId = "com.t2v"
         minSdk = 24
         targetSdk = 34
         versionCode = 1

@@ -1,4 +1,4 @@
-# LTV Reader — итоговая сводка
+# T2V — итоговая сводка
 
 ## Что сделано
 
@@ -64,5 +64,5 @@
 - GitHub Issues: баги и фичи
 - Discussions: вопросы
 - Discord: (планируется)
-- Twitter/X: @ltvreader (планируется)
+- Twitter/X: @t2v (планируется)
 

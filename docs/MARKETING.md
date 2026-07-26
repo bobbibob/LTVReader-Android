@@ -26,7 +26,7 @@
 
 ## ASO (App Store Optimization)
 
-**Название**: LTV Reader — Text to Voice & Audiobook
+**Название**: T2V — Text to Voice & Audiobook
 
 **Короткое описание (80 символов)**:
 Long text to MP3 audiobook with 5+ TTS engines, LTV markup, music mix.

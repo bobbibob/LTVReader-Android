@@ -1,6 +1,6 @@
 # Сравнение с конкурентами
 
-| Функция | LTV Reader | @Voice Aloud | TTS Reader | Speechify | NaturalReader | Voice Dream |
+| Функция | T2V | @Voice Aloud | TTS Reader | Speechify | NaturalReader | Voice Dream |
 |---|---|---|---|---|---|---|
 | **Платформа** | Android | Android | Android | iOS+Android | iOS+Android | iOS |
 | **Цена** | Бесплатно, open-source | Freemium | Freemium | $12.99/мес | $9.99/мес | $4.99/мес |
@@ -19,7 +19,7 @@
 | **Открытый код** | ✅ MIT | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Размер APK** | < 10 МБ | ~ 50 МБ | ~ 30 МБ | ~ 80 МБ | ~ 100 МБ | ~ 100 МБ |
 
-## Где LTV Reader выигрывает
+## Где T2V выигрывает
 
 1. **Бесплатность**: open-source, без подписки, без рекламы.
 2. **Приватность**: on-device Kokoro, ваши тексты не уходят в облако.

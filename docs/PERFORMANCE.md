@@ -32,19 +32,19 @@
 ## Профилирование
 
 ### Android Studio Profiler
-- CPU: вкладка CPU, выбрать `com.ltvreader`, посмотреть hot methods.
+- CPU: вкладка CPU, выбрать `com.t2v`, посмотреть hot methods.
 - Memory: проверка утечек через LeakCanary.
 - Network: посмотреть запросы к API.
 
 ### ADB
 ```bash
 # Логи
-adb logcat -s ltvreader:V LTVPipeline:V
+adb logcat -s t2v:V LTVPipeline:V
 
 # Профилирование
-adb shell am profile start com.ltvreader.debug /data/local/tmp/ltv.trace
+adb shell am profile start com.t2v.debug /data/local/tmp/ltv.trace
 # (выполнить сценарий)
-adb shell am profile stop com.ltvreader.debug
+adb shell am profile stop com.t2v.debug
 adb pull /data/local/tmp/ltv.trace
 ```
 

@@ -1,15 +1,11 @@
-# LTV Reader — Android-порт LocalText2Voice
+# T2V
 
-Android-клиент для длинных TTS-аудиокниг и подкастов.
+Самостоятельное Android-приложение для создания длинных TTS-аудиокниг,
+озвучки и подкастов. Написано на Kotlin и Jetpack Compose.
 
-Это порт-форка [bobbibob/Text2Voice](https://github.com/bobbibob/Text2Voice) (он же
-[estebanstifli/LocalText2Voice](https://github.com/estebanstifli/LocalText2Voice),
-v1.2.1). Оригинал — Windows-десктоп на PySide6. Здесь — нативное Android-приложение
-на Kotlin + Jetpack Compose.
-
-## Что сохранено
+## Возможности
 - LTV-разметка (`{{voice "..."}}`, `{{pause 700ms}}`, `{{lang es}}` и т.д.) — парсер
-  портирован 1:1, поведение и регулярки совпадают.
+  для точного управления озвучкой.
 - Алгоритм текст-процессора: детекция глав, разбиение на чанки, безопасные
   границы предложений/параграфов, рандомизированные паузы.
 - Модель данных `Project / Audiobook / Segment / VoiceConfig / StoredSegment` —
@@ -18,14 +14,14 @@ v1.2.1). Оригинал — Windows-десктоп на PySide6. Здесь �
 - Eleven одинаковых локалей.
 - Каталог голосов, раздел «Стили», галерея голосов, импорт DOCX/TXT/MD.
 
-## Что изменилось
-- UI: вместо `QStackedWidget` (14 190 строк) — Jetpack Compose с Material 3.
-- TTS: вместо Windows-процессов — встроенный **Kokoro** (onnxruntime-android, NNAPI)
+## Архитектура
+- UI: Jetpack Compose с Material 3.
+- TTS: локальные Android-runtime
   + облачные API (OpenAI / ElevenLabs / Gemini / Azure / Custom HTTP). Движки
   Chatterbox / Qwen3 / OmniVoice / Piper — **только через удалённый engine-host**
   (см. ниже).
 - FFmpeg: `ffmpeg-kit` вместо `ffmpeg.exe`.
-- HTTP/MCP-сервер: убран из приложения. Вместо него — опциональный **remote host**
+- Для тяжёлых моделей используется опциональный **engine-host**
   в `/server-host` (Python), к которому Android подключается по Wi-Fi.
 
 ## Архитектура

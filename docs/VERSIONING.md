@@ -1,6 +1,6 @@
 # Версионирование
 
-LTV Reader следует [Semantic Versioning](https://semver.org/).
+T2V следует [Semantic Versioning](https://semver.org/).
 
 ## Формат
 

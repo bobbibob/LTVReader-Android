@@ -31,6 +31,6 @@ API-ключи хранятся в `SharedPreferences`. **Не включайт�
 
 ## Reporting vulnerabilities
 
-Нашли уязвимость? Пишите на security@ltvreader.example.com
+Нашли уязвимость? Пишите на security@t2v.example.com
 (замените на реальный адрес при публикации).
 
