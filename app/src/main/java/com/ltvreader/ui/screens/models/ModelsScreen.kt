@@ -102,42 +102,46 @@ fun ModelsScreen(
                     }
                 }
             }
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                onClick = vm::openRemoteVariants,
-            ) {
-                Column(
-                    modifier = Modifier.padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+            Text("Verified engine-host models", style = MaterialTheme.typography.titleMedium)
+            REMOTE_MODEL_FAMILIES.forEach { family ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { vm.openRemoteVariants(family) },
                 ) {
-                    Text("Qwen3-TTS", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        "4 verified variants • 1.8–4.2 GB • installed on engine-host",
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Text(
-                        if (state.remoteHostUrl.isBlank()) {
-                            "Set the engine-host address in Settings before downloading"
-                        } else {
-                            "Host: ${state.remoteHostUrl}"
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Button(
-                        onClick = vm::openRemoteVariants,
-                        enabled = state.remoteDownloadingId.isBlank(),
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        Text("Choose variant")
+                        Text(family.name, style = MaterialTheme.typography.titleMedium)
+                        Text(family.description, style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            "${family.variants.size} variant(s) • installed on engine-host",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Button(
+                            onClick = { vm.openRemoteVariants(family) },
+                            enabled = state.remoteDownloadingId.isBlank(),
+                        ) {
+                            Text("Choose variant")
+                        }
                     }
                 }
             }
+            Text(
+                if (state.remoteHostUrl.isBlank()) {
+                    "Set the engine-host address in Settings before downloading"
+                } else {
+                    "Host: ${state.remoteHostUrl}"
+                },
+                style = MaterialTheme.typography.bodySmall,
+            )
 
             state.error?.let {
                 Text(it, color = MaterialTheme.colorScheme.error)
             }
-            if (state.remoteVariantDialog) {
+            state.remoteVariantFamily?.let { family ->
                 RemoteVariantDialog(
-                    variants = QWEN_REMOTE_VARIANTS,
+                    family = family,
                     installed = state.remoteInstalled,
                     downloadingId = state.remoteDownloadingId,
                     onDismiss = vm::closeRemoteVariants,
@@ -189,52 +193,60 @@ data class RemoteModelVariant(
     val label: String,
     val capability: String,
     val sizeBytes: Long,
+    val license: String,
 )
 
-private val QWEN_REMOTE_VARIANTS = listOf(
-    RemoteModelVariant(
-        "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice",
-        "Qwen3-TTS 0.6B",
-        "9 built-in voices",
-        1_800L * 1024 * 1024,
+data class RemoteModelFamily(
+    val name: String,
+    val description: String,
+    val variants: List<RemoteModelVariant>,
+)
+
+private val REMOTE_MODEL_FAMILIES = listOf(
+    RemoteModelFamily(
+        "Qwen3-TTS",
+        "Multilingual voices, instruction control and voice cloning.",
+        listOf(
+            RemoteModelVariant("Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice", "Qwen3-TTS 0.6B", "9 built-in voices", 1_800L * 1024 * 1024, "Apache-2.0"),
+            RemoteModelVariant("Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice", "Qwen3-TTS 1.7B", "9 voices + instruction control", 4_200L * 1024 * 1024, "Apache-2.0"),
+            RemoteModelVariant("Qwen/Qwen3-TTS-12Hz-0.6B-Base", "Qwen3-TTS Base 0.6B", "Voice cloning", 1_800L * 1024 * 1024, "Apache-2.0"),
+            RemoteModelVariant("Qwen/Qwen3-TTS-12Hz-1.7B-Base", "Qwen3-TTS Base 1.7B", "Voice cloning, higher quality", 4_200L * 1024 * 1024, "Apache-2.0"),
+        ),
     ),
-    RemoteModelVariant(
-        "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
-        "Qwen3-TTS 1.7B",
-        "9 voices + instruction control",
-        4_200L * 1024 * 1024,
+    RemoteModelFamily(
+        "Meta MMS-TTS",
+        "Compact single-language VITS models. Non-commercial model license.",
+        listOf(
+            RemoteModelVariant("facebook/mms-tts-rus", "MMS-TTS Russian", "Russian • compact CPU model", 145L * 1024 * 1024, "CC-BY-NC-4.0"),
+            RemoteModelVariant("facebook/mms-tts-eng", "MMS-TTS English", "English • compact CPU model", 145L * 1024 * 1024, "CC-BY-NC-4.0"),
+        ),
     ),
-    RemoteModelVariant(
-        "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
-        "Qwen3-TTS Base 0.6B",
-        "Voice cloning",
-        1_800L * 1024 * 1024,
-    ),
-    RemoteModelVariant(
-        "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
-        "Qwen3-TTS Base 1.7B",
-        "Voice cloning, higher quality",
-        4_200L * 1024 * 1024,
+    RemoteModelFamily(
+        "Chatterbox",
+        "Expressive English speech, paralinguistic tags and voice cloning.",
+        listOf(
+            RemoteModelVariant("ResembleAI/chatterbox-turbo", "Chatterbox Turbo 350M", "English • voice cloning • lower latency", 4_040L * 1024 * 1024, "MIT"),
+        ),
     ),
 )
 
 @Composable
 private fun RemoteVariantDialog(
-    variants: List<RemoteModelVariant>,
+    family: RemoteModelFamily,
     installed: Set<String>,
     downloadingId: String,
     onDismiss: () -> Unit,
     onDownload: (RemoteModelVariant) -> Unit,
 ) {
     var selected by androidx.compose.runtime.remember {
-        androidx.compose.runtime.mutableStateOf(variants.first())
+        androidx.compose.runtime.mutableStateOf(family.variants.first())
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Choose Qwen3-TTS variant") },
+        title = { Text("Choose ${family.name} variant") },
         text = {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                items(variants, key = { it.id }) { variant ->
+                items(family.variants, key = { it.id }) { variant ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         onClick = { selected = variant },
@@ -253,6 +265,7 @@ private fun RemoteVariantDialog(
                                     "${variant.capability} • ${formatBytes(variant.sizeBytes)}",
                                     style = MaterialTheme.typography.bodySmall,
                                 )
+                                Text("License: ${variant.license}", style = MaterialTheme.typography.labelSmall)
                                 Text(variant.id, style = MaterialTheme.typography.labelSmall)
                             }
                             if (variant.id in installed) {
@@ -447,7 +460,7 @@ data class ModelsState(
     val remoteHostUrl: String = "",
     val remoteInstalled: Set<String> = emptySet(),
     val remoteDownloadingId: String = "",
-    val remoteVariantDialog: Boolean = false,
+    val remoteVariantFamily: RemoteModelFamily? = null,
 )
 
 class ModelsViewModel(private val context: android.content.Context) : ViewModel() {
@@ -478,14 +491,14 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
         }
     }
 
-    fun openRemoteVariants() {
-        _state.update { it.copy(remoteVariantDialog = true, error = null) }
+    fun openRemoteVariants(family: RemoteModelFamily) {
+        _state.update { it.copy(remoteVariantFamily = family, error = null) }
         refreshRemoteInstalled()
     }
 
     fun closeRemoteVariants() {
         if (_state.value.remoteDownloadingId.isBlank()) {
-            _state.update { it.copy(remoteVariantDialog = false) }
+            _state.update { it.copy(remoteVariantFamily = null) }
         }
     }
 

@@ -46,6 +46,7 @@ class EngineRegistry(
         if (hostClientProvider() != null) {
             add(EngineInfo("remote:piper", "Piper (via remote host)", EngineInfo.EngineKind.Remote))
             add(EngineInfo("remote:chatterbox", "Chatterbox (via remote host)", EngineInfo.EngineKind.Remote))
+            add(EngineInfo("remote:mms", "Meta MMS-TTS (via remote host)", EngineInfo.EngineKind.Remote))
             add(
                 EngineInfo(
                     "remote:qwen",
@@ -118,6 +119,7 @@ class EngineRegistry(
             )
             "remote:piper" -> hostClient?.let { RemoteHostTtsEngine(it, "piper", "Piper (via remote host)") }
             "remote:chatterbox" -> hostClient?.let { RemoteHostTtsEngine(it, "chatterbox", "Chatterbox (via remote host)") }
+            "remote:mms" -> hostClient?.let { RemoteHostTtsEngine(it, "mms", "Meta MMS-TTS (via remote host)") }
             "remote:qwen" -> hostClient?.let { RemoteHostTtsEngine(it, "qwen", "Qwen3 TTS (via remote host)") }
             "remote:omnivoice" -> hostClient?.let { RemoteHostTtsEngine(it, "omnivoice", "OmniVoice (via remote host)") }
             else -> null

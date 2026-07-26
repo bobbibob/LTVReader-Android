@@ -38,6 +38,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 HF_TOKEN = os.environ.get("HF_TOKEN", "")  # для приватных репо
 MODELS_DIR = Path(os.environ.get("LTV_MODELS_DIR", "./models")).resolve()
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
+os.environ.setdefault("HF_HOME", str(MODELS_DIR / ".hf-cache"))
 MODELS_DB = MODELS_DIR / ".models.json"
 CLONES_DIR = MODELS_DIR / ".voice-clones"
 
@@ -108,11 +109,52 @@ KNOWN_TTS_MODELS = [
         "tags": ["official", "multilingual", "voice-cloning", "remote-only"],
         "files": [],
     },
+    {
+        "id": "facebook/mms-tts-rus",
+        "name": "Meta MMS-TTS Russian",
+        "engine": "mms",
+        "runtime": "transformers",
+        "target": "remote-host",
+        "size_mb": 145,
+        "languages": ["ru"],
+        "description": "Compact Russian VITS checkpoint from Meta MMS.",
+        "tags": ["official", "russian", "single-voice", "remote-only", "non-commercial"],
+        "license": "CC-BY-NC-4.0",
+        "files": [],
+    },
+    {
+        "id": "facebook/mms-tts-eng",
+        "name": "Meta MMS-TTS English",
+        "engine": "mms",
+        "runtime": "transformers",
+        "target": "remote-host",
+        "size_mb": 145,
+        "languages": ["en"],
+        "description": "Compact English VITS checkpoint from Meta MMS.",
+        "tags": ["official", "english", "single-voice", "remote-only", "non-commercial"],
+        "license": "CC-BY-NC-4.0",
+        "files": [],
+    },
+    {
+        "id": "ResembleAI/chatterbox-turbo",
+        "name": "Chatterbox Turbo",
+        "engine": "chatterbox",
+        "runtime": "chatterbox-tts",
+        "target": "remote-host",
+        "size_mb": 4040,
+        "languages": ["en"],
+        "description": "Official 350M low-latency model with paralinguistic tags and voice cloning.",
+        "tags": ["official", "english", "voice-cloning", "remote-only"],
+        "license": "MIT",
+        "files": [],
+    },
 ]
 MODEL_CATALOG = {model["id"]: model for model in KNOWN_TTS_MODELS}
 DEFAULT_QWEN_MODEL = "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice"
 QWEN_SPEAKERS = ["Vivian", "Serena", "Uncle_Fu", "Dylan", "Eric", "Ryan", "Aiden", "Ono_Anna", "Sohee"]
 _qwen_models: dict[str, Any] = {}
+_mms_models: dict[str, Any] = {}
+_chatterbox_models: dict[str, Any] = {}
 _music_models: dict[str, Any] = {}
 MUSIC_MODELS = [
     {
@@ -146,6 +188,71 @@ def require_supported_model(repo_id: str) -> dict[str, Any]:
 
 def qwen_runtime_available() -> bool:
     return importlib.util.find_spec("qwen_tts") is not None
+
+
+def transformers_runtime_available() -> bool:
+    return importlib.util.find_spec("transformers") is not None
+
+
+def chatterbox_runtime_available() -> bool:
+    return importlib.util.find_spec("chatterbox") is not None
+
+
+def local_model_source(model_id: str) -> str:
+    directory = MODELS_DIR / model_id.replace("/", "_")
+    return str(directory) if directory.is_dir() and any(directory.iterdir()) else model_id
+
+
+def synthesize_mms(body: "SynthesizeBody") -> FileResponse:
+    model_id = str(body.options.get("model_id") or body.voice or "facebook/mms-tts-rus")
+    info = require_supported_model(model_id)
+    if info["engine"] != "mms":
+        raise HTTPException(422, "Selected model is not an MMS-TTS model")
+    if not transformers_runtime_available():
+        raise HTTPException(503, "MMS runtime unavailable; install requirements-extra-tts.txt")
+    import torch
+    import soundfile as sf
+    from transformers import AutoTokenizer, VitsModel
+
+    cached = _mms_models.get(model_id)
+    if cached is None:
+        source = local_model_source(model_id)
+        cached = (AutoTokenizer.from_pretrained(source), VitsModel.from_pretrained(source))
+        _mms_models[model_id] = cached
+    tokenizer, model = cached
+    inputs = tokenizer(body.text, return_tensors="pt")
+    with torch.no_grad():
+        waveform = model(**inputs).waveform.squeeze().cpu().numpy()
+    output_dir = MODELS_DIR / ".output"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output = output_dir / f"mms_{int(time.time() * 1000)}.wav"
+    sf.write(output, waveform, model.config.sampling_rate)
+    return FileResponse(output, media_type="audio/wav", filename=output.name)
+
+
+def synthesize_chatterbox(body: "SynthesizeBody") -> FileResponse:
+    model_id = str(body.options.get("model_id") or "ResembleAI/chatterbox-turbo")
+    info = require_supported_model(model_id)
+    if info["engine"] != "chatterbox":
+        raise HTTPException(422, "Selected model is not a Chatterbox model")
+    if not chatterbox_runtime_available():
+        raise HTTPException(503, "Chatterbox runtime unavailable; install requirements-extra-tts.txt")
+    import torch
+    import soundfile as sf
+    from chatterbox.tts_turbo import ChatterboxTurboTTS
+
+    model = _chatterbox_models.get(model_id)
+    if model is None:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model = ChatterboxTurboTTS.from_pretrained(device=device)
+        _chatterbox_models[model_id] = model
+    audio_prompt = body.options.get("audio_prompt_path")
+    waveform = model.generate(body.text, audio_prompt_path=audio_prompt or None)
+    output_dir = MODELS_DIR / ".output"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output = output_dir / f"chatterbox_{int(time.time() * 1000)}.wav"
+    sf.write(output, waveform.squeeze().cpu().numpy(), model.sr)
+    return FileResponse(output, media_type="audio/wav", filename=output.name)
 
 
 def generate_stable_audio(body: "MusicGenerateBody", seconds: int) -> tuple[Any, int]:
@@ -321,6 +428,8 @@ def create_app() -> FastAPI:
             "known_models": [m["id"] for m in KNOWN_TTS_MODELS],
             "capabilities": {
                 "qwen_tts": qwen_runtime_available(),
+                "mms_tts": transformers_runtime_available(),
+                "chatterbox_tts": chatterbox_runtime_available(),
                 "ollama_tts": False,
                 "arbitrary_huggingface_models": False,
                 "music_generation": importlib.util.find_spec("diffusers") is not None,
@@ -330,7 +439,40 @@ def create_app() -> FastAPI:
 
     @app.get("/engines")
     def engines() -> list[str]:
-        return ["qwen"] if qwen_runtime_available() else []
+        result = []
+        if qwen_runtime_available():
+            result.append("qwen")
+        if transformers_runtime_available():
+            result.append("mms")
+        if chatterbox_runtime_available():
+            result.append("chatterbox")
+        return result
+
+    @app.get("/engines/mms/voices")
+    def mms_voices() -> list[dict[str, Any]]:
+        return [
+            {
+                "id": model["id"],
+                "display_name": model["name"],
+                "language": model["languages"][0],
+                "sample_rate": 16000,
+                "download_model_id": model["id"],
+                "download_size_bytes": model["size_mb"] * 1024 * 1024,
+            }
+            for model in KNOWN_TTS_MODELS if model["engine"] == "mms"
+        ]
+
+    @app.get("/engines/chatterbox/voices")
+    def chatterbox_voices() -> list[dict[str, Any]]:
+        model = MODEL_CATALOG["ResembleAI/chatterbox-turbo"]
+        return [{
+            "id": "default",
+            "display_name": "Chatterbox Turbo",
+            "language": "en",
+            "sample_rate": 24000,
+            "download_model_id": model["id"],
+            "download_size_bytes": model["size_mb"] * 1024 * 1024,
+        }]
 
     @app.get("/engines/qwen/voices")
     def qwen_voices() -> list[dict[str, Any]]:
@@ -430,6 +572,32 @@ def create_app() -> FastAPI:
         _qwen_models.clear()
         return {"status": "unloaded"}
 
+    @app.post("/engines/mms/preload")
+    def preload_mms(body: dict[str, Any]) -> dict[str, str]:
+        model_id = str(body.get("options", {}).get("model_id", "facebook/mms-tts-rus"))
+        info = require_supported_model(model_id)
+        if info["engine"] != "mms":
+            raise HTTPException(422, "Selected model is not an MMS-TTS model")
+        return {"status": "ready", "model_id": model_id}
+
+    @app.post("/engines/mms/unload")
+    def unload_mms() -> dict[str, str]:
+        _mms_models.clear()
+        return {"status": "unloaded"}
+
+    @app.post("/engines/chatterbox/preload")
+    def preload_chatterbox(body: dict[str, Any]) -> dict[str, str]:
+        model_id = str(body.get("options", {}).get("model_id", "ResembleAI/chatterbox-turbo"))
+        info = require_supported_model(model_id)
+        if info["engine"] != "chatterbox":
+            raise HTTPException(422, "Selected model is not a Chatterbox model")
+        return {"status": "ready", "model_id": model_id}
+
+    @app.post("/engines/chatterbox/unload")
+    def unload_chatterbox() -> dict[str, str]:
+        _chatterbox_models.clear()
+        return {"status": "unloaded"}
+
     # --- Каталог моделей ---
     @app.get("/models")
     def list_models() -> dict[str, Any]:
@@ -523,6 +691,18 @@ def create_app() -> FastAPI:
                     )
                     downloaded.append({"name": fname, "size": os.path.getsize(path)})
                 return {"repo_id": repo_id, "downloaded": downloaded, "path": str(model_dir)}
+            elif model_info["engine"] == "chatterbox":
+                path = snapshot_download(
+                    repo_id=repo_id,
+                    cache_dir=os.environ["HF_HOME"],
+                    token=HF_TOKEN or None,
+                )
+                (model_dir / ".downloaded").write_text(path)
+                return {
+                    "repo_id": repo_id,
+                    "path": path,
+                    "files": [{"name": ".downloaded", "size": 0}],
+                }
             else:
                 # Скачать все файлы (snapshot)
                 log.info("snapshot_download %s to %s", repo_id, model_dir)
@@ -588,6 +768,10 @@ def create_app() -> FastAPI:
     def synthesize(body: SynthesizeBody) -> FileResponse:
         if body.engine_id == "qwen":
             return synthesize_qwen(body)
+        if body.engine_id == "mms":
+            return synthesize_mms(body)
+        if body.engine_id == "chatterbox":
+            return synthesize_chatterbox(body)
 
         from app.core.settings_manager import SettingsManager
         from app.tts.registry import TTS_ENGINES
