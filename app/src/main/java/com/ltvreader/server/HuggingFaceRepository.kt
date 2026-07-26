@@ -1,5 +1,8 @@
 package com.ltvreader.server
 
+import android.content.Context
+import android.net.Uri
+import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -24,7 +27,9 @@ import kotlin.coroutines.coroutineContext
  * the original repository id because filesystem-safe directory names are hashes.
  */
 class HuggingFaceRepository(
+    private val context: Context,
     private val modelsRoot: File,
+    private val modelsTreeUri: String = "",
     private val token: String = "",
 ) {
     data class ModelFile(
@@ -33,6 +38,9 @@ class HuggingFaceRepository(
     ) {
         val isTtsArtifact: Boolean
             get() = path.substringAfterLast('.').lowercase() in SUPPORTED_EXTENSIONS
+
+        val quantization: String
+            get() = QUANTIZATION.find(path.uppercase())?.value ?: "Original"
     }
 
     data class Model(
@@ -47,11 +55,35 @@ class HuggingFaceRepository(
 
         val compatibleFiles: List<ModelFile>
             get() = files.filter { it.isTtsArtifact }
+
+        val variants: List<ModelVariant>
+            get() = compatibleFiles
+                .filter { it.path.substringAfterLast('.').lowercase() in WEIGHT_EXTENSIONS }
+                .map { file ->
+                    ModelVariant(
+                        id = file.path,
+                        label = file.path.substringAfterLast('/'),
+                        format = file.path.substringAfterLast('.').uppercase(),
+                        quantization = file.quantization,
+                        sizeBytes = file.sizeBytes,
+                        weightFile = file,
+                    )
+                }
+                .sortedBy { it.sizeBytes.takeIf { size -> size > 0 } ?: Long.MAX_VALUE }
     }
+
+    data class ModelVariant(
+        val id: String,
+        val label: String,
+        val format: String,
+        val quantization: String,
+        val sizeBytes: Long,
+        val weightFile: ModelFile,
+    )
 
     data class InstalledModel(
         val id: String,
-        val directory: File,
+        val location: String,
         val filesCount: Int,
         val totalSizeBytes: Long,
     )
@@ -103,13 +135,22 @@ class HuggingFaceRepository(
 
     suspend fun install(
         model: Model,
-        files: List<ModelFile> = model.compatibleFiles,
+        variant: ModelVariant,
         onProgress: (downloaded: Long, total: Long) -> Unit = { _, _ -> },
     ): InstalledModel = withContext(Dispatchers.IO) {
         require(model.id in VERIFIED_ANDROID_MODELS) {
             "Model ${model.id} is not verified for execution on Android"
         }
-        require(files.isNotEmpty()) { "No supported TTS model files found in ${model.id}" }
+        require(variant in model.variants) { "Variant does not belong to ${model.id}" }
+        val files = buildList {
+            add(variant.weightFile)
+            addAll(
+                model.compatibleFiles.filter {
+                    it != variant.weightFile &&
+                        it.path.substringAfterLast('.').lowercase() in SUPPORT_FILE_EXTENSIONS
+                },
+            )
+        }.distinctBy { it.path }
         val directory = directoryFor(model.id)
         directory.mkdirs()
         val knownTotal = files.map { it.sizeBytes }.filter { it > 0 }.sum()
@@ -157,7 +198,13 @@ class HuggingFaceRepository(
                 }
             }
             writeManifest(directory, model.id)
-            installedModel(directory) ?: error("Cannot read installed model")
+            if (modelsTreeUri.isNotBlank()) {
+                val installed = copyToDocumentTree(directory, model.id)
+                directory.deleteRecursively()
+                installed
+            } else {
+                installedModel(directory) ?: error("Cannot read installed model")
+            }
         } catch (error: Throwable) {
             directory.walkTopDown()
                 .filter { it.isFile && it.name.endsWith(".part") }
@@ -167,6 +214,12 @@ class HuggingFaceRepository(
     }
 
     fun installed(): List<InstalledModel> {
+        documentRoot()?.let { root ->
+            return root.listFiles()
+                .filter { it.isDirectory }
+                .mapNotNull(::installedDocumentModel)
+                .sortedBy { it.id.lowercase() }
+        }
         if (!modelsRoot.isDirectory) return emptyList()
         return modelsRoot.listFiles()
             .orEmpty()
@@ -176,6 +229,10 @@ class HuggingFaceRepository(
     }
 
     fun delete(modelId: String): Boolean {
+        documentRoot()?.let { root ->
+            val hash = sha256(modelId).take(24)
+            return root.findFile(hash)?.delete() == true
+        }
         val directory = directoryFor(modelId)
         return directory.exists() && directory.deleteRecursively()
     }
@@ -217,7 +274,62 @@ class HuggingFaceRepository(
         }.getOrNull() ?: return null
         val id = obj.string("id") ?: return null
         val files = directory.walkTopDown().filter { it.isFile && it.name != MANIFEST }.toList()
-        return InstalledModel(id, directory, files.size, files.sumOf { it.length() })
+        return InstalledModel(id, directory.absolutePath, files.size, files.sumOf { it.length() })
+    }
+
+    private fun documentRoot(): DocumentFile? =
+        modelsTreeUri.takeIf { it.isNotBlank() }
+            ?.let(Uri::parse)
+            ?.let { DocumentFile.fromTreeUri(context, it) }
+            ?.takeIf { it.canRead() && it.canWrite() }
+
+    private fun copyToDocumentTree(source: File, modelId: String): InstalledModel {
+        val root = documentRoot() ?: error("Selected models folder is not writable")
+        val name = sha256(modelId).take(24)
+        root.findFile(name)?.delete()
+        val destination = root.createDirectory(name)
+            ?: error("Cannot create model folder in selected location")
+        source.listFiles().orEmpty().forEach { copyDocument(it, destination) }
+        return installedDocumentModel(destination) ?: error("Cannot verify copied model")
+    }
+
+    private fun copyDocument(source: File, destination: DocumentFile) {
+        if (source.isDirectory) {
+            val child = destination.createDirectory(source.name)
+                ?: error("Cannot create ${source.name}")
+            source.listFiles().orEmpty().forEach { copyDocument(it, child) }
+            return
+        }
+        val mime = if (source.name.endsWith(".json")) "application/json" else "application/octet-stream"
+        val output = destination.createFile(mime, source.name)
+            ?: error("Cannot create ${source.name}")
+        context.contentResolver.openOutputStream(output.uri, "w").use { stream ->
+            requireNotNull(stream) { "Cannot open ${source.name}" }
+            source.inputStream().use { input -> input.copyTo(stream, 128 * 1024) }
+        }
+    }
+
+    private fun installedDocumentModel(directory: DocumentFile): InstalledModel? {
+        val manifest = directory.findFile(MANIFEST) ?: return null
+        val text = context.contentResolver.openInputStream(manifest.uri)
+            ?.bufferedReader()
+            ?.use { it.readText() }
+            ?: return null
+        val obj = runCatching { json.parseToJsonElement(text) as JsonObject }.getOrNull() ?: return null
+        val id = obj.string("id") ?: return null
+        val files = documentFiles(directory).filter { it.name != MANIFEST }.toList()
+        return InstalledModel(
+            id = id,
+            location = directory.uri.toString(),
+            filesCount = files.size,
+            totalSizeBytes = files.sumOf { it.length() },
+        )
+    }
+
+    private fun documentFiles(root: DocumentFile): Sequence<DocumentFile> = sequence {
+        for (child in root.listFiles()) {
+            if (child.isDirectory) yieldAll(documentFiles(child)) else yield(child)
+        }
     }
 
     private fun writeManifest(directory: File, id: String) {
@@ -263,7 +375,12 @@ class HuggingFaceRepository(
         private val VERIFIED_ANDROID_MODELS: Set<String> = emptySet()
         private val SUPPORTED_EXTENSIONS = setOf(
             "onnx", "bin", "json", "txt", "model", "safetensors", "pt", "pth",
-            "yaml", "yml", "tokens", "vocab", "config",
+            "yaml", "yml", "tokens", "vocab", "config", "gguf",
+        )
+        private val WEIGHT_EXTENSIONS = setOf("onnx", "safetensors", "pt", "pth", "gguf")
+        private val SUPPORT_FILE_EXTENSIONS = SUPPORTED_EXTENSIONS - WEIGHT_EXTENSIONS
+        private val QUANTIZATION = Regex(
+            """(?:^|[._-])(F32|F16|BF16|Q[2-8](?:_[0-9])?(?:_[KMLS]+)?|IQ[1-4](?:_[A-Z]+)?)(?:[._-]|$)""",
         )
     }
 }

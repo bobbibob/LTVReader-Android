@@ -1,5 +1,8 @@
 package com.ltvreader.ui.screens.models
 
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,6 +17,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -21,6 +25,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -55,6 +60,16 @@ fun ModelsScreen(
     vm: ModelsViewModel = viewModel(factory = ModelsViewModelFactory(LocalContext.current)),
 ) {
     val state by vm.state.collectAsState()
+    val context = LocalContext.current
+    val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) {
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+            )
+            vm.setModelsFolder(uri.toString())
+        }
+    }
     LTVScaffold(
         nav = nav,
         title = stringResource(R.string.nav_models),
@@ -67,6 +82,24 @@ fun ModelsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text("Models folder", style = MaterialTheme.typography.labelLarge)
+                    Text(
+                        state.modelsTreeUri.ifBlank { "Internal app storage" },
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    OutlinedButton(
+                        enabled = state.downloadingId.isBlank(),
+                        onClick = { folderPicker.launch(null) },
+                    ) {
+                        Text("Change folder")
+                    }
+                }
+            }
             OutlinedTextField(
                 value = state.query,
                 onValueChange = vm::setQuery,
@@ -96,6 +129,13 @@ fun ModelsScreen(
 
             state.error?.let {
                 Text(it, color = MaterialTheme.colorScheme.error)
+            }
+            state.variantModel?.let { model ->
+                VariantDialog(
+                    model = model,
+                    onDismiss = vm::closeVariants,
+                    onDownload = { variant -> vm.download(model, variant) },
+                )
             }
 
             if (state.installed.isNotEmpty()) {
@@ -132,13 +172,68 @@ fun ModelsScreen(
                         installed = state.installed.any { it.id == model.id },
                         downloading = state.downloadingId == model.id,
                         progress = state.downloadProgress,
-                        onDownload = { vm.download(model) },
+                        onDownload = { vm.openVariants(model) },
                         onCancel = vm::cancelDownload,
                     )
                 }
             }
         }
     }
+}
+
+@Composable
+private fun VariantDialog(
+    model: HuggingFaceRepository.Model,
+    onDismiss: () -> Unit,
+    onDownload: (HuggingFaceRepository.ModelVariant) -> Unit,
+) {
+    var selected by androidx.compose.runtime.remember(model.id) {
+        androidx.compose.runtime.mutableStateOf(model.variants.firstOrNull())
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(model.name) },
+        text = {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                items(model.variants, key = { it.id }) { variant ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { selected = variant },
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(
+                                selected = selected?.id == variant.id,
+                                onClick = { selected = variant },
+                            )
+                            Column {
+                                Text(variant.label, style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    "${variant.format} • ${variant.quantization} • ${formatBytes(variant.sizeBytes)}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                enabled = selected != null,
+                onClick = { selected?.let(onDownload) },
+            ) {
+                Text(stringResource(R.string.models_download))
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) {
+                Text(stringResource(R.string.models_cancel_download))
+            }
+        },
+    )
 }
 
 @Composable
@@ -182,7 +277,7 @@ private fun HuggingFaceModelCard(
                 if (!installed && !downloading) {
                     Button(
                         onClick = onDownload,
-                        enabled = model.compatibleFiles.isNotEmpty(),
+                        enabled = model.variants.isNotEmpty(),
                     ) {
                         Icon(Icons.Default.CloudDownload, contentDescription = null)
                         Text("  ${stringResource(R.string.models_download)}")
@@ -247,6 +342,8 @@ data class ModelsState(
     val downloadingId: String = "",
     val downloadProgress: Float = 0f,
     val error: String? = null,
+    val variantModel: HuggingFaceRepository.Model? = null,
+    val modelsTreeUri: String = "",
 )
 
 class ModelsViewModel(private val context: android.content.Context) : ViewModel() {
@@ -256,14 +353,17 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
     val state: StateFlow<ModelsState> = _state.asStateFlow()
     private var downloadJob: Job? = null
     private var huggingFaceToken: String = ""
+    private var modelsTreeUri: String = ""
 
     init {
         viewModelScope.launch {
             settings.flow.collect { value ->
                 huggingFaceToken = value.engines["huggingface"]?.get("token").orEmpty()
+                modelsTreeUri = value.modelsTreeUri
                 _state.update {
                     it.copy(
                         selectedModelId = value.selectedModelId,
+                        modelsTreeUri = value.modelsTreeUri,
                         installed = repository().installed(),
                     )
                 }
@@ -274,6 +374,12 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
 
     fun setQuery(value: String) {
         _state.update { it.copy(query = value) }
+    }
+
+    fun setModelsFolder(uri: String) {
+        viewModelScope.launch {
+            settings.update { it[SettingsRepository.Keys.MODELS_TREE_URI] = uri }
+        }
     }
 
     fun search() {
@@ -302,14 +408,30 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
         }
     }
 
-    fun download(model: HuggingFaceRepository.Model) {
+    fun openVariants(model: HuggingFaceRepository.Model) {
+        _state.update { it.copy(variantModel = model, error = null) }
+    }
+
+    fun closeVariants() {
+        _state.update { it.copy(variantModel = null) }
+    }
+
+    fun download(
+        model: HuggingFaceRepository.Model,
+        variant: HuggingFaceRepository.ModelVariant,
+    ) {
         if (downloadJob?.isActive == true) return
         downloadJob = viewModelScope.launch {
             _state.update {
-                it.copy(downloadingId = model.id, downloadProgress = 0f, error = null)
+                it.copy(
+                    downloadingId = model.id,
+                    downloadProgress = 0f,
+                    error = null,
+                    variantModel = null,
+                )
             }
             runCatching {
-                repository().install(model) { downloaded, total ->
+                repository().install(model, variant) { downloaded, total ->
                     val progress = if (total > 0) downloaded.toFloat() / total else 0f
                     _state.update { it.copy(downloadProgress = progress) }
                 }
@@ -356,7 +478,7 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
     }
 
     private fun repository(): HuggingFaceRepository =
-        HuggingFaceRepository(modelsRoot, huggingFaceToken)
+        HuggingFaceRepository(context, modelsRoot, modelsTreeUri, huggingFaceToken)
 }
 
 private fun formatBytes(bytes: Long): String {
