@@ -15,7 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
-/** Russian Piper/VITS voices converted and published by sherpa-onnx. */
+/** Downloadable Piper/VITS models converted and published by sherpa-onnx. */
 class PiperRussianTtsEngine(
     private val modelsDir: File,
 ) : TtsEngine {
@@ -29,7 +29,7 @@ class PiperRussianTtsEngine(
         VoiceInfo(
             id = voice.id,
             displayName = voice.displayName,
-            language = "ru-RU",
+            language = voice.language,
             gender = voice.gender,
             engineId = info.id,
             isLocal = true,
@@ -129,6 +129,7 @@ class PiperRussianTtsEngine(
         val id: String,
         val displayName: String,
         val gender: String,
+        val language: String,
         val archiveUrl: String,
         val approximateSizeBytes: Long = 65_000_000L,
     )
@@ -139,11 +140,25 @@ class PiperRussianTtsEngine(
             russianVoice("denis", "Денис", "male"),
             russianVoice("dmitri", "Дмитрий", "male"),
             russianVoice("ruslan", "Руслан", "male"),
+            piperVoice(
+                id = "en-us-amy",
+                displayName = "Amy",
+                gender = "female",
+                language = "en-US",
+                archiveName = "vits-piper-en_US-amy-medium.tar.bz2",
+            ),
+            piperVoice(
+                id = "en-gb-cori",
+                displayName = "Cori",
+                gender = "female",
+                language = "en-GB",
+                archiveName = "vits-piper-en_GB-cori-medium.tar.bz2",
+            ),
         )
 
         val ENGINE_INFO = EngineInfo(
             id = "piper_ru",
-            displayName = "Piper Русский (на устройстве)",
+            displayName = "Piper/VITS (на устройстве)",
             kind = EngineInfo.EngineKind.Local,
             supportsLocal = true,
         )
@@ -154,8 +169,23 @@ class PiperRussianTtsEngine(
                 id = id,
                 displayName = name,
                 gender = gender,
+                language = "ru-RU",
                 archiveUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/$archiveName",
             )
         }
+
+        private fun piperVoice(
+            id: String,
+            displayName: String,
+            gender: String,
+            language: String,
+            archiveName: String,
+        ) = RussianVoice(
+            id = id,
+            displayName = displayName,
+            gender = gender,
+            language = language,
+            archiveUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/$archiveName",
+        )
     }
 }

@@ -39,6 +39,39 @@ interface AudiobookDao {
 
     @Update
     suspend fun update(audiobook: AudiobookEntity)
+
+    @Query("SELECT COALESCE(MAX(orderIndex), -1) + 1 FROM audiobooks WHERE projectId = :projectId")
+    suspend fun nextOrderIndex(projectId: Long): Int
+}
+
+@Dao
+interface AudioTimelineDao {
+    @Query("SELECT * FROM audio_tracks WHERE audiobookId = :audiobookId ORDER BY orderIndex")
+    suspend fun tracks(audiobookId: Long): List<AudioTrackEntity>
+
+    @Query("SELECT * FROM audio_clips WHERE trackId = :trackId ORDER BY timelineStartMs")
+    suspend fun clips(trackId: String): List<AudioClipEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertTracks(tracks: List<AudioTrackEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertClips(clips: List<AudioClipEntity>)
+
+    @Query("DELETE FROM audio_tracks WHERE audiobookId = :audiobookId")
+    suspend fun deleteTimeline(audiobookId: Long)
+}
+
+@Dao
+interface ChapterExportDao {
+    @Query("SELECT * FROM chapter_exports WHERE audiobookId = :audiobookId ORDER BY createdAt DESC")
+    fun observeForAudiobook(audiobookId: Long): Flow<List<ChapterExportEntity>>
+
+    @Insert
+    suspend fun insert(value: ChapterExportEntity): Long
+
+    @Delete
+    suspend fun delete(value: ChapterExportEntity)
 }
 
 @Dao

@@ -39,6 +39,15 @@ fun EditorScreen(
     val state by vm.state.collectAsState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) {
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+            )
+            vm.setOutputTreeUri(uri.toString())
+        }
+    }
 
     LTVScaffold(
         nav = nav,
@@ -58,6 +67,19 @@ fun EditorScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
+            OutlinedTextField(
+                value = state.author,
+                onValueChange = vm::setAuthor,
+                label = { Text("Автор (необязательно)") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Button(
+                onClick = { folderPicker.launch(null) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(if (state.outputTreeUri.isBlank()) "Выбрать папку проекта" else "Папка проекта выбрана")
+            }
 
             OutlinedTextField(
                 value = state.text,
@@ -97,6 +119,7 @@ fun EditorScreen(
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
+                enabled = state.text.isNotBlank() && state.outputTreeUri.isNotBlank(),
             ) {
                 Icon(Icons.Default.Save, contentDescription = null)
                 Text("  " + stringResource(R.string.gen_start))
@@ -104,3 +127,6 @@ fun EditorScreen(
         }
     }
 }
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts

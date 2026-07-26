@@ -37,6 +37,10 @@ class SettingsRepository(private val context: Context) {
         val SYNTAX_HIGHLIGHT = booleanPreferencesKey("syntax_highlight")
 
         val SELECTED_MODEL_ID = stringPreferencesKey("selected_model_id")
+        /** Independently selected generators for each editor track. */
+        val SELECTED_VOICE_MODEL_ID = stringPreferencesKey("selected_voice_model_id")
+        val SELECTED_MUSIC_MODEL_ID = stringPreferencesKey("selected_music_model_id")
+        val SELECTED_SOUND_MODEL_ID = stringPreferencesKey("selected_sound_model_id")
         /** local = downloaded models on the device; cloud = API providers. */
         val TTS_MODE = stringPreferencesKey("tts_mode")
         /** Persisted URI returned by ACTION_OPEN_DOCUMENT_TREE. */
@@ -76,6 +80,11 @@ class SettingsRepository(private val context: Context) {
         markupToolbar = this[Keys.MARKUP_TOOLBAR] ?: true,
         syntaxHighlight = this[Keys.SYNTAX_HIGHLIGHT] ?: true,
         selectedModelId = this[Keys.SELECTED_MODEL_ID] ?: "",
+        selectedVoiceModelId = this[Keys.SELECTED_VOICE_MODEL_ID]
+            ?: this[Keys.SELECTED_MODEL_ID]
+            ?: "",
+        selectedMusicModelId = this[Keys.SELECTED_MUSIC_MODEL_ID] ?: "",
+        selectedSoundModelId = this[Keys.SELECTED_SOUND_MODEL_ID] ?: "",
         ttsMode = this[Keys.TTS_MODE] ?: "",
         modelsTreeUri = this[Keys.MODELS_TREE_URI] ?: "",
         onboardingCompleted = this[Keys.ONBOARDING_COMPLETED] ?: false,
@@ -110,6 +119,9 @@ data class Settings(
     val markupToolbar: Boolean,
     val syntaxHighlight: Boolean,
     val selectedModelId: String,
+    val selectedVoiceModelId: String,
+    val selectedMusicModelId: String,
+    val selectedSoundModelId: String,
     val ttsMode: String,
     val modelsTreeUri: String,
     val onboardingCompleted: Boolean,

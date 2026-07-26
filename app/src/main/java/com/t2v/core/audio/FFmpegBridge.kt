@@ -24,6 +24,7 @@ object FFmpegBridge {
 
     private fun codecFor(format: String): String = when (format.lowercase()) {
         "m4a", "aac" -> "aac"
+        "mp3" -> "libmp3lame"
         "wav" -> "pcm_s16le"
         else -> error("Unsupported audio format in this FFmpeg build: $format")
     }
@@ -210,6 +211,104 @@ object FFmpegBridge {
             tempDir.deleteRecursively()
         }
     }
+
+    /** Renders clips at their saved timeline positions instead of concatenating them. */
+    suspend fun renderTimelineTrack(
+        context: Context,
+        clips: List<AudioEditClip>,
+        output: File,
+        trackVolumeDb: Double = 0.0,
+    ): File = withContext(Dispatchers.IO) {
+        require(clips.isNotEmpty()) { "Track has no clips" }
+        val command = mutableListOf("-y")
+        clips.forEach { command += listOf("-i", it.sourcePath) }
+        val filters = clips.mapIndexed { index, clip ->
+            val durationMs = (clip.endMs - clip.startMs).takeIf { it > 0 }
+            buildString {
+                append("[$index:a]")
+                append("atrim=start=${seconds(clip.startMs)}")
+                durationMs?.let { append(":duration=${seconds(it)}") }
+                append(",asetpts=PTS-STARTPTS")
+                append(",atempo=${number(clip.speed)}")
+                append(",volume=${number(clip.gainDb)}dB")
+                if (clip.fadeInMs > 0) append(",afade=t=in:st=0:d=${seconds(clip.fadeInMs)}")
+                if (clip.fadeOutMs > 0 && durationMs != null) {
+                    val adjustedDuration = durationMs / clip.speed
+                    val start = (adjustedDuration - clip.fadeOutMs).coerceAtLeast(0.0)
+                    append(",afade=t=out:st=${seconds(start.toLong())}:d=${seconds(clip.fadeOutMs)}")
+                }
+                if (clip.loop && durationMs != null) append(",aloop=loop=-1:size=2147483647")
+                append(",adelay=${clip.timelineStartMs}|${clip.timelineStartMs}")
+                append(",aformat=sample_rates=48000:channel_layouts=stereo[c$index]")
+            }
+        }.toMutableList()
+        filters += clips.indices.joinToString("") { "[c$it]" } +
+            "amix=inputs=${clips.size}:duration=longest:normalize=0," +
+            "volume=${number(trackVolumeDb)}dB[out]"
+        command += listOf(
+            "-filter_complex", filters.joinToString(";"),
+            "-map", "[out]",
+            "-c:a", "pcm_s16le",
+            "-ar", "48000",
+            "-ac", "2",
+            output.absolutePath,
+        )
+        output.parentFile?.mkdirs()
+        run(context, command)
+        output
+    }
+
+    /** Mixes the three production tracks and ducks only music while voice is active. */
+    suspend fun mixProduction(
+        context: Context,
+        voice: File,
+        music: File?,
+        sound: File?,
+        output: File,
+        format: String = "mp3",
+        bitrate: String = "192k",
+    ): File = withContext(Dispatchers.IO) {
+        val command = mutableListOf("-y", "-i", voice.absolutePath)
+        music?.let { command += listOf("-i", it.absolutePath) }
+        sound?.let { command += listOf("-i", it.absolutePath) }
+        val filter: String
+        val map: String
+        when {
+            music != null && sound != null -> {
+                filter = "[1:a][0:a]sidechaincompress=threshold=0.03:ratio=8:attack=200:release=1000[ducked];" +
+                    "[0:a][ducked][2:a]amix=inputs=3:duration=longest:normalize=0," +
+                    "alimiter=limit=0.891251,loudnorm=I=-18:TP=-1:LRA=11[out]"
+                map = "[out]"
+            }
+            music != null -> {
+                filter = "[1:a][0:a]sidechaincompress=threshold=0.03:ratio=8:attack=200:release=1000[ducked];" +
+                    "[0:a][ducked]amix=inputs=2:duration=longest:normalize=0," +
+                    "alimiter=limit=0.891251,loudnorm=I=-18:TP=-1:LRA=11[out]"
+                map = "[out]"
+            }
+            sound != null -> {
+                filter = "[0:a][1:a]amix=inputs=2:duration=longest:normalize=0," +
+                    "alimiter=limit=0.891251,loudnorm=I=-18:TP=-1:LRA=11[out]"
+                map = "[out]"
+            }
+            else -> {
+                filter = "[0:a]alimiter=limit=0.891251,loudnorm=I=-18:TP=-1:LRA=11[out]"
+                map = "[out]"
+            }
+        }
+        command += listOf(
+            "-filter_complex", filter,
+            "-map", map,
+            "-c:a", codecFor(format),
+            "-b:a", bitrate,
+            output.absolutePath,
+        )
+        run(context, command)
+        output
+    }
+
+    private fun number(value: Double): String = "%.4f".format(java.util.Locale.US, value)
+    private fun seconds(valueMs: Long): String = "%.3f".format(java.util.Locale.US, valueMs / 1000.0)
 
     private suspend fun run(context: Context, args: List<String>) = withContext(Dispatchers.IO) {
         val exe = ensure(context)

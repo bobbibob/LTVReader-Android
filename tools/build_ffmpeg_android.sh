@@ -3,6 +3,8 @@ set -euo pipefail
 
 FFMPEG_TAG="n7.1.1"
 FFMPEG_COMMIT="db69d06eeeab4f46da15030a80d539efb4503ca8"
+LAME_VERSION="3.100"
+LAME_SHA256="ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785d1da9e175b1da1e"
 ANDROID_API="24"
 OUTPUT_DIR="${1:-app/src/main/jniLibs/arm64-v8a}"
 NDK_ROOT="${ANDROID_NDK_HOME:-${ANDROID_NDK_ROOT:-}}"
@@ -23,6 +25,29 @@ fi
 
 TOOLCHAIN="$NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64"
 PREFIX="$WORK_DIR/install"
+LAME_PREFIX="$WORK_DIR/lame-install"
+LAME_ARCHIVE="$WORK_DIR/lame-${LAME_VERSION}.tar.gz"
+
+curl --fail --location --retry 3 \
+  "https://downloads.sourceforge.net/project/lame/lame/${LAME_VERSION}/lame-${LAME_VERSION}.tar.gz" \
+  --output "$LAME_ARCHIVE"
+echo "${LAME_SHA256}  ${LAME_ARCHIVE}" | sha256sum --check
+tar -xzf "$LAME_ARCHIVE" -C "$WORK_DIR"
+cd "$WORK_DIR/lame-${LAME_VERSION}"
+CC="$TOOLCHAIN/bin/aarch64-linux-android${ANDROID_API}-clang" \
+AR="$TOOLCHAIN/bin/llvm-ar" \
+RANLIB="$TOOLCHAIN/bin/llvm-ranlib" \
+CFLAGS="-O3 -fPIC" \
+./configure \
+  --host=aarch64-linux-android \
+  --prefix="$LAME_PREFIX" \
+  --disable-shared \
+  --enable-static \
+  --disable-frontend \
+  --with-pic
+make -j"$(nproc)"
+make install
+
 cd "$WORK_DIR/ffmpeg"
 ./configure \
   --prefix="$PREFIX" \
@@ -45,6 +70,10 @@ cd "$WORK_DIR/ffmpeg"
   --enable-ffmpeg \
   --disable-network \
   --disable-autodetect \
+  --enable-gpl \
+  --enable-libmp3lame \
+  --extra-cflags="-I$LAME_PREFIX/include" \
+  --extra-ldflags="-L$LAME_PREFIX/lib" \
   --enable-small
 make -j"$(nproc)" ffmpeg
 

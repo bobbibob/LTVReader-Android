@@ -18,6 +18,8 @@ import kotlinx.serialization.json.Json
 
 data class EditorState(
     val title: String = "Untitled",
+    val author: String = "",
+    val outputTreeUri: String = "",
     val text: String = "",
     val splitMode: String = "safe_chunks",
     val chunkCount: Int = 0,
@@ -33,6 +35,8 @@ class EditorViewModel(private val context: Context) : ViewModel() {
     val state: StateFlow<EditorState> = _state.asStateFlow()
 
     fun setTitle(value: String) = _state.update { it.copy(title = value) }
+    fun setAuthor(value: String) = _state.update { it.copy(author = value) }
+    fun setOutputTreeUri(value: String) = _state.update { it.copy(outputTreeUri = value) }
     fun setText(value: String) {
         _state.update { it.copy(text = value, chunkCount = estimateChunkCount(value)) }
     }
@@ -45,7 +49,7 @@ class EditorViewModel(private val context: Context) : ViewModel() {
     }
 
     suspend fun save(context: Context): Long? {
-        if (_state.value.text.isBlank()) return null
+        if (_state.value.text.isBlank() || _state.value.outputTreeUri.isBlank()) return null
         val s = settings.flow.first()
         val project = ProjectEntity(
             title = _state.value.title.ifBlank { "Untitled" },
@@ -53,6 +57,8 @@ class EditorViewModel(private val context: Context) : ViewModel() {
             ttsEngine = s.ttsEngine,
             voiceConfigJson = Json.encodeToString(VoiceConfig.serializer(), VoiceConfig.EMPTY.copy(voice = s.voiceId, lang = s.language, speed = s.speed)),
             splitMode = _state.value.splitMode,
+            outputTreeUri = _state.value.outputTreeUri,
+            author = _state.value.author,
         )
         return db.projects().upsert(project)
     }

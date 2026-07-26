@@ -24,6 +24,9 @@ data class ProjectEntity(
     val splitMode: String = "safe_chunks",
     val exportMode: String = "single",
     val outputPath: String? = null,
+    /** Persisted SAF tree selected when the book project is created. */
+    val outputTreeUri: String = "",
+    val author: String = "",
 )
 
 /** Аудиокнига — результат генерации одного проекта. */
@@ -50,6 +53,89 @@ data class AudiobookEntity(
     val segmentsTotal: Int = 0,
     val segmentsDone: Int = 0,
     val errorMessage: String? = null,
+    /** User-visible chapter/generation name inside the parent project. */
+    val title: String = "Chapter",
+    val orderIndex: Int = 0,
+)
+
+@Entity(
+    tableName = "audio_tracks",
+    indices = [Index("audiobookId"), Index(value = ["audiobookId", "type"])],
+    foreignKeys = [
+        ForeignKey(
+            entity = AudiobookEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["audiobookId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+)
+data class AudioTrackEntity(
+    @PrimaryKey val id: String,
+    val audiobookId: Long,
+    /** VOICE, MUSIC or SOUND. */
+    val type: String,
+    val title: String,
+    val orderIndex: Int,
+    val volumeDb: Float = 0f,
+    val muted: Boolean = false,
+    val solo: Boolean = false,
+    val locked: Boolean = false,
+    val updatedAt: Long = System.currentTimeMillis(),
+)
+
+@Entity(
+    tableName = "audio_clips",
+    indices = [Index("trackId"), Index("timelineStartMs"), Index("markupTagId")],
+    foreignKeys = [
+        ForeignKey(
+            entity = AudioTrackEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["trackId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+)
+data class AudioClipEntity(
+    @PrimaryKey val id: String,
+    val trackId: String,
+    val sourcePath: String,
+    val timelineStartMs: Long = 0,
+    val sourceStartMs: Long = 0,
+    /** Zero means until the end of the source. */
+    val sourceEndMs: Long = 0,
+    val gainDb: Float = 0f,
+    val speed: Float = 1f,
+    val fadeInMs: Long = 0,
+    val fadeOutMs: Long = 0,
+    val loop: Boolean = false,
+    val locked: Boolean = false,
+    val markupTagId: String? = null,
+    val updatedAt: Long = System.currentTimeMillis(),
+)
+
+@Entity(
+    tableName = "chapter_exports",
+    indices = [Index("audiobookId"), Index("createdAt")],
+    foreignKeys = [
+        ForeignKey(
+            entity = AudiobookEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["audiobookId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+)
+data class ChapterExportEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val audiobookId: Long,
+    val displayName: String,
+    val documentUri: String,
+    val format: String,
+    val bitrate: String,
+    val durationMs: Long = 0,
+    val createdAt: Long = System.currentTimeMillis(),
+    val isFinal: Boolean = false,
 )
 
 /** Сегмент — один чанк текста + сгенерированный аудиофайл. */

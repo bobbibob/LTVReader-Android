@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -35,6 +36,9 @@ import com.t2v.core.audio.AudioEditClip
 import com.t2v.core.audio.AudioEditProject
 import com.t2v.core.audio.AudioTrackKind
 import com.t2v.core.audio.FFmpegBridge
+import com.t2v.data.AudioClipEntity
+import com.t2v.data.AudioTrackEntity
+import com.t2v.data.ChapterExportEntity
 import com.t2v.ui.components.LTVScaffold
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -55,6 +59,9 @@ fun AudioEditorScreen(
     val musicPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) {
         it?.let(vm::addMusic)
     }
+    val soundPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) {
+        it?.let(vm::addSound)
+    }
     LTVScaffold(nav, "Audio editor", onBack = { nav.popBackStack() }) { padding: PaddingValues ->
         Column(
             Modifier.fillMaxSize().padding(padding).padding(12.dp).verticalScroll(rememberScrollState()),
@@ -66,7 +73,29 @@ fun AudioEditorScreen(
                 OutlinedButton(onClick = { musicPicker.launch("audio/*") }) { Text("Add clip") }
             }
             TrackEditor("Music track", AudioTrackKind.Music, state.project.musicClips, vm)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Sound effects", style = MaterialTheme.typography.titleMedium)
+                OutlinedButton(onClick = { soundPicker.launch("audio/*") }) { Text("Add sound") }
+            }
+            TrackEditor("Sound track", AudioTrackKind.Sound, state.project.soundClips, vm)
             state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = vm::save,
+                    enabled = !state.saving && !state.rendering,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(if (state.saving) "Сохранение…" else "Сохранить")
+                }
+                Button(
+                    onClick = vm::exportMp3,
+                    enabled = !state.rendering && state.project.voiceClips.isNotEmpty(),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(if (state.rendering) "Экспорт…" else "Экспорт MP3")
+                }
+            }
+            state.savedAt?.let { Text("Сохранено: ${java.text.DateFormat.getTimeInstance().format(it)}") }
             Button(
                 onClick = vm::render,
                 enabled = !state.rendering && state.project.voiceClips.isNotEmpty(),
@@ -94,6 +123,12 @@ private fun TrackEditor(
                 Text(File(clip.sourcePath).name.ifBlank { "Clip ${index + 1}" })
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
+                        value = clip.timelineStartMs.toString(),
+                        onValueChange = { vm.setTimelineStart(kind, clip.id, it.toLongOrNull() ?: 0) },
+                        label = { Text("Timeline, ms") },
+                        modifier = Modifier.weight(1f),
+                    )
+                    OutlinedTextField(
                         value = clip.startMs.toString(),
                         onValueChange = { vm.setStart(kind, clip.id, it.toLongOrNull() ?: 0) },
                         label = { Text("Start, ms") },
@@ -106,6 +141,12 @@ private fun TrackEditor(
                         modifier = Modifier.weight(1f),
                     )
                 }
+                OutlinedTextField(
+                    value = clip.gainDb.toString(),
+                    onValueChange = { vm.setGain(kind, clip.id, it.toDoubleOrNull() ?: 0.0) },
+                    label = { Text("Gain, dB") },
+                    modifier = Modifier.fillMaxWidth(),
+                )
                 Text("Speed: ${"%.2f".format(clip.speed)}×")
                 Slider(
                     value = clip.speed.toFloat(),
@@ -131,6 +172,8 @@ private fun TrackEditor(
 data class AudioEditorState(
     val project: AudioEditProject = AudioEditProject(),
     val rendering: Boolean = false,
+    val saving: Boolean = false,
+    val savedAt: Long? = null,
     val outputPath: String? = null,
     val error: String? = null,
 )
@@ -145,26 +188,33 @@ class AudioEditorViewModel(
 
     init {
         viewModelScope.launch {
-            db.audiobooks().byId(audiobookId)?.outputPath?.takeIf { File(it).isFile }?.let { path ->
-                _state.update {
-                    it.copy(project = it.project.copy(voiceClips = listOf(AudioEditClip(sourcePath = path))))
-                }
-            }
+            loadTimeline()
         }
     }
 
     fun addMusic(uri: Uri) = viewModelScope.launch {
+        addImported(uri, AudioTrackKind.Music, "music")
+    }
+
+    fun addSound(uri: Uri) = viewModelScope.launch {
+        addImported(uri, AudioTrackKind.Sound, "sound")
+    }
+
+    private suspend fun addImported(uri: Uri, kind: AudioTrackKind, prefix: String) {
         runCatching {
-            val file = File(context.filesDir, "audiobooks/$audiobookId/editor-music-${System.currentTimeMillis()}")
+            val file = File(context.filesDir, "audiobooks/$audiobookId/editor-$prefix-${System.currentTimeMillis()}")
             file.parentFile?.mkdirs()
             context.contentResolver.openInputStream(uri)?.use { input ->
                 file.outputStream().use { output -> input.copyTo(output, 128 * 1024) }
             } ?: error("Cannot read music")
             file
         }.onSuccess { file ->
-            mutate(AudioTrackKind.Music) { it + AudioEditClip(sourcePath = file.absolutePath) }
+            mutate(kind) { it + AudioEditClip(sourcePath = file.absolutePath) }
         }.onFailure { error -> _state.update { it.copy(error = error.message) } }
     }
+
+    fun setTimelineStart(kind: AudioTrackKind, id: String, value: Long) =
+        updateClip(kind, id) { it.copy(timelineStartMs = value.coerceAtLeast(0)) }
 
     fun setStart(kind: AudioTrackKind, id: String, value: Long) =
         updateClip(kind, id) { it.copy(startMs = value.coerceAtLeast(0)) }
@@ -174,6 +224,9 @@ class AudioEditorViewModel(
 
     fun setSpeed(kind: AudioTrackKind, id: String, value: Double) =
         updateClip(kind, id) { it.copy(speed = value.coerceIn(0.5, 2.0)) }
+
+    fun setGain(kind: AudioTrackKind, id: String, value: Double) =
+        updateClip(kind, id) { it.copy(gainDb = value.coerceIn(-60.0, 12.0)) }
 
     fun split(kind: AudioTrackKind, id: String) {
         val clips = clips(kind)
@@ -225,15 +278,57 @@ class AudioEditorViewModel(
         }
     }
 
-    private fun clips(kind: AudioTrackKind): List<AudioEditClip> =
-        if (kind == AudioTrackKind.Voice) _state.value.project.voiceClips else _state.value.project.musicClips
+    fun save() = viewModelScope.launch {
+        _state.update { it.copy(saving = true, error = null) }
+        runCatching { persistTimeline() }
+            .onSuccess {
+                _state.update { it.copy(saving = false, savedAt = System.currentTimeMillis()) }
+            }
+            .onFailure { error -> _state.update { it.copy(saving = false, error = error.message) } }
+    }
+
+    fun exportMp3() = viewModelScope.launch {
+        _state.update { it.copy(rendering = true, error = null) }
+        runCatching {
+            persistTimeline()
+            val project = _state.value.project
+            val root = File(context.filesDir, "audiobooks/$audiobookId")
+            val voice = FFmpegBridge.renderTimelineTrack(
+                context, project.voiceClips, File(root, "timeline-voice.wav"), project.voiceVolumeDb,
+            )
+            val music = project.musicClips.takeIf { it.isNotEmpty() }?.let {
+                FFmpegBridge.renderTimelineTrack(
+                    context, it, File(root, "timeline-music.wav"), project.musicVolumeDb,
+                )
+            }
+            val sound = project.soundClips.takeIf { it.isNotEmpty() }?.let {
+                FFmpegBridge.renderTimelineTrack(
+                    context, it, File(root, "timeline-sound.wav"), project.soundVolumeDb,
+                )
+            }
+            val local = FFmpegBridge.mixProduction(
+                context, voice, music, sound, File(root, "chapter-export.mp3"), "mp3",
+            )
+            exportToProjectFolder(local)
+        }.onSuccess { uri ->
+            _state.update { it.copy(rendering = false, outputPath = uri) }
+        }.onFailure { error ->
+            _state.update { it.copy(rendering = false, error = error.message) }
+        }
+    }
+
+    private fun clips(kind: AudioTrackKind): List<AudioEditClip> = when (kind) {
+        AudioTrackKind.Voice -> _state.value.project.voiceClips
+        AudioTrackKind.Music -> _state.value.project.musicClips
+        AudioTrackKind.Sound -> _state.value.project.soundClips
+    }
 
     private fun mutate(kind: AudioTrackKind, transform: (List<AudioEditClip>) -> List<AudioEditClip>) {
         _state.update {
-            val project = if (kind == AudioTrackKind.Voice) {
-                it.project.copy(voiceClips = transform(it.project.voiceClips))
-            } else {
-                it.project.copy(musicClips = transform(it.project.musicClips))
+            val project = when (kind) {
+                AudioTrackKind.Voice -> it.project.copy(voiceClips = transform(it.project.voiceClips))
+                AudioTrackKind.Music -> it.project.copy(musicClips = transform(it.project.musicClips))
+                AudioTrackKind.Sound -> it.project.copy(soundClips = transform(it.project.soundClips))
             }
             it.copy(project = project, error = null)
         }
@@ -241,6 +336,132 @@ class AudioEditorViewModel(
 
     private fun updateClip(kind: AudioTrackKind, id: String, transform: (AudioEditClip) -> AudioEditClip) {
         mutate(kind) { clips -> clips.map { if (it.id == id) transform(it) else it } }
+    }
+
+    private suspend fun loadTimeline() {
+        val tracks = db.audioTimeline().tracks(audiobookId)
+        if (tracks.isNotEmpty()) {
+            suspend fun load(type: AudioTrackKind): List<AudioEditClip> {
+                val track = tracks.firstOrNull { it.type == type.name.uppercase() } ?: return emptyList()
+                return db.audioTimeline().clips(track.id).map(::toEditClip)
+            }
+            _state.update {
+                it.copy(
+                    project = AudioEditProject(
+                        voiceClips = load(AudioTrackKind.Voice),
+                        musicClips = load(AudioTrackKind.Music),
+                        soundClips = load(AudioTrackKind.Sound),
+                    ),
+                )
+            }
+            return
+        }
+        val segments = db.segments().listForAudiobook(audiobookId)
+        var cursor = 0L
+        val voiceClips = segments.mapNotNull { segment ->
+            val path = segment.audioPath?.takeIf { File(it).isFile } ?: return@mapNotNull null
+            cursor += segment.pauseBeforeMs
+            AudioEditClip(
+                sourcePath = path,
+                timelineStartMs = cursor,
+                endMs = segment.durationMs.toLong(),
+            ).also {
+                cursor += segment.durationMs + segment.pauseAfterMs
+            }
+        }
+        _state.update { it.copy(project = it.project.copy(voiceClips = voiceClips)) }
+    }
+
+    private suspend fun persistTimeline() {
+        val now = System.currentTimeMillis()
+        val tracks = AudioTrackKind.entries.mapIndexed { index, kind ->
+            AudioTrackEntity(
+                id = "$audiobookId-${kind.name.lowercase()}",
+                audiobookId = audiobookId,
+                type = kind.name.uppercase(),
+                title = kind.name,
+                orderIndex = index,
+                volumeDb = when (kind) {
+                    AudioTrackKind.Voice -> _state.value.project.voiceVolumeDb.toFloat()
+                    AudioTrackKind.Music -> _state.value.project.musicVolumeDb.toFloat()
+                    AudioTrackKind.Sound -> _state.value.project.soundVolumeDb.toFloat()
+                },
+                updatedAt = now,
+            )
+        }
+        val clips = tracks.flatMap { track ->
+            val kind = when (track.type) {
+                "VOICE" -> AudioTrackKind.Voice
+                "MUSIC" -> AudioTrackKind.Music
+                else -> AudioTrackKind.Sound
+            }
+            clips(kind).map { clip ->
+                AudioClipEntity(
+                    id = clip.id,
+                    trackId = track.id,
+                    sourcePath = clip.sourcePath,
+                    timelineStartMs = clip.timelineStartMs,
+                    sourceStartMs = clip.startMs,
+                    sourceEndMs = clip.endMs,
+                    gainDb = clip.gainDb.toFloat(),
+                    speed = clip.speed.toFloat(),
+                    fadeInMs = clip.fadeInMs,
+                    fadeOutMs = clip.fadeOutMs,
+                    loop = clip.loop,
+                    locked = clip.locked,
+                    markupTagId = clip.markupTagId,
+                    updatedAt = now,
+                )
+            }
+        }
+        db.audioTimeline().deleteTimeline(audiobookId)
+        db.audioTimeline().upsertTracks(tracks)
+        db.audioTimeline().upsertClips(clips)
+    }
+
+    private fun toEditClip(value: AudioClipEntity) = AudioEditClip(
+        id = value.id,
+        sourcePath = value.sourcePath,
+        timelineStartMs = value.timelineStartMs,
+        startMs = value.sourceStartMs,
+        endMs = value.sourceEndMs,
+        gainDb = value.gainDb.toDouble(),
+        speed = value.speed.toDouble(),
+        fadeInMs = value.fadeInMs,
+        fadeOutMs = value.fadeOutMs,
+        loop = value.loop,
+        locked = value.locked,
+        markupTagId = value.markupTagId,
+    )
+
+    private suspend fun exportToProjectFolder(source: File): String {
+        val audiobook = db.audiobooks().byId(audiobookId) ?: error("Chapter not found")
+        val project = db.projects().byId(audiobook.projectId) ?: error("Project not found")
+        require(project.outputTreeUri.isNotBlank()) { "Choose a project folder first" }
+        val root = DocumentFile.fromTreeUri(context, Uri.parse(project.outputTreeUri))
+            ?.takeIf { it.canWrite() }
+            ?: error("Project folder is unavailable")
+        val exports = root.findFile("exports") ?: root.createDirectory("exports")
+            ?: error("Cannot create exports folder")
+        val safeName = audiobook.title.replace(Regex("""[\\/:*?"<>|]"""), "_").ifBlank { "Chapter" }
+        var name = "$safeName.mp3"
+        var suffix = 2
+        while (exports.findFile(name) != null) name = "$safeName ($suffix).mp3".also { suffix++ }
+        val target = exports.createFile("audio/mpeg", name) ?: error("Cannot create export file")
+        context.contentResolver.openOutputStream(target.uri, "w").use { output ->
+            requireNotNull(output) { "Cannot open export file" }
+            source.inputStream().use { it.copyTo(output, 128 * 1024) }
+        }
+        db.chapterExports().insert(
+            ChapterExportEntity(
+                audiobookId = audiobookId,
+                displayName = name,
+                documentUri = target.uri.toString(),
+                format = "mp3",
+                bitrate = "192k",
+            ),
+        )
+        return target.uri.toString()
     }
 }
 

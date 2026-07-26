@@ -154,7 +154,8 @@ data class SettingsUiState(val settings: Settings = Settings(
     language = "", speed = 1.0, splitMode = "safe_chunks", exportMode = "single",
     chunkSize = 2500, pauseBetweenBlocksMs = 350, pauseBetweenChaptersMs = 900,
     paragraphPauseMinMs = 450, paragraphPauseMaxMs = 900, markupToolbar = true, syntaxHighlight = true,
-    selectedModelId = "", ttsMode = "",
+    selectedModelId = "", selectedVoiceModelId = "", selectedMusicModelId = "",
+    selectedSoundModelId = "", ttsMode = "",
     modelsTreeUri = "", onboardingCompleted = false, engines = emptyMap(),
 ))
 

@@ -20,6 +20,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -80,6 +81,13 @@ fun GenerationScreen(
                     Text("${state.engines.size} engines available", style = MaterialTheme.typography.bodySmall)
                 }
             }
+            OutlinedTextField(
+                value = state.chapterTitle,
+                onValueChange = vm::setChapterTitle,
+                label = { Text("Название главы / генерации") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
 
             Text(if (state.selectedEngine.isBlank()) "Choose an engine" else "Engine: ${state.selectedEngine}")
             Row(
@@ -180,6 +188,7 @@ fun GenerationScreen(
 data class GenState(
     val projectId: Long = 0,
     val projectTitle: String = "Loading…",
+    val chapterTitle: String = "",
     val engines: List<EngineInfo> = emptyList(),
     val selectedEngine: String = "",
     val speed: Double = 1.0,
@@ -210,6 +219,7 @@ class GenerationViewModel(
                 _state.update {
                     it.copy(
                         projectTitle = project.title,
+                        chapterTitle = "Глава ${db.audiobooks().nextOrderIndex(projectId) + 1}",
                         selectedEngine = project.ttsEngine,
                         speed = voices.speed,
                         engines = registry.allEngineInfos(),
@@ -232,6 +242,7 @@ class GenerationViewModel(
     }
 
     fun setEngine(id: String) = _state.update { it.copy(selectedEngine = id) }
+    fun setChapterTitle(value: String) = _state.update { it.copy(chapterTitle = value) }
     fun setSpeed(v: Double) = _state.update { it.copy(speed = v) }
     fun cancel() = viewModelScope.launch { pipeline.cancel() }
 
@@ -254,6 +265,8 @@ class GenerationViewModel(
                 projectId = projectId,
                 status = "running",
                 startedAt = startedAt,
+                title = _state.value.chapterTitle.ifBlank { "Глава" },
+                orderIndex = db.audiobooks().nextOrderIndex(projectId),
             ),
         )
         val outputDir = java.io.File(context.filesDir, "audiobooks/$audiobookId")
@@ -279,6 +292,8 @@ class GenerationViewModel(
                 segmentsTotal = segments.size,
                 segmentsDone = segments.count { it.status == "completed" },
                 errorMessage = result.exceptionOrNull()?.message,
+                title = _state.value.chapterTitle.ifBlank { "Глава" },
+                orderIndex = db.audiobooks().byId(audiobookId)?.orderIndex ?: 0,
             ),
         )
         _state.update { it.copy(audiobookId = audiobookId) }

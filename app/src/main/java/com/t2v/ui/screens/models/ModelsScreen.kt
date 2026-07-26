@@ -21,10 +21,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -56,6 +61,7 @@ fun ModelsScreen(
     vm: ModelsViewModel = viewModel(factory = ModelsViewModelFactory(LocalContext.current)),
 ) {
     val state by vm.state.collectAsState()
+    var selectedTab by remember { mutableStateOf(ModelTab.Voice) }
     val context = LocalContext.current
     val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
@@ -96,7 +102,18 @@ fun ModelsScreen(
                 }
             }
 
-            Text("Available on-device models", style = MaterialTheme.typography.titleMedium)
+            TabRow(selectedTabIndex = selectedTab.ordinal) {
+                ModelTab.entries.forEach { tab ->
+                    Tab(
+                        selected = selectedTab == tab,
+                        onClick = { selectedTab = tab },
+                        text = { Text(tab.title) },
+                    )
+                }
+            }
+
+            if (selectedTab == ModelTab.Voice) {
+            Text("Available on-device voice models", style = MaterialTheme.typography.titleMedium)
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(
                     modifier = Modifier.padding(12.dp),
@@ -127,9 +144,9 @@ fun ModelsScreen(
                                 Text(stringResource(R.string.models_cancel_download))
                             }
                         }
-                        state.kokoroInstalled -> Text(
-                            stringResource(R.string.models_active),
-                            color = MaterialTheme.colorScheme.primary,
+                        state.kokoroInstalled -> ModelSelectionRow(
+                            selected = state.selectedVoiceModelId == VOICE_MODEL_KOKORO,
+                            onSelect = { vm.selectVoiceModel(VOICE_MODEL_KOKORO) },
                         )
                         else -> Button(
                             enabled = state.kokoroModel?.variants?.isNotEmpty() == true,
@@ -142,9 +159,9 @@ fun ModelsScreen(
                 }
             }
 
-            Text("Русские локальные голоса", style = MaterialTheme.typography.titleMedium)
+            Text("Локальные Piper/VITS модели", style = MaterialTheme.typography.titleMedium)
             Text(
-                "Piper/VITS • ONNX • полностью на телефоне • runtime устанавливать отдельно не нужно",
+                "ONNX • полностью на телефоне • общий runtime устанавливать отдельно не нужно",
                 style = MaterialTheme.typography.bodySmall,
             )
             PiperRussianTtsEngine.RUSSIAN_VOICES.forEach { voice ->
@@ -155,7 +172,7 @@ fun ModelsScreen(
                     ) {
                         Text(voice.displayName, style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "Русский • ${if (voice.gender == "female") "женский" else "мужской"} • " +
+                            "${voice.language} • ${if (voice.gender == "female") "женский" else "мужской"} • " +
                                 "Piper medium • примерно ${formatBytes(voice.approximateSizeBytes)}",
                             style = MaterialTheme.typography.bodySmall,
                         )
@@ -176,9 +193,9 @@ fun ModelsScreen(
                             }
                             voice.id in state.installedRussianVoices -> {
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Text(
-                                        "Установлен",
-                                        color = MaterialTheme.colorScheme.primary,
+                                    ModelSelectionRow(
+                                        selected = state.selectedVoiceModelId == "piper:${voice.id}",
+                                        onSelect = { vm.selectVoiceModel("piper:${voice.id}") },
                                         modifier = Modifier.weight(1f),
                                     )
                                     OutlinedButton(onClick = { vm.deleteRussianVoice(voice.id) }) {
@@ -195,6 +212,49 @@ fun ModelsScreen(
                         }
                     }
                 }
+            }
+            }
+
+            if (selectedTab == ModelTab.Music) {
+                LocalAudioModelCard(
+                    id = MUSIC_MODEL_STABLE_AUDIO_OPEN_SMALL,
+                    title = "Stable Audio Open Small",
+                    description = "Короткие музыкальные петли • до 11 секунд • ARM64 • полностью на устройстве",
+                    status = "Подготовка проверенного LiteRT runtime",
+                    selected = state.selectedMusicModelId == MUSIC_MODEL_STABLE_AUDIO_OPEN_SMALL,
+                    enabled = false,
+                    onSelect = vm::selectMusicModel,
+                )
+                LocalAudioModelCard(
+                    id = "stable-audio-3-small-music",
+                    title = "Stable Audio 3 Small Music",
+                    description = "Музыка до 120 секунд • 433M • для мощных устройств",
+                    status = "Experimental • появится только после device smoke-test",
+                    selected = state.selectedMusicModelId == "stable-audio-3-small-music",
+                    enabled = false,
+                    onSelect = vm::selectMusicModel,
+                )
+            }
+
+            if (selectedTab == ModelTab.Sound) {
+                LocalAudioModelCard(
+                    id = SOUND_MODEL_STABLE_AUDIO_OPEN_SMALL,
+                    title = "Stable Audio Open Small",
+                    description = "Эффекты, Foley и атмосферы • до 11 секунд • ARM64",
+                    status = "Подготовка проверенного LiteRT runtime",
+                    selected = state.selectedSoundModelId == SOUND_MODEL_STABLE_AUDIO_OPEN_SMALL,
+                    enabled = false,
+                    onSelect = vm::selectSoundModel,
+                )
+                LocalAudioModelCard(
+                    id = "stable-audio-3-small-sfx",
+                    title = "Stable Audio 3 Small SFX",
+                    description = "Эффекты и атмосферы до 120 секунд • 433M",
+                    status = "Experimental • появится только после device smoke-test",
+                    selected = state.selectedSoundModelId == "stable-audio-3-small-sfx",
+                    enabled = false,
+                    onSelect = vm::selectSoundModel,
+                )
             }
 
             Card(modifier = Modifier.fillMaxWidth()) {
@@ -233,6 +293,68 @@ fun ModelsScreen(
     }
 }
 
+private enum class ModelTab(val title: String) {
+    Voice("Голос"),
+    Music("Музыка"),
+    Sound("Звуки"),
+}
+
+@Composable
+private fun LocalAudioModelCard(
+    id: String,
+    title: String,
+    description: String,
+    status: String,
+    selected: Boolean,
+    enabled: Boolean,
+    onSelect: (String) -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(description, style = MaterialTheme.typography.bodySmall)
+            Text(status, color = MaterialTheme.colorScheme.primary)
+            OutlinedButton(
+                onClick = { onSelect(id) },
+                enabled = enabled && !selected,
+            ) {
+                Text(
+                    when {
+                        selected -> "Выбрана"
+                        enabled -> "Выбрать"
+                        else -> "Runtime ещё не готов"
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModelSelectionRow(
+    selected: Boolean,
+    onSelect: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            if (selected) "Выбрана" else "Установлена",
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.weight(1f),
+        )
+        if (!selected) {
+            OutlinedButton(onClick = onSelect) { Text("Выбрать") }
+        }
+    }
+}
+
 @Composable
 private fun InstalledModelCard(
     model: HuggingFaceRepository.InstalledModel,
@@ -266,6 +388,9 @@ private fun InstalledModelCard(
 data class ModelsState(
     val installed: List<HuggingFaceRepository.InstalledModel> = emptyList(),
     val selectedModelId: String = "",
+    val selectedVoiceModelId: String = "",
+    val selectedMusicModelId: String = "",
+    val selectedSoundModelId: String = "",
     val modelsTreeUri: String = "",
     val installedRussianVoices: Set<String> = emptySet(),
     val downloadingVoiceId: String? = null,
@@ -299,6 +424,9 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
                 _state.update {
                     it.copy(
                         selectedModelId = value.selectedModelId,
+                        selectedVoiceModelId = value.selectedVoiceModelId,
+                        selectedMusicModelId = value.selectedMusicModelId,
+                        selectedSoundModelId = value.selectedSoundModelId,
                         modelsTreeUri = value.modelsTreeUri,
                         installed = repository().installed(),
                         installedRussianVoices = installedRussianVoiceIds(),
@@ -406,7 +534,8 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
                 settings.update {
                     it[SettingsRepository.Keys.TTS_ENGINE] = "piper_ru"
                     it[SettingsRepository.Keys.VOICE_ID] = voice.id
-                    it[SettingsRepository.Keys.LANGUAGE] = "ru-RU"
+                    it[SettingsRepository.Keys.LANGUAGE] = voice.language
+                    it[SettingsRepository.Keys.SELECTED_VOICE_MODEL_ID] = "piper:${voice.id}"
                 }
                 _state.update {
                     it.copy(
@@ -464,6 +593,39 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
         }
     }
 
+    fun selectVoiceModel(modelId: String) {
+        viewModelScope.launch {
+            settings.update {
+                it[SettingsRepository.Keys.SELECTED_VOICE_MODEL_ID] = modelId
+                when {
+                    modelId == VOICE_MODEL_KOKORO -> {
+                        it[SettingsRepository.Keys.TTS_ENGINE] = "kokoro"
+                    }
+                    modelId.startsWith("piper:") -> {
+                        val voiceId = modelId.substringAfter(':')
+                        val voice = PiperRussianTtsEngine.RUSSIAN_VOICES
+                            .firstOrNull { it.id == voiceId }
+                        it[SettingsRepository.Keys.TTS_ENGINE] = "piper_ru"
+                        it[SettingsRepository.Keys.VOICE_ID] = voiceId
+                        it[SettingsRepository.Keys.LANGUAGE] = voice?.language ?: ""
+                    }
+                }
+            }
+        }
+    }
+
+    fun selectMusicModel(modelId: String) {
+        viewModelScope.launch {
+            settings.update { it[SettingsRepository.Keys.SELECTED_MUSIC_MODEL_ID] = modelId }
+        }
+    }
+
+    fun selectSoundModel(modelId: String) {
+        viewModelScope.launch {
+            settings.update { it[SettingsRepository.Keys.SELECTED_SOUND_MODEL_ID] = modelId }
+        }
+    }
+
     fun deleteModel(modelId: String) {
         viewModelScope.launch {
             val deleted = repository().delete(modelId)
@@ -482,6 +644,10 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
             .filter { russianInstaller.isInstalled(it.id) }
             .mapTo(mutableSetOf()) { it.id }
 }
+
+private const val VOICE_MODEL_KOKORO = "kokoro-82m"
+private const val MUSIC_MODEL_STABLE_AUDIO_OPEN_SMALL = "stable-audio-open-small:music"
+private const val SOUND_MODEL_STABLE_AUDIO_OPEN_SMALL = "stable-audio-open-small:sound"
 
 private fun formatBytes(bytes: Long): String {
     if (bytes <= 0) return "size unknown"
