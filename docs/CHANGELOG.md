@@ -16,6 +16,7 @@
   Projects, Settings) на Jetpack Compose + Material 3.
 - Локальный Kokoro через sherpa-onnx Android runtime.
 - Точный размер Kokoro из Hugging Face и прогресс загрузки в процентах и байтах.
+- Стабильная debug-подпись APK между GitHub Actions сборками для обновления без потери данных.
 - 11 локалей strings.xml: en, ru, es, fr, de, it, pt, zh, ja, hi, ar.
 - Документация: README, PORTING, ROADMAP, LTV_MARKUP, QUICKSTART,
   INTERNALS, ARCHITECTURE, CHANGELOG.
