@@ -49,6 +49,9 @@ abstract class AbstractHttpEngine(
     /** URL эндпоинта. */
     protected abstract fun endpoint(): String
 
+    /** Engines with a voice in the URL can override this request-aware form. */
+    protected open fun endpoint(request: TtsRequest): String = endpoint()
+
     /** HTTP-заголовки. */
     protected abstract fun headers(): Map<String, String>
 
@@ -68,7 +71,7 @@ abstract class AbstractHttpEngine(
     override suspend fun synthesize(request: TtsRequest): TtsResult = withContext(Dispatchers.IO) {
         val body = buildBody(request).toString().toRequestBody(JSON_MEDIA)
         val req = Request.Builder()
-            .url(endpoint())
+            .url(endpoint(request))
             .headers(headers().toHeaders())
             .post(body)
             .build()

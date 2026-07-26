@@ -10,8 +10,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
@@ -39,6 +39,8 @@ import com.t2v.R
 import com.t2v.app.AppContainer
 import com.t2v.data.SettingsRepository
 import com.t2v.server.HuggingFaceRepository
+import com.t2v.tts.catalog.RussianVoiceInstaller
+import com.t2v.tts.engines.PiperRussianTtsEngine
 import com.t2v.ui.components.LTVScaffold
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -71,7 +73,11 @@ fun ModelsScreen(
         onBack = { nav.popBackStack() },
     ) { padding: PaddingValues ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Card(modifier = Modifier.fillMaxWidth()) {
@@ -136,6 +142,61 @@ fun ModelsScreen(
                 }
             }
 
+            Text("Русские локальные голоса", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Piper/VITS • ONNX • полностью на телефоне • runtime устанавливать отдельно не нужно",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            PiperRussianTtsEngine.RUSSIAN_VOICES.forEach { voice ->
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Text(voice.displayName, style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Русский • ${if (voice.gender == "female") "женский" else "мужской"} • " +
+                                "Piper medium • примерно ${formatBytes(voice.approximateSizeBytes)}",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        when {
+                            state.downloadingVoiceId == voice.id -> {
+                                if (state.downloadTotalBytes > 0) {
+                                    LinearProgressIndicator(
+                                        progress = { state.downloadProgress },
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                } else {
+                                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                                }
+                                Text(downloadProgressText(state.downloadedBytes, state.downloadTotalBytes))
+                                OutlinedButton(onClick = vm::cancelDownload) {
+                                    Text(stringResource(R.string.models_cancel_download))
+                                }
+                            }
+                            voice.id in state.installedRussianVoices -> {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text(
+                                        "Установлен",
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    OutlinedButton(onClick = { vm.deleteRussianVoice(voice.id) }) {
+                                        Icon(Icons.Default.Delete, contentDescription = "Удалить")
+                                    }
+                                }
+                            }
+                            else -> Button(
+                                enabled = state.downloadingVoiceId == null && !state.downloading,
+                                onClick = { vm.downloadRussianVoice(voice.id) },
+                            ) {
+                                Text("Скачать голос")
+                            }
+                        }
+                    }
+                }
+            }
+
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(
                     modifier = Modifier.padding(12.dp),
@@ -147,7 +208,10 @@ fun ModelsScreen(
                             "have passed synthesis tests on a real Android device. Server models are not supported.",
                         style = MaterialTheme.typography.bodySmall,
                     )
-                    Text("Kokoro is the first verified catalog entry.", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "Проверены Kokoro и русские Piper/VITS-модели из официального каталога sherpa-onnx.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
                 }
             }
 
@@ -156,15 +220,13 @@ fun ModelsScreen(
                     "${stringResource(R.string.models_installed)} (${state.installed.size})",
                     style = MaterialTheme.typography.titleMedium,
                 )
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(state.installed, key = { it.id }) { model ->
-                        InstalledModelCard(
-                            model = model,
-                            selected = state.selectedModelId == model.id,
-                            onSelect = { vm.selectModel(model.id) },
-                            onDelete = { vm.deleteModel(model.id) },
-                        )
-                    }
+                state.installed.forEach { model ->
+                    InstalledModelCard(
+                        model = model,
+                        selected = state.selectedModelId == model.id,
+                        onSelect = { vm.selectModel(model.id) },
+                        onDelete = { vm.deleteModel(model.id) },
+                    )
                 }
             }
         }
@@ -205,6 +267,8 @@ data class ModelsState(
     val installed: List<HuggingFaceRepository.InstalledModel> = emptyList(),
     val selectedModelId: String = "",
     val modelsTreeUri: String = "",
+    val installedRussianVoices: Set<String> = emptySet(),
+    val downloadingVoiceId: String? = null,
     val kokoroModel: HuggingFaceRepository.Model? = null,
     val loadingCatalog: Boolean = true,
     val downloading: Boolean = false,
@@ -220,6 +284,7 @@ data class ModelsState(
 class ModelsViewModel(private val context: android.content.Context) : ViewModel() {
     private val settings = AppContainer.settings(context)
     private val modelsRoot = File(context.filesDir, "models")
+    private val russianInstaller = RussianVoiceInstaller(File(modelsRoot, "piper-ru"))
     private val _state = MutableStateFlow(ModelsState())
     val state: StateFlow<ModelsState> = _state.asStateFlow()
     private var modelsTreeUri = ""
@@ -236,6 +301,7 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
                         selectedModelId = value.selectedModelId,
                         modelsTreeUri = value.modelsTreeUri,
                         installed = repository().installed(),
+                        installedRussianVoices = installedRussianVoiceIds(),
                     )
                 }
             }
@@ -309,16 +375,80 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
         }
     }
 
+    fun downloadRussianVoice(voiceId: String) {
+        if (downloadJob?.isActive == true) return
+        val voice = PiperRussianTtsEngine.RUSSIAN_VOICES.firstOrNull { it.id == voiceId } ?: return
+        downloadJob = viewModelScope.launch {
+            _state.update {
+                it.copy(
+                    downloadingVoiceId = voice.id,
+                    downloadProgress = 0f,
+                    downloadedBytes = 0L,
+                    downloadTotalBytes = voice.approximateSizeBytes,
+                    error = null,
+                )
+            }
+            runCatching {
+                russianInstaller.install(voice) { downloaded, total ->
+                    _state.update {
+                        it.copy(
+                            downloadedBytes = downloaded,
+                            downloadTotalBytes = total,
+                            downloadProgress = if (total > 0) {
+                                (downloaded.toDouble() / total).toFloat().coerceIn(0f, 1f)
+                            } else {
+                                0f
+                            },
+                        )
+                    }
+                }
+            }.onSuccess {
+                settings.update {
+                    it[SettingsRepository.Keys.TTS_ENGINE] = "piper_ru"
+                    it[SettingsRepository.Keys.VOICE_ID] = voice.id
+                    it[SettingsRepository.Keys.LANGUAGE] = "ru-RU"
+                }
+                _state.update {
+                    it.copy(
+                        installedRussianVoices = installedRussianVoiceIds(),
+                        downloadingVoiceId = null,
+                        downloadProgress = 0f,
+                        downloadedBytes = 0,
+                        downloadTotalBytes = -1,
+                    )
+                }
+            }.onFailure { error ->
+                _state.update {
+                    it.copy(
+                        downloadingVoiceId = null,
+                        downloadProgress = 0f,
+                        downloadedBytes = 0,
+                        downloadTotalBytes = -1,
+                        error = error.message,
+                    )
+                }
+            }
+        }
+    }
+
     fun cancelDownload() {
         downloadJob?.cancel()
         downloadJob = null
         _state.update {
             it.copy(
                 downloading = false,
+                downloadingVoiceId = null,
                 downloadProgress = 0f,
                 downloadedBytes = 0L,
                 downloadTotalBytes = -1L,
             )
+        }
+    }
+
+    fun deleteRussianVoice(voiceId: String) {
+        viewModelScope.launch {
+            russianInstaller.delete(voiceId)
+            _state.update { it.copy(installedRussianVoices = installedRussianVoiceIds()) }
         }
     }
 
@@ -346,6 +476,11 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
 
     private fun repository(): HuggingFaceRepository =
         HuggingFaceRepository(context, modelsRoot, modelsTreeUri, huggingFaceToken)
+
+    private fun installedRussianVoiceIds(): Set<String> =
+        PiperRussianTtsEngine.RUSSIAN_VOICES
+            .filter { russianInstaller.isInstalled(it.id) }
+            .mapTo(mutableSetOf()) { it.id }
 }
 
 private fun formatBytes(bytes: Long): String {

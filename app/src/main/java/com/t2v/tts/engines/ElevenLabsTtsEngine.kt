@@ -12,7 +12,9 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
 
@@ -29,6 +31,11 @@ class ElevenLabsTtsEngine(
 ) : AbstractHttpEngine(ENGINE_INFO) {
 
     override fun endpoint(): String = "$baseUrl/text-to-speech/$defaultVoiceId?output_format=mp3_44100_128"
+
+    override fun endpoint(request: TtsRequest): String {
+        val voiceId = request.voice.voice.ifBlank { defaultVoiceId }
+        return "$baseUrl/text-to-speech/$voiceId?output_format=mp3_44100_128"
+    }
 
     override fun headers(): Map<String, String> = mapOf(
         "xi-api-key" to apiKey,
@@ -75,6 +82,38 @@ class ElevenLabsTtsEngine(
             }
         }.getOrDefault(emptyList())
     }
+
+    suspend fun cloneVoice(name: String, audioFile: File, mimeType: String): String =
+        withContext(Dispatchers.IO) {
+            require(name.isNotBlank()) { "Voice name is required" }
+            require(audioFile.isFile && audioFile.length() > 0) { "Voice recording is empty" }
+            val body = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("name", name.trim())
+                .addFormDataPart("description", "Created in T2V with the speaker's consent")
+                .addFormDataPart("labels", """{"language":"ru"}""")
+                .addFormDataPart(
+                    "files",
+                    audioFile.name,
+                    audioFile.asRequestBody(mimeType.toMediaType()),
+                )
+                .build()
+            val request = Request.Builder()
+                .url("$baseUrl/voices/add")
+                .header("xi-api-key", apiKey)
+                .post(body)
+                .build()
+            httpClient.newCall(request).execute().use { response ->
+                val text = response.body?.string().orEmpty()
+                if (!response.isSuccessful) {
+                    throw TtsEngineException.Api(response.code, text.take(500))
+                }
+                val result = json.parseToJsonElement(text) as? JsonObject
+                    ?: throw TtsEngineException.Generic("Invalid cloning response")
+                result["voice_id"]?.toString()?.trim('"')
+                    ?: throw TtsEngineException.Generic("Voice ID is missing")
+            }
+        }
 
     companion object {
         val ENGINE_INFO = EngineInfo(
