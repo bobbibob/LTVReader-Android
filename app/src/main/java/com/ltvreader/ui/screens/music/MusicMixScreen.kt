@@ -15,6 +15,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,6 +37,7 @@ import com.ltvreader.core.audio.AudioMixSettings
 import com.ltvreader.core.audio.FFmpegBridge
 import com.ltvreader.server.EngineHostClient
 import com.ltvreader.ui.components.LTVScaffold
+import com.ltvreader.ui.navigation.Routes
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -141,6 +143,13 @@ fun MusicMixScreen(
                 enabled = !state.isRendering,
             ) {
                 Text(stringResource(R.string.mix_render))
+            }
+            OutlinedButton(
+                onClick = { nav.navigate(Routes.audioEditor(audiobookId)) },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !state.isRendering,
+            ) {
+                Text("Open multitrack audio editor")
             }
             if (state.outputPath != null) {
                 Text("✓ ${state.outputPath}", style = MaterialTheme.typography.bodySmall)

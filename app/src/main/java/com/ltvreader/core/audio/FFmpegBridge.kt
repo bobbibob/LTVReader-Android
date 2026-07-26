@@ -161,6 +161,60 @@ object FFmpegBridge {
         output
     }
 
+    suspend fun renderEditedTrack(
+        context: Context,
+        clips: List<AudioEditClip>,
+        output: File,
+    ): File = withContext(Dispatchers.IO) {
+        require(clips.isNotEmpty()) { "Track has no clips" }
+        val tempDir = File(output.parentFile, ".edit-${System.currentTimeMillis()}")
+        tempDir.mkdirs()
+        val rendered = mutableListOf<File>()
+        try {
+            clips.forEachIndexed { index, clip ->
+                require(clip.speed in 0.5..2.0) { "Clip speed must be between 0.5 and 2.0" }
+                val source = File(clip.sourcePath)
+                require(source.isFile) { "Missing clip source: ${clip.sourcePath}" }
+                val part = File(tempDir, "clip-$index.wav")
+                val args = buildList {
+                    add("-y")
+                    add("-ss")
+                    add("%.3f".format(java.util.Locale.US, clip.startMs / 1000.0))
+                    if (clip.endMs > clip.startMs) {
+                        add("-to")
+                        add("%.3f".format(java.util.Locale.US, clip.endMs / 1000.0))
+                    }
+                    add("-i")
+                    add(source.absolutePath)
+                    add("-af")
+                    add("atempo=${"%.4f".format(java.util.Locale.US, clip.speed)}")
+                    add("-ac")
+                    add("2")
+                    add("-ar")
+                    add("44100")
+                    add(part.absolutePath)
+                }
+                run(context, args)
+                rendered += part
+            }
+            val listFile = File(tempDir, "concat.txt")
+            listFile.bufferedWriter().use { writer ->
+                rendered.forEach { writer.appendLine("file '${it.absolutePath.replace("'", "'\\''")}'") }
+            }
+            output.parentFile?.mkdirs()
+            run(
+                context,
+                listOf(
+                    "-y", "-f", "concat", "-safe", "0", "-i", listFile.absolutePath,
+                    "-c:a", "pcm_s16le", output.absolutePath,
+                ),
+            )
+            output
+        } finally {
+            tempDir.deleteRecursively()
+        }
+    }
+
     private suspend fun run(context: Context, args: List<String>) = withContext(Dispatchers.IO) {
         val exe = ensure(context)
         val full = listOf(exe) + args
