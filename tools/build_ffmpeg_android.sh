@@ -8,6 +8,7 @@ LAME_SHA256="ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785d1da9e175b1da1e"
 ANDROID_API="24"
 OUTPUT_DIR="${1:-app/src/main/jniLibs/arm64-v8a}"
 NDK_ROOT="${ANDROID_NDK_HOME:-${ANDROID_NDK_ROOT:-}}"
+PROJECT_DIR="$(pwd)"
 
 if [[ -z "$NDK_ROOT" || ! -d "$NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64" ]]; then
   echo "ANDROID_NDK_HOME must point to an Android NDK with a Linux LLVM toolchain" >&2
@@ -77,7 +78,7 @@ cd "$WORK_DIR/ffmpeg"
   --enable-small
 make -j"$(nproc)" ffmpeg
 
-mkdir -p "$OLDPWD/$OUTPUT_DIR"
-cp ffmpeg "$OLDPWD/$OUTPUT_DIR/libffmpeg_exec.so"
-"$TOOLCHAIN/bin/llvm-strip" "$OLDPWD/$OUTPUT_DIR/libffmpeg_exec.so"
-sha256sum "$OLDPWD/$OUTPUT_DIR/libffmpeg_exec.so"
+mkdir -p "$PROJECT_DIR/$OUTPUT_DIR"
+cp ffmpeg "$PROJECT_DIR/$OUTPUT_DIR/libffmpeg_exec.so"
+"$TOOLCHAIN/bin/llvm-strip" "$PROJECT_DIR/$OUTPUT_DIR/libffmpeg_exec.so"
+sha256sum "$PROJECT_DIR/$OUTPUT_DIR/libffmpeg_exec.so"
