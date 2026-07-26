@@ -28,14 +28,14 @@ class OpenAiTtsEngine(
 
     override fun headers(): Map<String, String> = mapOf(
         "Authorization" to "Bearer $apiKey",
-        "Accept" to "audio/mpeg",
+        "Accept" to "audio/wav",
     )
 
     override fun buildBody(request: TtsRequest): JsonObject = buildJsonObject {
         put("model", defaultModel)
         put("input", request.text)
         put("voice", request.voice.voice.ifEmpty { defaultVoice })
-        put("response_format", "mp3")
+        put("response_format", "wav")
         put("speed", request.voice.speed.coerceIn(0.25, 4.0))
     }
 

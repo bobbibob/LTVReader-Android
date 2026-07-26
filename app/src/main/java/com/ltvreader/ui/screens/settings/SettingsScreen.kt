@@ -1,5 +1,8 @@
 package com.ltvreader.ui.screens.settings
 
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -108,6 +111,9 @@ fun SettingsScreen(
             PasswordField("ElevenLabs API Key", state.settings.engines["elevenlabs"]?.get("apiKey").orEmpty()) { v -> vm.setApiKey("elevenlabs", v) }
             PasswordField("Gemini API Key", state.settings.engines["gemini"]?.get("apiKey").orEmpty()) { v -> vm.setApiKey("gemini", v) }
             PasswordField("Azure Subscription Key", state.settings.engines["azure"]?.get("subscriptionKey").orEmpty()) { v -> vm.setApiKey("azure", v) }
+            PasswordField("Hugging Face Token (optional)", state.settings.engines["huggingface"]?.get("token").orEmpty()) { v ->
+                vm.setApiKey("huggingface", v, "token")
+            }
             OutlinedTextField(
                 value = state.settings.engines["azure"]?.get("region").orEmpty(),
                 onValueChange = { vm.setApiKey("azure", it, "region") },
@@ -186,6 +192,7 @@ class SettingsViewModel(private val context: android.content.Context) : ViewMode
                 "gemini" -> it[SettingsRepository.Keys.GEMINI_KEY] = v
                 "azure" -> if (field == "region") it[SettingsRepository.Keys.AZURE_REGION] = v
                 else it[SettingsRepository.Keys.AZURE_KEY] = v
+                "huggingface" -> it[SettingsRepository.Keys.HUGGING_FACE_TOKEN] = v
             }
         }
     }

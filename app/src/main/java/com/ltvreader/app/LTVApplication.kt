@@ -10,7 +10,6 @@ import com.ltvreader.worker.GenerationPipeline
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -23,16 +22,32 @@ class LTVApplication : Application() {
     val database: AppDatabase by lazy { AppDatabase.get(this) }
     val settingsRepo: SettingsRepository by lazy { SettingsRepository(this) }
 
+    @Volatile private var engineSettings = EngineRegistry.EngineSettings()
     @Volatile var hostClient: EngineHostClient? = null
+        private set
+
     val engineRegistry: EngineRegistry by lazy {
-        // Загружаем актуальные настройки и пересоздаём реестр.
+        EngineRegistry(
+            appContext = this,
+            settingsProvider = { engineSettings },
+            hostClientProvider = { hostClient },
+        )
+    }
+
+    override fun onCreate() {
+        super.onCreate()
         appScope.launch {
-            val s = settingsRepo.flow.first()
-            hostClient = if (s.remoteHostEnabled && s.remoteHostUrl.isNotBlank()) {
-                EngineHostClient(s.remoteHostUrl.trimEnd('/'))
-            } else null
+            settingsRepo.flow.collect { settings ->
+                engineSettings = EngineRegistry.EngineSettings(settings.engines)
+                val currentUrl = settings.remoteHostUrl.trimEnd('/')
+                hostClient = if (settings.remoteHostEnabled && currentUrl.isNotBlank()) {
+                    EngineHostClient(currentUrl)
+                } else {
+                    null
+                }
+                engineRegistry.closeAll()
+            }
         }
-        EngineRegistry(this, EngineRegistry.EngineSettings(emptyMap()), hostClient)
     }
 
     val textProcessor: TextProcessor by lazy {

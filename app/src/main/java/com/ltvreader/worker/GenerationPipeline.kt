@@ -2,9 +2,8 @@ package com.ltvreader.worker
 
 import android.content.Context
 import com.ltvreader.core.audio.AudioEncoder
-import com.ltvreader.core.audio.FFmpegBridge
 import com.ltvreader.core.text.TextProcessor
-import com.ltvreader.data.AudiobookEntity
+import com.ltvreader.data.AppDatabase
 import com.ltvreader.data.SegmentEntity
 import com.ltvreader.tts.TtsEngineException
 import com.ltvreader.tts.TtsRequest
@@ -56,9 +55,12 @@ class GenerationPipeline(
 
     private val mutex = Mutex()
     @Volatile private var cancelled = false
+    private val database = AppDatabase.get(context)
+    @Volatile private var activeEngine: TtsEngine? = null
 
     suspend fun cancel() {
         cancelled = true
+        activeEngine?.cancel()
     }
 
     suspend fun generate(
@@ -78,6 +80,18 @@ class GenerationPipeline(
             _progress.value = Progress(total = total, done = 0, phase = Progress.Phase.Processing)
 
             val engine = engineRegistry.get(engineId)
+            activeEngine = engine
+            val segmentIds = chunks.mapIndexed { index, chunk ->
+                database.segments().upsert(
+                    SegmentEntity(
+                        audiobookId = audiobookId,
+                        orderIndex = index,
+                        text = chunk.text,
+                        pauseBeforeMs = chunk.markupPauseBeforeMs,
+                        pauseAfterMs = chunk.markupPauseAfterMs ?: 0,
+                    ),
+                )
+            }
 
             for ((idx, chunk) in chunks.withIndex()) {
                 if (cancelled) {
@@ -91,6 +105,10 @@ class GenerationPipeline(
                     )
                 }
                 val wav = File(outputDir, "seg_%05d.wav".format(idx))
+                val segmentId = segmentIds[idx]
+                val pendingSegment = database.segments().byId(segmentId)
+                    ?: error("Segment $segmentId disappeared")
+                database.segments().update(pendingSegment.copy(status = "running"))
                 val req = TtsRequest(
                     text = chunk.text,
                     outputFile = wav,
@@ -103,6 +121,13 @@ class GenerationPipeline(
                     ),
                 )
                 val result = withRetry(maxAttempts = 2) { engine.synthesize(req) }
+                database.segments().update(
+                    pendingSegment.copy(
+                        audioPath = result.outputFile.absolutePath,
+                        durationMs = result.durationMs.coerceAtLeast(0),
+                        status = "completed",
+                    ),
+                )
 
                 // Между чанками — тишина
                 if (chunk.markupPauseBeforeMs > 0) {
@@ -121,18 +146,20 @@ class GenerationPipeline(
 
             // Кодируем
             _progress.update { it.copy(phase = Progress.Phase.Encoding) }
-            val finalMp3 = File(outputDir, "audiobook.mp3")
+            val finalWav = File(outputDir, "audiobook.wav")
             if (segmentWavs.size == 1) {
-                FFmpegBridge.encode(context, segmentWavs.first(), finalMp3, "mp3")
+                segmentWavs.first().copyTo(finalWav, overwrite = true)
             } else {
-                FFmpegBridge.concat(context, segmentWavs, finalMp3, "mp3")
+                AudioEncoder.concatWav(segmentWavs, finalWav)
             }
             _progress.update { it.copy(phase = Progress.Phase.Completed) }
-            finalMp3
+            finalWav
         }.onFailure { e ->
             _progress.update {
                 it.copy(phase = if (cancelled) Progress.Phase.Cancelled else Progress.Phase.Failed, error = e.message)
             }
+        }.also {
+            activeEngine = null
         }
     }
 

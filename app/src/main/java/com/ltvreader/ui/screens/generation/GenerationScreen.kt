@@ -221,11 +221,12 @@ class GenerationViewModel(
             voice = s.voiceId.ifEmpty { voices.voice },
             lang = s.language.ifEmpty { voices.lang },
         )
+        val startedAt = System.currentTimeMillis()
         val audiobookId = db.audiobooks().upsert(
             com.ltvreader.data.AudiobookEntity(
                 projectId = projectId,
                 status = "running",
-                startedAt = System.currentTimeMillis(),
+                startedAt = startedAt,
             ),
         )
         val outputDir = java.io.File(context.filesDir, "audiobooks/$audiobookId")
@@ -238,14 +239,18 @@ class GenerationViewModel(
             outputDir = outputDir,
         )
         val finalStatus = if (result.isSuccess) "completed" else "failed"
+        val segments = db.segments().listForAudiobook(audiobookId)
         db.audiobooks().update(
             com.ltvreader.data.AudiobookEntity(
                 id = audiobookId,
                 projectId = projectId,
                 status = finalStatus,
-                startedAt = System.currentTimeMillis(),
+                startedAt = startedAt,
                 completedAt = System.currentTimeMillis(),
                 outputPath = result.getOrNull()?.absolutePath,
+                durationMs = segments.sumOf { it.durationMs },
+                segmentsTotal = segments.size,
+                segmentsDone = segments.count { it.status == "completed" },
                 errorMessage = result.exceptionOrNull()?.message,
             ),
         )

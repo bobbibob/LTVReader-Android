@@ -24,8 +24,8 @@ import java.io.File
  */
 class EngineRegistry(
     private val appContext: Context,
-    private val settings: EngineSettings,
-    private val hostClient: EngineHostClient? = null,
+    private val settingsProvider: () -> EngineSettings,
+    private val hostClientProvider: () -> EngineHostClient? = { null },
 ) {
 
     /** Настройки конкретного движка (API-ключи и т.п.). */
@@ -43,7 +43,7 @@ class EngineRegistry(
         add(GeminiTtsEngine.ENGINE_INFO)
         add(AzureTtsEngine.ENGINE_INFO)
         add(CustomHttpTtsEngine.ENGINE_INFO)
-        if (hostClient != null) {
+        if (hostClientProvider() != null) {
             add(EngineInfo("remote:piper", "Piper (via remote host)", EngineInfo.EngineKind.Remote))
             add(EngineInfo("remote:chatterbox", "Chatterbox (via remote host)", EngineInfo.EngineKind.Remote))
             add(EngineInfo("remote:qwen", "Qwen3 TTS (via remote host)", EngineInfo.EngineKind.Remote))
@@ -68,7 +68,8 @@ class EngineRegistry(
     }
 
     private fun createEngine(id: String): TtsEngine? {
-        val cfg = settings.engines[id] ?: emptyMap()
+        val cfg = settingsProvider().engines[id] ?: emptyMap()
+        val hostClient = hostClientProvider()
         return when (id) {
             "kokoro" -> {
                 val root = File(appContext.filesDir, "voices/kokoro")
@@ -78,29 +79,29 @@ class EngineRegistry(
                 )
             }
             "openai" -> OpenAiTtsEngine(
-                apiKey = cfg["apiKey"] ?: return null,
+                apiKey = cfg["apiKey"]?.takeIf { it.isNotBlank() } ?: return null,
                 baseUrl = cfg["baseUrl"] ?: "https://api.openai.com/v1",
                 defaultModel = cfg["model"] ?: "gpt-4o-mini-tts",
             )
             "elevenlabs" -> ElevenLabsTtsEngine(
-                apiKey = cfg["apiKey"] ?: return null,
+                apiKey = cfg["apiKey"]?.takeIf { it.isNotBlank() } ?: return null,
                 baseUrl = cfg["baseUrl"] ?: "https://api.elevenlabs.io/v1",
                 defaultVoiceId = cfg["voiceId"] ?: "21m00Tcm4TlvDq8ikWAM",
                 modelId = cfg["modelId"] ?: "eleven_multilingual_v2",
             )
             "gemini" -> GeminiTtsEngine(
-                apiKey = cfg["apiKey"] ?: return null,
+                apiKey = cfg["apiKey"]?.takeIf { it.isNotBlank() } ?: return null,
                 model = cfg["model"] ?: "gemini-2.5-flash-preview-tts",
                 voiceName = cfg["voiceName"] ?: "Kore",
             )
             "azure" -> AzureTtsEngine(
-                subscriptionKey = cfg["subscriptionKey"] ?: return null,
-                region = cfg["region"] ?: return null,
+                subscriptionKey = cfg["subscriptionKey"]?.takeIf { it.isNotBlank() } ?: return null,
+                region = cfg["region"]?.takeIf { it.isNotBlank() } ?: return null,
                 defaultVoice = cfg["voice"] ?: "en-US-JennyNeural",
             )
             "custom_http" -> CustomHttpTtsEngine(
                 CustomHttpTtsEngine.Config(
-                    url = cfg["url"] ?: return null,
+                    url = cfg["url"]?.takeIf { it.isNotBlank() } ?: return null,
                     headers = parseHeaders(cfg["headers"] ?: ""),
                     bodyTemplate = cfg["bodyTemplate"]
                         ?: """{"text": "{{text}}", "voice": "{{voice}}", "lang": "{{lang}}"}""",

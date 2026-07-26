@@ -107,6 +107,104 @@ object AudioEncoder {
         val silence = ShortArray(n) // already zero
         return writeWav(out, AudioChunk(silence, sampleRate, channels))
     }
+
+    /**
+     * Concatenate PCM WAV files without FFmpeg. Input formats must match.
+     * Audio data is streamed, so long books are not loaded into memory.
+     */
+    fun concatWav(inputs: List<java.io.File>, out: java.io.File): Long {
+        require(inputs.isNotEmpty()) { "No WAV files to concatenate" }
+        val metadata = inputs.map(::readMetadata)
+        val first = metadata.first()
+        require(metadata.all {
+            it.sampleRate == first.sampleRate &&
+                it.channels == first.channels &&
+                it.bitsPerSample == first.bitsPerSample
+        }) { "All WAV files must have the same PCM format" }
+        val totalDataSize = metadata.sumOf { it.dataSize.toLong() }
+        require(totalDataSize <= Int.MAX_VALUE - 36L) { "WAV output exceeds 2 GB" }
+        out.parentFile?.mkdirs()
+        java.io.DataOutputStream(java.io.BufferedOutputStream(out.outputStream())).use { output ->
+            output.write(byteArrayOf(0x52, 0x49, 0x46, 0x46))
+            output.writeIntLe((36L + totalDataSize).toInt())
+            output.write(byteArrayOf(0x57, 0x41, 0x56, 0x45))
+            output.write(byteArrayOf(0x66, 0x6D, 0x74, 0x20))
+            output.writeIntLe(16)
+            output.writeShortLe(1)
+            output.writeShortLe(first.channels)
+            output.writeIntLe(first.sampleRate)
+            output.writeIntLe(first.sampleRate * first.channels * 2)
+            output.writeShortLe(first.channels * 2)
+            output.writeShortLe(first.bitsPerSample)
+            output.write(byteArrayOf(0x64, 0x61, 0x74, 0x61))
+            output.writeIntLe(totalDataSize.toInt())
+
+            val buffer = ByteArray(128 * 1024)
+            for ((index, input) in inputs.withIndex()) {
+                java.io.RandomAccessFile(input, "r").use { source ->
+                    source.seek(metadata[index].dataOffset)
+                    var remaining = metadata[index].dataSize
+                    while (remaining > 0) {
+                        val read = source.read(buffer, 0, minOf(buffer.size, remaining))
+                        if (read < 0) error("Unexpected end of WAV: ${input.name}")
+                        output.write(buffer, 0, read)
+                        remaining -= read
+                    }
+                }
+            }
+        }
+        return totalDataSize
+    }
+
+    private data class WavMetadata(
+        val sampleRate: Int,
+        val channels: Int,
+        val bitsPerSample: Int,
+        val dataOffset: Long,
+        val dataSize: Int,
+    )
+
+    private fun readMetadata(file: java.io.File): WavMetadata {
+        java.io.RandomAccessFile(file, "r").use { raf ->
+            fun readLeShort(): Int = raf.read() or (raf.read() shl 8)
+            fun readLeInt(): Int =
+                raf.read() or (raf.read() shl 8) or (raf.read() shl 16) or (raf.read() shl 24)
+
+            val riff = ByteArray(4).also { raf.readFully(it) }
+            require(riff.toString(Charsets.US_ASCII) == "RIFF") { "Not a RIFF file: ${file.name}" }
+            readLeInt()
+            val wave = ByteArray(4).also { raf.readFully(it) }
+            require(wave.toString(Charsets.US_ASCII) == "WAVE") { "Not a WAVE file: ${file.name}" }
+            var sampleRate = 0
+            var channels = 0
+            var bitsPerSample = 0
+            while (raf.filePointer < raf.length()) {
+                val idBytes = ByteArray(4)
+                if (raf.read(idBytes) < 4) break
+                val size = readLeInt()
+                when (idBytes.toString(Charsets.US_ASCII)) {
+                    "fmt " -> {
+                        require(readLeShort() == 1) { "Only PCM WAV is supported" }
+                        channels = readLeShort()
+                        sampleRate = readLeInt()
+                        raf.skipBytes(6)
+                        bitsPerSample = readLeShort()
+                        require(bitsPerSample == 16) { "Only 16-bit PCM WAV is supported" }
+                        if (size > 16) raf.skipBytes(size - 16)
+                    }
+                    "data" -> return WavMetadata(
+                        sampleRate,
+                        channels,
+                        bitsPerSample,
+                        raf.filePointer,
+                        size,
+                    )
+                    else -> raf.skipBytes(size + (size and 1))
+                }
+            }
+            error("WAV file has no data chunk: ${file.name}")
+        }
+    }
 }
 
 // DataInput/DataOutput helpers для little-endian

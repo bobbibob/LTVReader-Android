@@ -81,4 +81,26 @@ class AudioMixerTest {
             tmp.delete()
         }
     }
+
+    @Test
+    fun `concatWav streams matching files`() {
+        val first = kotlin.io.path.createTempFile(suffix = ".wav").toFile()
+        val second = kotlin.io.path.createTempFile(suffix = ".wav").toFile()
+        val output = kotlin.io.path.createTempFile(suffix = ".wav").toFile()
+        try {
+            AudioEncoder.writeWav(first, AudioChunk(shortArrayOf(100, 200), 22050, 1))
+            AudioEncoder.writeWav(second, AudioChunk(shortArrayOf(300, 400, 500), 22050, 1))
+
+            AudioEncoder.concatWav(listOf(first, second), output)
+
+            val (_, result) = AudioEncoder.readWav(output)
+            assertEquals(listOf<Short>(100, 200, 300, 400, 500), result.samples.toList())
+            assertEquals(22050, result.sampleRate)
+            assertEquals(1, result.channels)
+        } finally {
+            first.delete()
+            second.delete()
+            output.delete()
+        }
+    }
 }

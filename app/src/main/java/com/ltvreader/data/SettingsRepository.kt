@@ -53,6 +53,7 @@ class SettingsRepository(private val context: Context) {
         val AZURE_KEY = stringPreferencesKey("engines.azure.subscriptionKey")
         val AZURE_REGION = stringPreferencesKey("engines.azure.region")
         val CUSTOM_URL = stringPreferencesKey("engines.custom_http.url")
+        val HUGGING_FACE_TOKEN = stringPreferencesKey("huggingface.token")
     }
 
     val flow: Flow<Settings> = context.dataStore.data.map { p -> p.toSettings() }
@@ -92,6 +93,7 @@ class SettingsRepository(private val context: Context) {
                 "region" to (this[Keys.AZURE_REGION] ?: ""),
             ),
             "custom_http" to mapOf("url" to (this[Keys.CUSTOM_URL] ?: "")),
+            "huggingface" to mapOf("token" to (this[Keys.HUGGING_FACE_TOKEN] ?: "")),
         ),
     )
 }

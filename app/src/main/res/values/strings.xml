@@ -149,4 +149,9 @@
     <string name="models_active">✓ Active</string>
     <string name="models_unknown_engine">Unknown engine</string>
     <string name="models_hf_token_required">Set HF_TOKEN env var for private repos</string>
+    <string name="models_hf_search">Search Hugging Face TTS models</string>
+    <string name="models_hf_repo">Repository ID, for example owner/model</string>
+    <string name="models_hf_search_action">Search</string>
+    <string name="models_hf_open_repo">Open repository</string>
+    <string name="models_cancel_download">Cancel download</string>
 </resources>
