@@ -95,10 +95,26 @@ jobs:
         with:
           path: ~/.android/debug.keystore
           key: t2v-debug-signing-v1
+      - name: Create debug signing key on first run
+        run: |
+          mkdir -p ~/.android
+          if [ ! -s ~/.android/debug.keystore ]; then
+            keytool -genkeypair \
+              -keystore ~/.android/debug.keystore \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Android Debug,O=T2V,C=US"
+          fi
       - name: Make gradlew executable
         run: chmod +x ./gradlew
       - name: Build debug APK
         run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
+      - name: Verify persistent debug signing key
+        run: test -s ~/.android/debug.keystore
       - name: Verify FFmpeg is packaged
         run: unzip -l app/build/outputs/apk/debug/app-debug.apk | grep 'lib/arm64-v8a/libffmpeg_exec.so'
       - name: Verify local TTS runtime is packaged
