@@ -17,7 +17,7 @@ fi
 
 WORK_DIR="$(mktemp -d)"
 trap 'rm -rf "$WORK_DIR"' EXIT
-git clone --depth 1 --branch "$FFMPEG_TAG" https://git.ffmpeg.org/ffmpeg.git "$WORK_DIR/ffmpeg"
+git clone --depth 1 --branch "$FFMPEG_TAG" https://github.com/FFmpeg/FFmpeg.git "$WORK_DIR/ffmpeg"
 ACTUAL_COMMIT="$(git -C "$WORK_DIR/ffmpeg" rev-parse HEAD)"
 if [[ "$ACTUAL_COMMIT" != "$FFMPEG_COMMIT" ]]; then
   echo "FFmpeg source verification failed: expected $FFMPEG_COMMIT, got $ACTUAL_COMMIT" >&2
