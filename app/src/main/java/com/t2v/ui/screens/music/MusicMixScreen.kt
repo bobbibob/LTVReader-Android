@@ -5,7 +5,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,9 +13,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -35,7 +32,6 @@ import com.t2v.R
 import com.t2v.app.AppContainer
 import com.t2v.core.audio.AudioMixSettings
 import com.t2v.core.audio.FFmpegBridge
-import com.t2v.server.EngineHostClient
 import com.t2v.ui.components.LTVScaffold
 import com.t2v.ui.navigation.Routes
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -89,33 +85,6 @@ fun MusicMixScreen(
                     Text("Remove background music")
                 }
             }
-            OutlinedTextField(
-                value = state.musicPrompt,
-                onValueChange = vm::setMusicPrompt,
-                label = { Text("Generate instrumental background") },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Row {
-                RadioButton(
-                    selected = state.musicModelId == STABLE_AUDIO,
-                    onClick = { vm.setMusicModel(STABLE_AUDIO) },
-                )
-                Text("Stable Audio Open • commercial use subject to license", Modifier.padding(top = 12.dp))
-            }
-            Row {
-                RadioButton(
-                    selected = state.musicModelId == MUSICGEN,
-                    onClick = { vm.setMusicModel(MUSICGEN) },
-                )
-                Text("MusicGen Small • non-commercial only", Modifier.padding(top = 12.dp))
-            }
-            Button(
-                onClick = vm::generateMusic,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = state.musicPrompt.isNotBlank() && !state.generatingMusic,
-            ) {
-                Text(if (state.generatingMusic) "Generating music…" else "Generate on local host")
-            }
             state.error?.let {
                 Text(it, color = MaterialTheme.colorScheme.error)
             }
@@ -165,9 +134,6 @@ data class MusicMixState(
     val outputPath: String? = null,
     val isRendering: Boolean = false,
     val error: String? = null,
-    val musicPrompt: String = "",
-    val musicModelId: String = STABLE_AUDIO,
-    val generatingMusic: Boolean = false,
 )
 
 class MusicMixViewModel(
@@ -175,14 +141,9 @@ class MusicMixViewModel(
     private val audiobookId: Long,
 ) : ViewModel() {
     private val db = AppContainer.database(context)
-    private val settingsRepository = AppContainer.settings(context)
-    private var remoteHostUrl = ""
     private val _state = MutableStateFlow(MusicMixState())
     val state: StateFlow<MusicMixState> = _state.asStateFlow()
     init {
-        viewModelScope.launch {
-            settingsRepository.flow.collect { settings -> remoteHostUrl = settings.remoteHostUrl }
-        }
         viewModelScope.launch {
             val audiobook = db.audiobooks().byId(audiobookId)
             _state.update {
@@ -196,37 +157,6 @@ class MusicMixViewModel(
     fun setVoiceVolume(db: Double) = _state.update { it.copy(settings = it.settings.copy(voiceVolumeDb = db)) }
     fun setMusicVolume(db: Double) = _state.update { it.copy(settings = it.settings.copy(musicVolumeDb = db)) }
     fun setDucking(db: Double) = _state.update { it.copy(settings = it.settings.copy(duckingDb = db)) }
-    fun setMusicPrompt(value: String) = _state.update { it.copy(musicPrompt = value) }
-    fun setMusicModel(value: String) = _state.update { it.copy(musicModelId = value) }
-    fun generateMusic() {
-        val state = _state.value
-        if (remoteHostUrl.isBlank()) {
-            _state.update { it.copy(error = "Configure remote host URL in Settings") }
-            return
-        }
-        viewModelScope.launch {
-            _state.update { it.copy(generatingMusic = true, error = null) }
-            val output = File(context.filesDir, "audiobooks/$audiobookId/generated_music.wav")
-            runCatching {
-                EngineHostClient(remoteHostUrl.trimEnd('/')).generateMusic(
-                    modelId = state.musicModelId,
-                    prompt = state.musicPrompt,
-                    seconds = 30,
-                    outputFile = output,
-                )
-            }.onSuccess {
-                _state.update {
-                    it.copy(
-                        musicPath = output.absolutePath,
-                        settings = it.settings.copy(musicPath = output.absolutePath),
-                        generatingMusic = false,
-                    )
-                }
-            }.onFailure { error ->
-                _state.update { it.copy(generatingMusic = false, error = error.message) }
-            }
-        }
-    }
     fun importMusic(uri: Uri) {
         viewModelScope.launch {
             runCatching {
@@ -279,9 +209,6 @@ class MusicMixViewModel(
         _state.update { it.copy(outputPath = outFile.absolutePath, isRendering = false) }
     }
 }
-
-private const val STABLE_AUDIO = "stabilityai/stable-audio-open-1.0"
-private const val MUSICGEN = "facebook/musicgen-small"
 
 class MusicMixViewModelFactory(
     private val context: android.content.Context,

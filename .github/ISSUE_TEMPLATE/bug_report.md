@@ -30,7 +30,6 @@ assignees: ''
 - Android: (например, Android 14)
 - Версия LTV Reader: (например, 0.1.0)
 - TTS-движок: (Kokoro / OpenAI / и т.д.)
-- Включён remote host: да/нет
 
 ## Логи
 

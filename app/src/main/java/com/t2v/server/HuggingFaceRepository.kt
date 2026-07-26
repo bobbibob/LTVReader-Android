@@ -121,6 +121,8 @@ class HuggingFaceRepository(
         }
         val url = "https://huggingface.co/api/models".toHttpUrl().newBuilder()
             .addPathSegments(repoId.trim('/'))
+            .addPathSegment("revision")
+            .addPathSegment(revisionFor(repoId))
             .addQueryParameter("files_metadata", "true")
             .build()
         val request = authorized(Request.Builder().url(url)).get().build()
@@ -142,14 +144,21 @@ class HuggingFaceRepository(
             "Model ${model.id} is not verified for execution on Android"
         }
         require(variant in model.variants) { "Variant does not belong to ${model.id}" }
-        val files = buildList {
-            add(variant.weightFile)
-            addAll(
-                model.compatibleFiles.filter {
-                    it != variant.weightFile &&
-                        it.path.substringAfterLast('.').lowercase() in SUPPORT_FILE_EXTENSIONS
-                },
-            )
+        val files = if (model.id == KOKORO_REPOSITORY) {
+            model.files.filter {
+                it.path != ".gitattributes" &&
+                    !it.path.equals("README.md", ignoreCase = true)
+            }
+        } else {
+            buildList {
+                add(variant.weightFile)
+                addAll(
+                    model.compatibleFiles.filter {
+                        it != variant.weightFile &&
+                            it.path.substringAfterLast('.').lowercase() in SUPPORT_FILE_EXTENSIONS
+                    },
+                )
+            }
         }.distinctBy { it.path }
         val directory = directoryFor(model.id)
         directory.mkdirs()
@@ -163,7 +172,8 @@ class HuggingFaceRepository(
                 output.parentFile?.mkdirs()
                 val url = "https://huggingface.co".toHttpUrl().newBuilder()
                     .addPathSegments(model.id)
-                    .addPathSegments("resolve/main")
+                    .addPathSegment("resolve")
+                    .addPathSegment(revisionFor(model.id))
                     .addPathSegments(file.path)
                     .build()
                 val request = authorized(Request.Builder().url(url)).get().build()
@@ -198,7 +208,7 @@ class HuggingFaceRepository(
                 }
             }
             writeManifest(directory, model.id)
-            if (modelsTreeUri.isNotBlank()) {
+            if (modelsTreeUri.isNotBlank() && model.id != KOKORO_REPOSITORY) {
                 val installed = copyToDocumentTree(directory, model.id)
                 directory.deleteRecursively()
                 installed
@@ -355,6 +365,9 @@ class HuggingFaceRepository(
     private fun authorized(builder: Request.Builder): Request.Builder =
         if (token.isBlank()) builder else builder.header("Authorization", "Bearer $token")
 
+    private fun revisionFor(modelId: String): String =
+        if (modelId == KOKORO_REPOSITORY) KOKORO_REVISION else "main"
+
     private fun JsonObject.string(key: String): String? =
         (this[key] as? JsonPrimitive)?.takeIf { it.isString }?.content
 
@@ -372,7 +385,9 @@ class HuggingFaceRepository(
          * an instrumentation test for its exact repository/revision.
          * GGUF/ONNX/SafeTensors extensions alone never qualify a model.
          */
-        private val VERIFIED_ANDROID_MODELS: Set<String> = emptySet()
+        const val KOKORO_REPOSITORY = "csukuangfj/kokoro-en-v0_19"
+        const val KOKORO_REVISION = "92805c485745946a0d945562d3aba19e7cbb2104"
+        private val VERIFIED_ANDROID_MODELS: Set<String> = setOf(KOKORO_REPOSITORY)
         private val SUPPORTED_EXTENSIONS = setOf(
             "onnx", "bin", "json", "txt", "model", "safetensors", "pt", "pth",
             "yaml", "yml", "tokens", "vocab", "config", "gguf",

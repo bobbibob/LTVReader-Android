@@ -8,16 +8,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  server-contract:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Validate engine-host syntax
-        run: python -m py_compile server-host/engine_host.py
-
   test:
     runs-on: ubuntu-latest
     steps:
@@ -48,6 +38,27 @@ jobs:
         with:
           name: ffmpeg-android-arm64
           path: app/src/main/jniLibs/arm64-v8a/libffmpeg_exec.so
+      - name: Restore sherpa-onnx Android runtime
+        uses: actions/cache@v4
+        with:
+          path: |
+            app/src/main/jniLibs/arm64-v8a/libsherpa-onnx-jni.so
+            app/src/main/jniLibs/arm64-v8a/libsherpa-onnx-c-api.so
+            app/src/main/jniLibs/arm64-v8a/libsherpa-onnx-cxx-api.so
+            app/src/main/jniLibs/arm64-v8a/libonnxruntime.so
+          key: sherpa-onnx-android-arm64-v1.13.4
+      - name: Prepare sherpa-onnx Android runtime
+        if: hashFiles('app/src/main/jniLibs/arm64-v8a/libsherpa-onnx-jni.so') == ''
+        run: bash tools/prepare_sherpa_onnx_android.sh
+      - name: Upload sherpa-onnx Android runtime
+        uses: actions/upload-artifact@v4
+        with:
+          name: sherpa-onnx-android-arm64
+          path: |
+            app/src/main/jniLibs/arm64-v8a/libsherpa-onnx-jni.so
+            app/src/main/jniLibs/arm64-v8a/libsherpa-onnx-c-api.so
+            app/src/main/jniLibs/arm64-v8a/libsherpa-onnx-cxx-api.so
+            app/src/main/jniLibs/arm64-v8a/libonnxruntime.so
       - name: Make gradlew executable
         run: chmod +x ./gradlew
       - name: Run unit tests
@@ -74,12 +85,21 @@ jobs:
         with:
           name: ffmpeg-android-arm64
           path: app/src/main/jniLibs/arm64-v8a
+      - name: Download sherpa-onnx Android runtime
+        uses: actions/download-artifact@v4
+        with:
+          name: sherpa-onnx-android-arm64
+          path: app/src/main/jniLibs/arm64-v8a
       - name: Make gradlew executable
         run: chmod +x ./gradlew
       - name: Build debug APK
         run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
       - name: Verify FFmpeg is packaged
         run: unzip -l app/build/outputs/apk/debug/app-debug.apk | grep 'lib/arm64-v8a/libffmpeg_exec.so'
+      - name: Verify local TTS runtime is packaged
+        run: |
+          unzip -l app/build/outputs/apk/debug/app-debug.apk | grep 'lib/arm64-v8a/libsherpa-onnx-jni.so'
+          unzip -l app/build/outputs/apk/debug/app-debug.apk | grep 'lib/arm64-v8a/libonnxruntime.so'
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:

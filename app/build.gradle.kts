@@ -129,9 +129,6 @@ dependencies {
     // ffmpeg-kit (https://github.com/Arthenica/ffmpeg-kit) — через JitPack/MavenCentral
 
 
-    // onnxruntime-android (Kokoro TTS, локальный движок)
-    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.19.0")
-
     // NumPy не нужен: всё, что было на numpy, переписано на ручные массивы.
     // Документы: docx4j нет в Android, используем чистый ZIP-парсер для DOCX.
     implementation("org.apache.commons:commons-compress:1.26.0")

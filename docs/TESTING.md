@@ -50,6 +50,5 @@ app/src/androidTest/      # ART integration (медленные, ~30 с)
 - UI-тесты (Compose UI Test).
 - Тесты микшера с реальными WAV-файлами.
 - Тесты Room (in-memory database).
-- Тесты remote host (с mock-сервером).
+- Тесты загрузки моделей (с mock HTTP).
 - Скриншот-тесты (Paparazzi или Roborazzi).
-

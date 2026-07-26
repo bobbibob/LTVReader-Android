@@ -13,23 +13,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -43,11 +38,8 @@ import androidx.navigation.NavController
 import com.t2v.R
 import com.t2v.app.AppContainer
 import com.t2v.data.SettingsRepository
-import com.t2v.server.EngineHostClient
 import com.t2v.server.HuggingFaceRepository
-import com.t2v.server.ModelRepository
 import com.t2v.ui.components.LTVScaffold
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -72,16 +64,14 @@ fun ModelsScreen(
             vm.setModelsFolder(uri.toString())
         }
     }
+
     LTVScaffold(
         nav = nav,
         title = stringResource(R.string.nav_models),
         onBack = { nav.popBackStack() },
     ) { padding: PaddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Card(modifier = Modifier.fillMaxWidth()) {
@@ -89,102 +79,72 @@ fun ModelsScreen(
                     modifier = Modifier.padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    Text("Models folder", style = MaterialTheme.typography.labelLarge)
+                    Text("On-device models folder", style = MaterialTheme.typography.labelLarge)
                     Text(
                         state.modelsTreeUri.ifBlank { "Internal app storage" },
                         style = MaterialTheme.typography.bodySmall,
                     )
-                    OutlinedButton(
-                        enabled = state.downloadingId.isBlank(),
-                        onClick = { folderPicker.launch(null) },
-                    ) {
+                    OutlinedButton(onClick = { folderPicker.launch(null) }) {
                         Text("Change folder")
                     }
                 }
             }
-            Text("Remote server models", style = MaterialTheme.typography.titleMedium)
+
+            Text("Available on-device models", style = MaterialTheme.typography.titleMedium)
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(
                     modifier = Modifier.padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
+                    Text("Kokoro 82M", style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "These models do not run inside the Android app.",
-                        style = MaterialTheme.typography.titleSmall,
-                    )
-                    Text(
-                        "Qwen3-TTS, MMS-TTS and Chatterbox are downloaded and executed by " +
-                            "engine-host on a separate computer. T2V receives the generated audio.",
+                        "English • 11 voices • ONNX • Apache-2.0 • runs entirely on this phone",
                         style = MaterialTheme.typography.bodySmall,
                     )
-                    if (!state.remoteHostConfigured) {
-                        Button(onClick = { nav.navigate(com.t2v.ui.navigation.Routes.Settings) }) {
-                            Text("Configure engine-host")
+                    Text(
+                        state.kokoroModel?.let { formatBytes(it.totalSizeBytes) } ?: "approximately 369 MB",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    when {
+                        state.loadingCatalog -> CircularProgressIndicator()
+                        state.downloading -> {
+                            LinearProgressIndicator(
+                                progress = { state.downloadProgress.coerceIn(0f, 1f) },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            Text("${(state.downloadProgress * 100).toInt()}%")
+                            OutlinedButton(onClick = vm::cancelDownload) {
+                                Text(stringResource(R.string.models_cancel_download))
+                            }
                         }
-                    }
-                }
-            }
-            REMOTE_MODEL_FAMILIES.forEach { family ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = { vm.openRemoteVariants(family) },
-                ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Text(family.name, style = MaterialTheme.typography.titleMedium)
-                        Text(family.description, style = MaterialTheme.typography.bodySmall)
-                        Text(
-                            "${family.variants.size} variant(s) • remote server",
-                            style = MaterialTheme.typography.bodySmall,
+                        state.kokoroInstalled -> Text(
+                            stringResource(R.string.models_active),
+                            color = MaterialTheme.colorScheme.primary,
                         )
-                        Button(
-                            onClick = { vm.openRemoteVariants(family) },
-                            enabled = state.remoteDownloadingId.isBlank(),
+                        else -> Button(
+                            enabled = state.kokoroModel?.variants?.isNotEmpty() == true,
+                            onClick = vm::downloadKokoro,
                         ) {
-                            Text("Choose variant")
+                            Text("Download Kokoro")
                         }
                     }
+                    state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 }
             }
-            Text(
-                when {
-                    !state.remoteHostEnabled -> "Engine-host is disabled in Settings"
-                    state.remoteHostUrl.isBlank() -> "Engine-host address is not configured"
-                    else -> "Engine-host: ${state.remoteHostUrl}"
-                },
-                color = if (state.remoteHostConfigured) {
-                    MaterialTheme.colorScheme.onSurface
-                } else {
-                    MaterialTheme.colorScheme.error
-                },
-                style = MaterialTheme.typography.bodyMedium,
-            )
 
-            state.error?.let {
-                Text(it, color = MaterialTheme.colorScheme.error)
-            }
-            state.remoteVariantFamily?.let { family ->
-                RemoteVariantDialog(
-                    family = family,
-                    installed = state.remoteInstalled,
-                    downloadingId = state.remoteDownloadingId,
-                    hostConfigured = state.remoteHostConfigured,
-                    onDismiss = vm::closeRemoteVariants,
-                    onDownload = vm::downloadRemote,
-                    onConfigureHost = {
-                        vm.closeRemoteVariants()
-                        nav.navigate(com.t2v.ui.navigation.Routes.Settings)
-                    },
-                )
-            }
-            state.variantModel?.let { model ->
-                VariantDialog(
-                    model = model,
-                    onDismiss = vm::closeVariants,
-                    onDownload = { variant -> vm.download(model, variant) },
-                )
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text("Only Android-compatible models", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "T2V lists a model here only after its exact files, runtime and revision " +
+                            "have passed synthesis tests on a real Android device. Server models are not supported.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Text("Kokoro is the first verified catalog entry.", style = MaterialTheme.typography.bodyMedium)
+                }
             }
 
             if (state.installed.isNotEmpty()) {
@@ -192,10 +152,7 @@ fun ModelsScreen(
                     "${stringResource(R.string.models_installed)} (${state.installed.size})",
                     style = MaterialTheme.typography.titleMedium,
                 )
-                LazyColumn(
-                    modifier = Modifier.weight(0.35f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(state.installed, key = { it.id }) { model ->
                         InstalledModelCard(
                             model = model,
@@ -204,243 +161,6 @@ fun ModelsScreen(
                             onDelete = { vm.deleteModel(model.id) },
                         )
                     }
-                }
-            }
-
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    "Local Android models are hidden until an exact model, runtime and revision " +
-                        "pass a real-device compatibility test. A GGUF/ONNX extension alone is not sufficient.",
-                    modifier = Modifier.padding(12.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-        }
-    }
-}
-
-data class RemoteModelVariant(
-    val id: String,
-    val label: String,
-    val capability: String,
-    val sizeBytes: Long,
-    val license: String,
-)
-
-data class RemoteModelFamily(
-    val name: String,
-    val description: String,
-    val variants: List<RemoteModelVariant>,
-)
-
-private val REMOTE_MODEL_FAMILIES = listOf(
-    RemoteModelFamily(
-        "Qwen3-TTS",
-        "Multilingual voices, instruction control and voice cloning.",
-        listOf(
-            RemoteModelVariant("Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice", "Qwen3-TTS 0.6B", "9 built-in voices", 1_800L * 1024 * 1024, "Apache-2.0"),
-            RemoteModelVariant("Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice", "Qwen3-TTS 1.7B", "9 voices + instruction control", 4_200L * 1024 * 1024, "Apache-2.0"),
-            RemoteModelVariant("Qwen/Qwen3-TTS-12Hz-0.6B-Base", "Qwen3-TTS Base 0.6B", "Voice cloning", 1_800L * 1024 * 1024, "Apache-2.0"),
-            RemoteModelVariant("Qwen/Qwen3-TTS-12Hz-1.7B-Base", "Qwen3-TTS Base 1.7B", "Voice cloning, higher quality", 4_200L * 1024 * 1024, "Apache-2.0"),
-        ),
-    ),
-    RemoteModelFamily(
-        "Meta MMS-TTS",
-        "Compact single-language VITS models. Non-commercial model license.",
-        listOf(
-            RemoteModelVariant("facebook/mms-tts-rus", "MMS-TTS Russian", "Russian • compact CPU model", 145L * 1024 * 1024, "CC-BY-NC-4.0"),
-            RemoteModelVariant("facebook/mms-tts-eng", "MMS-TTS English", "English • compact CPU model", 145L * 1024 * 1024, "CC-BY-NC-4.0"),
-        ),
-    ),
-    RemoteModelFamily(
-        "Chatterbox",
-        "Expressive English speech, paralinguistic tags and voice cloning.",
-        listOf(
-            RemoteModelVariant("ResembleAI/chatterbox-turbo", "Chatterbox Turbo 350M", "English • voice cloning • lower latency", 4_040L * 1024 * 1024, "MIT"),
-        ),
-    ),
-)
-
-@Composable
-private fun RemoteVariantDialog(
-    family: RemoteModelFamily,
-    installed: Set<String>,
-    downloadingId: String,
-    hostConfigured: Boolean,
-    onDismiss: () -> Unit,
-    onDownload: (RemoteModelVariant) -> Unit,
-    onConfigureHost: () -> Unit,
-) {
-    var selected by androidx.compose.runtime.remember {
-        androidx.compose.runtime.mutableStateOf(family.variants.first())
-    }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Choose ${family.name} variant") },
-        text = {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                items(family.variants, key = { it.id }) { variant ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = { selected = variant },
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(
-                                selected = selected.id == variant.id,
-                                onClick = { selected = variant },
-                            )
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(variant.label)
-                                Text(
-                                    "${variant.capability} • ${formatBytes(variant.sizeBytes)}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                                Text("License: ${variant.license}", style = MaterialTheme.typography.labelSmall)
-                                Text(variant.id, style = MaterialTheme.typography.labelSmall)
-                            }
-                            if (variant.id in installed) {
-                                Icon(Icons.Default.CheckCircle, contentDescription = "Installed")
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                enabled = hostConfigured && downloadingId.isBlank() && selected.id !in installed,
-                onClick = { onDownload(selected) },
-            ) {
-                if (downloadingId == selected.id) {
-                    CircularProgressIndicator()
-                } else {
-                    Text(if (selected.id in installed) "Installed" else "Download to host")
-                }
-            }
-        },
-        dismissButton = {
-            if (hostConfigured) {
-                OutlinedButton(onClick = onDismiss) { Text("Close") }
-            } else {
-                OutlinedButton(onClick = onConfigureHost) { Text("Configure server") }
-            }
-        },
-    )
-}
-
-@Composable
-private fun VariantDialog(
-    model: HuggingFaceRepository.Model,
-    onDismiss: () -> Unit,
-    onDownload: (HuggingFaceRepository.ModelVariant) -> Unit,
-) {
-    var selected by androidx.compose.runtime.remember(model.id) {
-        androidx.compose.runtime.mutableStateOf(model.variants.firstOrNull())
-    }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(model.name) },
-        text = {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                items(model.variants, key = { it.id }) { variant ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = { selected = variant },
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(
-                                selected = selected?.id == variant.id,
-                                onClick = { selected = variant },
-                            )
-                            Column {
-                                Text(variant.label, style = MaterialTheme.typography.bodyMedium)
-                                Text(
-                                    "${variant.format} • ${variant.quantization} • ${formatBytes(variant.sizeBytes)}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                enabled = selected != null,
-                onClick = { selected?.let(onDownload) },
-            ) {
-                Text(stringResource(R.string.models_download))
-            }
-        },
-        dismissButton = {
-            OutlinedButton(onClick = onDismiss) {
-                Text(stringResource(R.string.models_cancel_download))
-            }
-        },
-    )
-}
-
-@Composable
-private fun HuggingFaceModelCard(
-    model: HuggingFaceRepository.Model,
-    installed: Boolean,
-    downloading: Boolean,
-    progress: Float,
-    onDownload: () -> Unit,
-    onCancel: () -> Unit,
-) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(model.name, style = MaterialTheme.typography.titleSmall)
-                        if (installed) {
-                            Icon(
-                                Icons.Default.CheckCircle,
-                                contentDescription = null,
-                                modifier = Modifier.padding(start = 6.dp),
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                    }
-                    Text(model.id, style = MaterialTheme.typography.bodySmall)
-                    Text(
-                        "${model.compatibleFiles.size} TTS files • " +
-                            "${formatBytes(model.totalSizeBytes)} • ${model.downloads} downloads",
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-                if (!installed && !downloading) {
-                    Button(
-                        onClick = onDownload,
-                        enabled = model.variants.isNotEmpty(),
-                    ) {
-                        Icon(Icons.Default.CloudDownload, contentDescription = null)
-                        Text("  ${stringResource(R.string.models_download)}")
-                    }
-                }
-            }
-            if (downloading) {
-                LinearProgressIndicator(
-                    progress = { progress.coerceIn(0f, 1f) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedButton(onClick = onCancel) {
-                    Text(stringResource(R.string.models_cancel_download))
                 }
             }
         }
@@ -456,9 +176,7 @@ private fun InstalledModelCard(
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -469,12 +187,8 @@ private fun InstalledModelCard(
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-            if (selected) {
-                Text(stringResource(R.string.models_active))
-            } else {
-                OutlinedButton(onClick = onSelect) {
-                    Text(stringResource(R.string.models_select))
-                }
+            OutlinedButton(onClick = onSelect, enabled = !selected) {
+                Text(if (selected) stringResource(R.string.models_active) else stringResource(R.string.models_select))
             }
             OutlinedButton(onClick = onDelete) {
                 Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.models_delete))
@@ -484,24 +198,17 @@ private fun InstalledModelCard(
 }
 
 data class ModelsState(
-    val query: String = "",
-    val catalog: List<HuggingFaceRepository.Model> = emptyList(),
     val installed: List<HuggingFaceRepository.InstalledModel> = emptyList(),
     val selectedModelId: String = "",
-    val loading: Boolean = false,
-    val downloadingId: String = "",
+    val modelsTreeUri: String = "",
+    val kokoroModel: HuggingFaceRepository.Model? = null,
+    val loadingCatalog: Boolean = true,
+    val downloading: Boolean = false,
     val downloadProgress: Float = 0f,
     val error: String? = null,
-    val variantModel: HuggingFaceRepository.Model? = null,
-    val modelsTreeUri: String = "",
-    val remoteHostUrl: String = "",
-    val remoteHostEnabled: Boolean = false,
-    val remoteInstalled: Set<String> = emptySet(),
-    val remoteDownloadingId: String = "",
-    val remoteVariantFamily: RemoteModelFamily? = null,
 ) {
-    val remoteHostConfigured: Boolean
-        get() = remoteHostEnabled && remoteHostUrl.isNotBlank()
+    val kokoroInstalled: Boolean
+        get() = installed.any { it.id == HuggingFaceRepository.KOKORO_REPOSITORY }
 }
 
 class ModelsViewModel(private val context: android.content.Context) : ViewModel() {
@@ -509,146 +216,46 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
     private val modelsRoot = File(context.filesDir, "models")
     private val _state = MutableStateFlow(ModelsState())
     val state: StateFlow<ModelsState> = _state.asStateFlow()
-    private var downloadJob: Job? = null
-    private var huggingFaceToken: String = ""
-    private var modelsTreeUri: String = ""
+    private var modelsTreeUri = ""
+    private var huggingFaceToken = ""
+    private var downloadJob: kotlinx.coroutines.Job? = null
 
     init {
         viewModelScope.launch {
             settings.flow.collect { value ->
-                huggingFaceToken = value.engines["huggingface"]?.get("token").orEmpty()
                 modelsTreeUri = value.modelsTreeUri
-                val normalizedHost = value.remoteHostUrl.trim().trimEnd('/')
-                val hostChanged = _state.value.remoteHostUrl != normalizedHost ||
-                    _state.value.remoteHostEnabled != value.remoteHostEnabled
+                huggingFaceToken = value.engines["huggingface"]?.get("token").orEmpty()
                 _state.update {
                     it.copy(
                         selectedModelId = value.selectedModelId,
                         modelsTreeUri = value.modelsTreeUri,
                         installed = repository().installed(),
-                        remoteHostUrl = normalizedHost,
-                        remoteHostEnabled = value.remoteHostEnabled,
-                        remoteInstalled = if (value.remoteHostEnabled && normalizedHost.isNotBlank()) {
-                            it.remoteInstalled
-                        } else {
-                            emptySet()
-                        },
                     )
                 }
-                if (hostChanged && value.remoteHostEnabled && normalizedHost.isNotBlank()) {
-                    refreshRemoteInstalled()
-                }
             }
         }
+        loadKokoro()
     }
 
-    fun openRemoteVariants(family: RemoteModelFamily) {
-        _state.update { it.copy(remoteVariantFamily = family, error = null) }
-        refreshRemoteInstalled()
-    }
-
-    fun closeRemoteVariants() {
-        if (_state.value.remoteDownloadingId.isBlank()) {
-            _state.update { it.copy(remoteVariantFamily = null) }
-        }
-    }
-
-    fun downloadRemote(variant: RemoteModelVariant) {
-        val current = _state.value
-        val host = current.remoteHostUrl
-        if (!current.remoteHostConfigured) {
-            _state.update {
-                it.copy(error = "Configure and enable engine-host in Settings. This model runs on the server, not on Android.")
-            }
-            return
-        }
+    private fun loadKokoro() {
         viewModelScope.launch {
-            _state.update { it.copy(remoteDownloadingId = variant.id, error = null) }
+            _state.update { it.copy(loadingCatalog = true, error = null) }
             runCatching {
-                EngineHostClient(host).downloadVoiceModel(variant.id)
-            }.onSuccess {
-                _state.update {
-                    it.copy(
-                        remoteDownloadingId = "",
-                        remoteInstalled = it.remoteInstalled + variant.id,
-                    )
-                }
-            }.onFailure { error ->
-                _state.update { it.copy(remoteDownloadingId = "", error = error.message) }
-            }
-        }
-    }
-
-    private fun refreshRemoteInstalled() {
-        val current = _state.value
-        val host = current.remoteHostUrl
-        if (!current.remoteHostConfigured) return
-        viewModelScope.launch {
-            runCatching { ModelRepository(host).listLocalModels() }
-                .onSuccess { models ->
-                    _state.update { state -> state.copy(remoteInstalled = models.map { it.id }.toSet()) }
-                }
-        }
-    }
-
-    fun setQuery(value: String) {
-        _state.update { it.copy(query = value) }
-    }
-
-    fun setModelsFolder(uri: String) {
-        viewModelScope.launch {
-            settings.update { it[SettingsRepository.Keys.MODELS_TREE_URI] = uri }
-        }
-    }
-
-    fun search() {
-        viewModelScope.launch {
-            _state.update { it.copy(loading = true, error = null) }
-            runCatching {
-                repository().search(_state.value.query)
-            }.onSuccess { models ->
-                _state.update { it.copy(catalog = models, loading = false) }
-            }.onFailure { error ->
-                _state.update { it.copy(loading = false, error = error.message) }
-            }
-        }
-    }
-
-    fun openExactRepository() {
-        viewModelScope.launch {
-            _state.update { it.copy(loading = true, error = null) }
-            runCatching {
-                repository().model(_state.value.query.trim())
+                repository().model(HuggingFaceRepository.KOKORO_REPOSITORY)
             }.onSuccess { model ->
-                _state.update { it.copy(catalog = listOf(model), loading = false) }
+                _state.update { it.copy(kokoroModel = model, loadingCatalog = false) }
             }.onFailure { error ->
-                _state.update { it.copy(loading = false, error = error.message) }
+                _state.update { it.copy(loadingCatalog = false, error = error.message) }
             }
         }
     }
 
-    fun openVariants(model: HuggingFaceRepository.Model) {
-        _state.update { it.copy(variantModel = model, error = null) }
-    }
-
-    fun closeVariants() {
-        _state.update { it.copy(variantModel = null) }
-    }
-
-    fun download(
-        model: HuggingFaceRepository.Model,
-        variant: HuggingFaceRepository.ModelVariant,
-    ) {
+    fun downloadKokoro() {
         if (downloadJob?.isActive == true) return
+        val model = _state.value.kokoroModel ?: return
+        val variant = model.variants.firstOrNull() ?: return
         downloadJob = viewModelScope.launch {
-            _state.update {
-                it.copy(
-                    downloadingId = model.id,
-                    downloadProgress = 0f,
-                    error = null,
-                    variantModel = null,
-                )
-            }
+            _state.update { it.copy(downloading = true, downloadProgress = 0f, error = null) }
             runCatching {
                 repository().install(model, variant) { downloaded, total ->
                     val progress = if (total > 0) downloaded.toFloat() / total else 0f
@@ -658,17 +265,13 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
                 _state.update {
                     it.copy(
                         installed = repository().installed(),
-                        downloadingId = "",
+                        downloading = false,
                         downloadProgress = 0f,
                     )
                 }
             }.onFailure { error ->
                 _state.update {
-                    it.copy(
-                        downloadingId = "",
-                        downloadProgress = 0f,
-                        error = error.message,
-                    )
+                    it.copy(downloading = false, downloadProgress = 0f, error = error.message)
                 }
             }
         }
@@ -677,7 +280,13 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
     fun cancelDownload() {
         downloadJob?.cancel()
         downloadJob = null
-        _state.update { it.copy(downloadingId = "", downloadProgress = 0f) }
+        _state.update { it.copy(downloading = false, downloadProgress = 0f) }
+    }
+
+    fun setModelsFolder(uri: String) {
+        viewModelScope.launch {
+            settings.update { it[SettingsRepository.Keys.MODELS_TREE_URI] = uri }
+        }
     }
 
     fun selectModel(modelId: String) {

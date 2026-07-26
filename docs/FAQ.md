@@ -10,9 +10,8 @@
 - **Chatterbox, Qwen3, OmniVoice** — все на PyTorch. Модели 0.5–2 ГБ,
   плюс сам PyTorch 500 МБ. APK стал бы > 2 ГБ.
 
-Поэтому:
-- Локально на Android — **Kokoro**.
-- Через remote host — все остальные.
+Поэтому локальный каталог показывает только модели с проверенным Android-runtime.
+Серверные TTS-модели не поддерживаются.
 
 ## Q: Можно ли без интернета?
 
@@ -55,9 +54,7 @@ TTS зависит от движка:
 
 ## Q: Можно ли использовать Whisper-верификацию?
 
-На устройстве — нет (нет ctranslate2 для Android).
-Через remote host — да: engine-host умеет Faster Whisper, можно
-вызвать `/jobs` с `verify: true`.
+Пока нет: для используемого варианта Faster Whisper отсутствует Android-runtime.
 
 ## Q: Как работает LTV-разметка в Compose?
 
@@ -85,4 +82,3 @@ TTS зависит от движка:
 Да, используя `Context.filesDir` вместо `assets/`. См.
 `KokoroTtsEngine` — он читает из `filesDir/voices/kokoro/`.
 Модель можно скачать через `VoiceCatalogStub.downloadVoice()`.
-

@@ -29,7 +29,6 @@ fi
 
 echo ""
 echo "=== 5. Server host setup ==="
-echo "  cd server-host && pip install -r requirements.txt && python engine_host.py --port 8765 --allow-lan"
 
 echo ""
 echo "Done."

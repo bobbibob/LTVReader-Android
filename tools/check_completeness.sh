@@ -36,7 +36,6 @@ check "app/src/main/java/com/t2v/tts/engines/ElevenLabsTtsEngine.kt" "ElevenLabs
 check "app/src/main/java/com/t2v/tts/engines/GeminiTtsEngine.kt"    "Gemini"
 check "app/src/main/java/com/t2v/tts/engines/AzureTtsEngine.kt"     "Azure"
 check "app/src/main/java/com/t2v/tts/engines/CustomHttpTtsEngine.kt" "Custom HTTP"
-check "app/src/main/java/com/t2v/tts/engines/RemoteHostTtsEngine.kt" "Remote Host (Piper/Chatterbox/Qwen3/OmniVoice)"
 
 echo ""
 echo "=== Data ==="
@@ -60,12 +59,6 @@ check "app/src/main/java/com/t2v/ui/screens/settings/SettingsScreen.kt" "Setting
 check "app/src/main/java/com/t2v/ui/waveform/WaveformCanvas.kt"     "Waveform canvas"
 check "app/src/main/java/com/t2v/ui/markup/MarkupHighlighter.kt"    "Markup highlighter"
 check "app/src/main/java/com/t2v/ui/components/MarkupToolbar.kt"    "Markup toolbar"
-
-echo ""
-echo "=== Server host ==="
-check "server-host/engine_host.py"                                        "engine_host.py"
-check "server-host/requirements.txt"                                      "requirements.txt"
-check "server-host/README.md"                                             "README.md"
 
 echo ""
 echo "=== Tests ==="
@@ -99,5 +92,3 @@ echo "=== Summary ==="
 echo "Kotlin:  $(find app/src/main/java -name '*.kt' | wc -l | tr -d ' ') files"
 echo "Tests:   $(find app/src/test app/src/androidTest -name '*.kt' 2>/dev/null | wc -l | tr -d ' ') files"
 echo "Lines:   $(find app/src -name '*.kt' -exec cat {} \; | wc -l | tr -d ' ') total"
-echo "Python:  $(find server-host -name '*.py' | wc -l | tr -d ' ') files"
-echo ""

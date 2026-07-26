@@ -95,17 +95,6 @@ fun SettingsScreen(
 
             HorizontalDivider()
 
-            SectionTitle(stringResource(R.string.settings_remote_host))
-            OutlinedTextField(
-                value = state.settings.remoteHostUrl,
-                onValueChange = vm::setRemoteHostUrl,
-                label = { Text("URL (e.g. http://192.168.1.10:8765)") },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            SwitchSetting("Enable remote host", state.settings.remoteHostEnabled) { vm.setRemoteHostEnabled(it) }
-
-            HorizontalDivider()
-
             SectionTitle(stringResource(R.string.settings_engines))
             PasswordField("OpenAI API Key", state.settings.engines["openai"]?.get("apiKey").orEmpty()) { v -> vm.setApiKey("openai", v) }
             PasswordField("ElevenLabs API Key", state.settings.engines["elevenlabs"]?.get("apiKey").orEmpty()) { v -> vm.setApiKey("elevenlabs", v) }
@@ -165,7 +154,7 @@ data class SettingsUiState(val settings: Settings = Settings(
     language = "", speed = 1.0, splitMode = "safe_chunks", exportMode = "single",
     chunkSize = 2500, pauseBetweenBlocksMs = 350, pauseBetweenChaptersMs = 900,
     paragraphPauseMinMs = 450, paragraphPauseMaxMs = 900, markupToolbar = true, syntaxHighlight = true,
-    remoteHostUrl = "", remoteHostEnabled = false, selectedModelId = "", ttsMode = "",
+    selectedModelId = "", ttsMode = "",
     modelsTreeUri = "", onboardingCompleted = false, engines = emptyMap(),
 ))
 
@@ -180,8 +169,6 @@ class SettingsViewModel(private val context: android.content.Context) : ViewMode
     fun setChunkSize(v: Int) = viewModelScope.launch { repo.update { it[SettingsRepository.Keys.CHUNK_SIZE] = v } }
     fun setMarkupToolbar(v: Boolean) = viewModelScope.launch { repo.update { it[SettingsRepository.Keys.MARKUP_TOOLBAR] = v } }
     fun setSyntaxHighlight(v: Boolean) = viewModelScope.launch { repo.update { it[SettingsRepository.Keys.SYNTAX_HIGHLIGHT] = v } }
-    fun setRemoteHostUrl(v: String) = viewModelScope.launch { repo.update { it[SettingsRepository.Keys.REMOTE_HOST_URL] = v } }
-    fun setRemoteHostEnabled(v: Boolean) = viewModelScope.launch { repo.update { it[SettingsRepository.Keys.REMOTE_HOST_ENABLED] = v } }
     fun setTtsMode(v: String) = viewModelScope.launch { repo.update { it[SettingsRepository.Keys.TTS_MODE] = v } }
     fun setModelsTreeUri(v: String) = viewModelScope.launch { repo.update { it[SettingsRepository.Keys.MODELS_TREE_URI] = v } }
     fun setApiKey(engine: String, v: String, field: String = "apiKey") = viewModelScope.launch {

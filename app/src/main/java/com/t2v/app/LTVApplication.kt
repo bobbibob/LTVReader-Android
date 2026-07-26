@@ -4,7 +4,6 @@ import android.app.Application
 import com.t2v.core.text.TextProcessor
 import com.t2v.data.AppDatabase
 import com.t2v.data.SettingsRepository
-import com.t2v.server.EngineHostClient
 import com.t2v.tts.registry.EngineRegistry
 import com.t2v.worker.GenerationPipeline
 import kotlinx.coroutines.CoroutineScope
@@ -23,14 +22,10 @@ class LTVApplication : Application() {
     val settingsRepo: SettingsRepository by lazy { SettingsRepository(this) }
 
     @Volatile private var engineSettings = EngineRegistry.EngineSettings()
-    @Volatile var hostClient: EngineHostClient? = null
-        private set
-
     val engineRegistry: EngineRegistry by lazy {
         EngineRegistry(
             appContext = this,
             settingsProvider = { engineSettings },
-            hostClientProvider = { hostClient },
         )
     }
 
@@ -39,12 +34,6 @@ class LTVApplication : Application() {
         appScope.launch {
             settingsRepo.flow.collect { settings ->
                 engineSettings = EngineRegistry.EngineSettings(settings.engines)
-                val currentUrl = settings.remoteHostUrl.trimEnd('/')
-                hostClient = if (settings.remoteHostEnabled && currentUrl.isNotBlank()) {
-                    EngineHostClient(currentUrl)
-                } else {
-                    null
-                }
                 engineRegistry.closeAll()
             }
         }

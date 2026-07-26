@@ -42,26 +42,6 @@ Settings → TTS engines → введите:
 - Azure (Subscription Key + Region)
 - Custom HTTP (URL + body template)
 
-### 6. Подключить удалённый engine-host (для Chatterbox/Qwen3/OmniVoice/Piper)
-
-На ПК с Windows/Linux/macOS:
-```bash
-cd server-host
-pip install -r requirements.txt
-cp -r ../Text2Voice/app .
-cp -r ../Text2Voice/engines .
-python engine_host.py --port 8765 --allow-lan
-```
-
-В Android-приложении:
-Settings → Remote host → URL: `http://192.168.1.10:8765` → Enable ✓
-
-В выпадающем списке движков появятся:
-- Piper (via remote host)
-- Chatterbox (via remote host)
-- Qwen3 TTS (via remote host)
-- OmniVoice (via remote host)
-
 ## Тестирование без устройства
 
 Unit-тесты:
@@ -85,13 +65,10 @@ t2v/
 │   │   ├── data/                 # Room, DataStore
 │   │   ├── ui/                   # Compose-экраны
 │   │   ├── worker/               # пайплайн генерации
-│   │   └── server/               # HTTP-клиент к engine-host
+│   │   └── server/               # загрузка проверенных моделей с Hugging Face
 │   ├── src/test/                 # unit-тесты
 │   ├── src/androidTest/          # интеграционные тесты
 │   └── build.gradle.kts
-├── server-host/                  # Python-бэкенд (опционально)
-│   ├── engine_host.py
-│   └── requirements.txt
 ├── docs/                         # документация
 │   ├── PORTING.md
 │   ├── ROADMAP.md
@@ -99,4 +76,3 @@ t2v/
 │   └── QUICKSTART.md
 └── tools/                        # вспомогательные скрипты
 ```
-

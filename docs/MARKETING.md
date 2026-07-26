@@ -56,7 +56,7 @@ srt, ass, subtitle, offline, on-device, onnx, neural, voice cloning.
 3. Music Mix с waveform
 4. Voices (список по движкам)
 5. Review (сегменты)
-6. Settings (API-ключи, remote host)
+6. Settings (API-ключи, локальные модели)
 7. Material You (Android 12+)
 
 ## План запуска
@@ -79,4 +79,3 @@ srt, ass, subtitle, offline, on-device, onnx, neural, voice cloning.
 - [ ] Еженедельные баг-фикс релизы.
 - [ ] YouTube-туториалы.
 - [ ] Discord-сервер.
-

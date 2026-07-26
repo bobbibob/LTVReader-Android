@@ -11,9 +11,7 @@ import com.t2v.tts.engines.ElevenLabsTtsEngine
 import com.t2v.tts.engines.GeminiTtsEngine
 import com.t2v.tts.engines.KokoroTtsEngine
 import com.t2v.tts.engines.OpenAiTtsEngine
-import com.t2v.tts.engines.RemoteHostTtsEngine
 import com.t2v.tts.engines.TtsEngine
-import com.t2v.server.EngineHostClient
 import java.io.File
 
 /**
@@ -25,7 +23,6 @@ import java.io.File
 class EngineRegistry(
     private val appContext: Context,
     private val settingsProvider: () -> EngineSettings,
-    private val hostClientProvider: () -> EngineHostClient? = { null },
 ) {
 
     /** Настройки конкретного движка (API-ключи и т.п.). */
@@ -35,28 +32,22 @@ class EngineRegistry(
 
     private val instances = mutableMapOf<String, TtsEngine>()
 
-    /** Список всех известных движков (включая удалённые, даже если host недоступен). */
+    /** Список движков, выполняемых на устройстве или через облачный API. */
     fun allEngineInfos(): List<EngineInfo> = buildList {
-        add(KokoroTtsEngine.ENGINE_INFO)
+        val kokoroRoot = File(appContext.filesDir, "models/$KOKORO_DIRECTORY")
+        if (
+            File(kokoroRoot, "model.onnx").isFile &&
+            File(kokoroRoot, "voices.bin").isFile &&
+            File(kokoroRoot, "tokens.txt").isFile &&
+            File(kokoroRoot, "espeak-ng-data").isDirectory
+        ) {
+            add(KokoroTtsEngine.ENGINE_INFO)
+        }
         add(OpenAiTtsEngine.ENGINE_INFO)
         add(ElevenLabsTtsEngine.ENGINE_INFO)
         add(GeminiTtsEngine.ENGINE_INFO)
         add(AzureTtsEngine.ENGINE_INFO)
         add(CustomHttpTtsEngine.ENGINE_INFO)
-        if (hostClientProvider() != null) {
-            add(EngineInfo("remote:piper", "Piper (via remote host)", EngineInfo.EngineKind.Remote))
-            add(EngineInfo("remote:chatterbox", "Chatterbox (via remote host)", EngineInfo.EngineKind.Remote))
-            add(EngineInfo("remote:mms", "Meta MMS-TTS (via remote host)", EngineInfo.EngineKind.Remote))
-            add(
-                EngineInfo(
-                    "remote:qwen",
-                    "Qwen3 TTS (via remote host)",
-                    EngineInfo.EngineKind.Remote,
-                    supportsCloning = true,
-                ),
-            )
-            add(EngineInfo("remote:omnivoice", "OmniVoice (via remote host)", EngineInfo.EngineKind.Remote))
-        }
     }
 
     /** Получить или создать экземпляр движка по id. */
@@ -77,14 +68,9 @@ class EngineRegistry(
 
     private fun createEngine(id: String): TtsEngine? {
         val cfg = settingsProvider().engines[id] ?: emptyMap()
-        val hostClient = hostClientProvider()
         return when (id) {
             "kokoro" -> {
-                val root = File(appContext.filesDir, "voices/kokoro")
-                KokoroTtsEngine(
-                    modelFile = File(root, "kokoro.onnx"),
-                    voicesFile = File(root, "voices.bin"),
-                )
+                KokoroTtsEngine(File(appContext.filesDir, "models/$KOKORO_DIRECTORY"))
             }
             "openai" -> OpenAiTtsEngine(
                 apiKey = cfg["apiKey"]?.takeIf { it.isNotBlank() } ?: return null,
@@ -117,11 +103,6 @@ class EngineRegistry(
                     responseUrlField = cfg["responseUrlField"]?.ifEmpty { null },
                 ),
             )
-            "remote:piper" -> hostClient?.let { RemoteHostTtsEngine(it, "piper", "Piper (via remote host)") }
-            "remote:chatterbox" -> hostClient?.let { RemoteHostTtsEngine(it, "chatterbox", "Chatterbox (via remote host)") }
-            "remote:mms" -> hostClient?.let { RemoteHostTtsEngine(it, "mms", "Meta MMS-TTS (via remote host)") }
-            "remote:qwen" -> hostClient?.let { RemoteHostTtsEngine(it, "qwen", "Qwen3 TTS (via remote host)") }
-            "remote:omnivoice" -> hostClient?.let { RemoteHostTtsEngine(it, "omnivoice", "OmniVoice (via remote host)") }
             else -> null
         }
     }
@@ -138,5 +119,9 @@ class EngineRegistry(
             }
         }
         return out
+    }
+
+    companion object {
+        private const val KOKORO_DIRECTORY = "8ae649d98c616269e26efb10"
     }
 }

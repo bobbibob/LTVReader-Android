@@ -25,7 +25,7 @@
 7. **Субтитры**: SRT и karaoke-ASS.
 8. **Просмотр сегментов**: обзор, регенерация, отметка ошибок.
 9. **Проекты**: список, импорт, сохранение, удаление.
-10. **Настройки**: 11 локалей, remote host, API-ключи, параметры.
+10. **Настройки**: 11 локалей, API-ключи и параметры локальных моделей.
 11. **Server-host**: опциональный Python-бэкенд для Chatterbox/Qwen3/OmniVoice/Piper.
 
 ## Что не работает / отложено
@@ -34,7 +34,7 @@
 - ❌ Реальный G2P для Kokoro (используется ASCII-fallback).
 - ❌ Полный timeline-микшер (только упрощённый 1 голос + 1 музыка).
 - ❌ Background WorkManager (каркас GenerationService есть, но не подключён).
-- ❌ Локальные Piper/Chatterbox/Qwen3/OmniVoice (только через remote host).
+- ❌ Непроверенные локальные Piper/Chatterbox/Qwen3/OmniVoice.
 - ❌ iOS-версия.
 - ❌ LLM-пайплайны (litellm не портируется на Android).
 
@@ -49,7 +49,6 @@
 ### Опционально
 - Kokoro-модель (для локального TTS)
 - API-ключи OpenAI / ElevenLabs / Gemini / Azure (для облачных)
-- Python 3.11+ (для server-host)
 
 ## Следующие шаги
 
@@ -65,4 +64,3 @@
 - Discussions: вопросы
 - Discord: (планируется)
 - Twitter/X: @t2v (планируется)
-

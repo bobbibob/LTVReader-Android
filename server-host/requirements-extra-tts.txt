@@ -1,6 +1,0 @@
--r requirements.txt
-torch>=2.6
-transformers>=4.49,<6
-accelerate>=1.2,<2
-soundfile>=0.13,<1
-chatterbox-tts>=0.1.2,<1

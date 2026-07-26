@@ -52,6 +52,5 @@
 - [PERFORMANCE](PERFORMANCE.md) — производительность
 - [COMPARISON](COMPARISON.md) — сравнение с конкурентами
 - [MODELS](MODELS.md) — какие движки выбрать
-- [EN_ENGINE_HOST](EN_ENGINE_HOST.md) — гайд по server-host
 - [MARKETING](MARKETING.md) — продвижение
 - [VERSIONING](VERSIONING.md) — версионирование

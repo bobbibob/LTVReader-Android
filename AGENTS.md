@@ -9,18 +9,17 @@ t2v/
 ├── app/                        Android-приложение (Kotlin, Compose)
 │   ├── src/main/java/com/t2v/
 │   │   ├── core/               бизнес-логика (text, markup, audio, subtitle, normalization, project)
-│   │   ├── tts/                TTS-движки (Kokoro, OpenAI, ElevenLabs, Gemini, Azure, Custom, Remote)
+│   │   ├── tts/                локальные Android и облачные TTS-движки
 │   │   ├── data/               Room (6 DAO, 6 Entities) + DataStore Settings
 │   │   ├── ui/                 Compose-экраны (8: editor, generation, music, review, voices, projects, settings, models)
 │   │   ├── worker/             GenerationPipeline + GenerationService
-│   │   ├── server/             EngineHostClient + ModelRepository (HTTP к engine-host)
+│   │   ├── server/             проверка и загрузка локальных моделей с Hugging Face
 │   │   ├── util/               LocaleHelper, Permissions, AudioPlayer
 │   │   └── app/                LTVApplication + AppContainer (ручной DI)
 │   ├── src/main/assets/        Kokoro-модель, FFmpeg-бинарь (см. README каждого)
 │   ├── src/main/res/values*/   strings.xml (11 локалей)
 │   ├── src/test/               JVM unit-тесты (7 классов)
 │   └── src/androidTest/        ART integration-тесты
-├── server-host/                Python FastAPI-бэкенд (прокси HuggingFace + TTS)
 ├── docs/                       документация (PORTING, ROADMAP, LTV_MARKUP, FAQ, …)
 └── tools/                      install.sh, check_completeness.sh, inspect_layout.sh
 ```
@@ -49,10 +48,6 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 # Скачать готовый APK из CI
 gh run download 29977084836 -n app-debug
 
-# Server-host (опционально, нужен для ModelsScreen)
-cd server-host && pip install -r requirements.txt
-python engine_host.py --port 8765 --allow-lan
-# Эндпоинты: /info, /engines, /synthesize, /models, /local-models
 ```
 
 CI: `.github/workflows/android.yml`. Триггер: push в main, PR, или `gh workflow run android.yml`.
@@ -103,7 +98,7 @@ CI: `.github/workflows/android.yml`. Триггер: push в main, PR, или `g
 
 - **Не коммитьте крупные бинарники** (Kokoro .onnx, FFmpeg-бинарь) — только плейсхолдеры.
 - **Compose-экраны**: передавайте `LocalContext.current` явно в `ViewModelFactory`; не полагайтесь на глобальный контекст.
-- **При добавлении TTS-движка**: реализуйте `TtsEngine`, зарегистрируйте в `EngineRegistry.createEngine()` + `allEngineInfos()`, добавьте API-ключ в `SettingsRepository.Keys`, добавьте `EngineInfo` с правильным `EngineKind` (Local/Cloud/Remote).
+- **При добавлении TTS-движка**: реализуйте `TtsEngine`, зарегистрируйте в `EngineRegistry.createEngine()` + `allEngineInfos()`, добавьте API-ключ в `SettingsRepository.Keys`, добавьте `EngineInfo` с правильным `EngineKind` (Local/Cloud).
 - **При изменении LTV-разметки**: обновите парсер (`LTVMarkupParser`), подсветку (`MarkupHighlighter`), панель кнопок (`MarkupToolbar`) и тесты.
 - **Compose Material 3 1.2.x**: `NavigationBarItem` помечен как `@ExperimentalMaterial3Api`. Используйте `@OptIn(ExperimentalMaterial3Api::class)` или собственную реализацию (как `BottomNavButton` в `LTVScaffold.kt`).
 - **FFmpeg**: `FFmpegBridge` запускает нативный бинарь через `Runtime.exec()`. Бинарь лежит в `assets/ffmpeg/<abi>/ffmpeg`. Никаких JNI или AAR-зависимостей.
@@ -114,5 +109,5 @@ CI: `.github/workflows/android.yml`. Триггер: push в main, PR, или `g
 - **Импорты в Kotlin**: только в начале файла. Если IDE вставил посреди — будет `imports are only allowed in the beginning of file`.
 - **WAV read**: используйте `RandomAccessFile` с ручным little-endian чтением (`(b1 shl 8) or b0`). `DataInputStream.readShortLe()` есть, но на разных JVM-платформах ведёт себя по-разному в unit-тестах.
 - **Room**: `exportSchema = false` обязательно, иначе KSP падает в CI.
-- **ModelsScreen** (`ui/screens/models/ModelsScreen.kt`): показывает каталог TTS-моделей с HuggingFace через engine-host. Kokoro скачивается на устройство, тяжёлые модели — на сервер.
-- **engine-host** (`server-host/engine_host.py`): эндпоинты `/models` (каталог), `/local-models`, `/models/{id}/download`. Требует `huggingface_hub`. Приватные репо — `HF_TOKEN=...` env var.
+- **ModelsScreen** (`ui/screens/models/ModelsScreen.kt`): показывает только модели, которые скачиваются и запускаются на Android. Серверные модели запрещены.
+- **Архитектура TTS**: допустимы только `Local` (выполнение на телефоне) и `Cloud` (публичный API-провайдер). Отдельные пользовательские engine-host/server-host запрещены.

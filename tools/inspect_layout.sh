@@ -15,4 +15,3 @@ echo "tests  : $(find app/src/test -name '*.kt' | wc -l | tr -d ' ')"
 echo ""
 echo "=== Lines of code ==="
 find app/src -name '*.kt' | xargs wc -l | tail -1
-find server-host -name '*.py' | xargs wc -l | tail -1

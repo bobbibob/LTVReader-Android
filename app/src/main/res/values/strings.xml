@@ -61,11 +61,6 @@
     <string name="engine_gemini">Google Gemini TTS</string>
     <string name="engine_azure">Azure Speech</string>
     <string name="engine_custom_http">Custom HTTP</string>
-    <string name="engine_remote_host">Remote engine host</string>
-    <string name="engine_piper_remote">Piper (via remote host)</string>
-    <string name="engine_chatterbox_remote">Chatterbox (via remote host)</string>
-    <string name="engine_qwen_remote">Qwen3 TTS (via remote host)</string>
-    <string name="engine_omnivoice_remote">OmniVoice (via remote host)</string>
 
     <!-- Music mix -->
     <string name="mix_title">Audio Mix</string>
@@ -89,7 +84,6 @@
     <string name="settings_general">General</string>
     <string name="settings_engines">TTS engines</string>
     <string name="settings_voice_gallery">Voice gallery</string>
-    <string name="settings_remote_host">Remote engine host</string>
     <string name="settings_normalization">Text normalization</string>
     <string name="settings_about">About</string>
     <string name="settings_language">Interface language</string>

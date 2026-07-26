@@ -36,9 +36,6 @@ class SettingsRepository(private val context: Context) {
         val MARKUP_TOOLBAR = booleanPreferencesKey("markup_toolbar")
         val SYNTAX_HIGHLIGHT = booleanPreferencesKey("syntax_highlight")
 
-        // Server
-        val REMOTE_HOST_URL = stringPreferencesKey("remote_host_url")
-        val REMOTE_HOST_ENABLED = booleanPreferencesKey("remote_host_enabled")
         val SELECTED_MODEL_ID = stringPreferencesKey("selected_model_id")
         /** local = downloaded models on the device; cloud = API providers. */
         val TTS_MODE = stringPreferencesKey("tts_mode")
@@ -78,8 +75,6 @@ class SettingsRepository(private val context: Context) {
         paragraphPauseMaxMs = this[Keys.PARAGRAPH_PAUSE_MAX] ?: 900,
         markupToolbar = this[Keys.MARKUP_TOOLBAR] ?: true,
         syntaxHighlight = this[Keys.SYNTAX_HIGHLIGHT] ?: true,
-        remoteHostUrl = this[Keys.REMOTE_HOST_URL] ?: "",
-        remoteHostEnabled = this[Keys.REMOTE_HOST_ENABLED] ?: false,
         selectedModelId = this[Keys.SELECTED_MODEL_ID] ?: "",
         ttsMode = this[Keys.TTS_MODE] ?: "",
         modelsTreeUri = this[Keys.MODELS_TREE_URI] ?: "",
@@ -114,8 +109,6 @@ data class Settings(
     val paragraphPauseMaxMs: Int,
     val markupToolbar: Boolean,
     val syntaxHighlight: Boolean,
-    val remoteHostUrl: String,
-    val remoteHostEnabled: Boolean,
     val selectedModelId: String,
     val ttsMode: String,
     val modelsTreeUri: String,

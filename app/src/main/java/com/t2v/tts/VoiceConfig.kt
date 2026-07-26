@@ -65,7 +65,6 @@ data class EngineInfo(
     enum class EngineKind {
         @SerialName("local") Local,
         @SerialName("cloud") Cloud,
-        @SerialName("remote") Remote,
     }
 
     @Serializable

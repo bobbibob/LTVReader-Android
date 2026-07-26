@@ -24,7 +24,6 @@
 ## Деплоймент
 - [DEPLOYMENT](DEPLOYMENT.md) — публикация в Google Play и F-Droid
 - [SECURITY](SECURITY.md) — безопасность
-- [EN_ENGINE_HOST](EN_ENGINE_HOST.md) — настройка server-host
 
 ## Продукт
 - [FAQ](FAQ.md) — частые вопросы
@@ -46,13 +45,11 @@ t2v/
 │   │   ├── data/         Room + DataStore
 │   │   ├── ui/           Compose-экраны
 │   │   ├── worker/       пайплайн
-│   │   ├── server/       HTTP-клиент к engine-host
+│   │   ├── server/       загрузка локальных моделей
 │   │   ├── util/         утилиты
 │   │   ├── llm/          LLM stub
 │   │   └── app/          Application + DI
 │   └── src/test/         тесты
-├── server-host/          Python-бэкенд
 ├── docs/                 эта документация
 └── tools/                вспомогательные скрипты
 ```
-

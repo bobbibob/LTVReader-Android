@@ -2,11 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Сетевые разрешения: TTS API, загрузка голосов, опциональный engine-host -->
+    <!-- Сетевые разрешения: облачные TTS API и загрузка локальных моделей -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- Wi-Fi для подключения к локальному engine-host -->
+    <!-- Состояние сети для облачных API и Hugging Face -->
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
 

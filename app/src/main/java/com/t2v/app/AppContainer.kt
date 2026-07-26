@@ -4,7 +4,6 @@ import android.content.Context
 import com.t2v.core.text.TextProcessor
 import com.t2v.data.AppDatabase
 import com.t2v.data.SettingsRepository
-import com.t2v.server.EngineHostClient
 import com.t2v.tts.registry.EngineRegistry
 import com.t2v.worker.GenerationPipeline
 
@@ -22,6 +21,4 @@ object AppContainer {
         (ctx.applicationContext as LTVApplication).pipeline
     fun textProcessor(ctx: Context): TextProcessor =
         (ctx.applicationContext as LTVApplication).textProcessor
-    fun hostClient(ctx: Context): EngineHostClient? =
-        (ctx.applicationContext as LTVApplication).hostClient
 }
