@@ -260,10 +260,10 @@ class MusicMixViewModel(
         val voiceFile = s.voicePath?.let { File(it) } ?: return
         if (!voiceFile.exists()) return
         _state.update { it.copy(isRendering = true) }
-        val outFile = File(context.filesDir, "audiobooks/$audiobookId/mix.mp3")
+        val outFile = File(context.filesDir, "audiobooks/$audiobookId/mix.m4a")
         outFile.parentFile?.mkdirs()
         if (s.musicPath == null) {
-            FFmpegBridge.encode(context, voiceFile, outFile, "mp3")
+            FFmpegBridge.encode(context, voiceFile, outFile, "m4a")
         } else {
             FFmpegBridge.applyMusicDucking(
                 context = context,
@@ -273,6 +273,7 @@ class MusicMixViewModel(
                 voiceVolumeDb = s.settings.voiceVolumeDb,
                 musicVolumeDb = s.settings.musicVolumeDb,
                 duckingDb = s.settings.duckingDb,
+                format = "m4a",
             )
         }
         _state.update { it.copy(outputPath = outFile.absolutePath, isRendering = false) }

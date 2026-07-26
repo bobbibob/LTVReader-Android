@@ -210,7 +210,13 @@ class AudioEditorViewModel(
                 voice
             } else {
                 val music = FFmpegBridge.renderEditedTrack(context, project.musicClips, File(root, "edited-music.wav"))
-                FFmpegBridge.applyMusicDucking(context, voice, music, File(root, "edited-final.mp3"))
+                FFmpegBridge.applyMusicDucking(
+                    context,
+                    voice,
+                    music,
+                    File(root, "edited-final.m4a"),
+                    format = "m4a",
+                )
             }
         }.onSuccess { output ->
             _state.update { it.copy(rendering = false, outputPath = output.absolutePath) }

@@ -8,12 +8,11 @@ import java.io.File
 /**
  * Тонкая обёртка вокруг FFmpeg для Android.
  *
- * Используется для финального кодирования PCM→MP3/OGG/M4A,
+ * Используется для финального кодирования PCM→M4A/WAV,
  * склейки сегментов, наложения музыки с ducking через sidechaincompress,
  * обрезки тишины в начале/конце и экспорта.
  *
- * Реализация: нативный бинарник FFmpeg, поставляемый в assets/ffmpeg/
- * или скачиваемый при первом запуске.
+ * Реализация: проверенный CI нативный бинарник FFmpeg из nativeLibraryDir.
  *
  * Заменяет `com.arthenica.ffmpegkit` (проект Arthenica был удалён с Maven Central)
  * на нативный бинарник FFmpeg, который мы запускаем через Runtime.
@@ -22,6 +21,12 @@ object FFmpegBridge {
 
     /** Returns the read-only executable packaged in the APK native library directory. */
     @Volatile private var ffmpegPath: String? = null
+
+    private fun codecFor(format: String): String = when (format.lowercase()) {
+        "m4a", "aac" -> "aac"
+        "wav" -> "pcm_s16le"
+        else -> error("Unsupported audio format in this FFmpeg build: $format")
+    }
 
     suspend fun ensure(context: Context): String = withContext(Dispatchers.IO) {
         ffmpegPath?.let { return@withContext it }
@@ -43,7 +48,7 @@ object FFmpegBridge {
     }
 
     /**
-     * Закодировать WAV → [format] (mp3/ogg/m4a/wav).
+     * Закодировать WAV → [format] (m4a/aac/wav).
      */
     suspend fun encode(
         context: Context,
@@ -52,12 +57,7 @@ object FFmpegBridge {
         format: String,
         bitrate: String = "192k",
     ): File = withContext(Dispatchers.IO) {
-        val codec = when (format.lowercase()) {
-            "mp3" -> "libmp3lame"
-            "ogg" -> "libvorbis"
-            "m4a" -> "aac"
-            else -> "pcm_s16le"
-        }
+        val codec = codecFor(format)
         val ext = if (format.equals("wav", true)) "wav" else format
         val target = if (output.extension.isEmpty()) {
             File(output.parentFile, "${output.nameWithoutExtension}.$ext")
@@ -79,7 +79,7 @@ object FFmpegBridge {
         context: Context,
         wavs: List<File>,
         output: File,
-        format: String = "mp3",
+        format: String = "m4a",
         bitrate: String = "192k",
     ): File = withContext(Dispatchers.IO) {
         val listFile = File(output.parentFile, "concat_${System.currentTimeMillis()}.txt")
@@ -93,7 +93,7 @@ object FFmpegBridge {
         val cmd = listOf(
             "-y", "-f", "concat", "-safe", "0",
             "-i", listFile.absolutePath,
-            "-c:a", if (format == "mp3") "libmp3lame" else "pcm_s16le",
+            "-c:a", codecFor(format),
             "-b:a", bitrate,
             target.absolutePath,
         )
@@ -116,14 +116,14 @@ object FFmpegBridge {
         voiceVolumeDb: Double = 0.0,
         musicVolumeDb: Double = -12.0,
         duckingDb: Double = -6.0,
-        format: String = "mp3",
+        format: String = "m4a",
         bitrate: String = "192k",
     ): File = withContext(Dispatchers.IO) {
         val target = File(output.parentFile, "${output.nameWithoutExtension}.${format}")
-        val filter = "[0:a]volume=${"%.2f".format(voiceVolumeDb)}dB[voice];" +
-            "[1:a]volume=${"%.2f".format(musicVolumeDb)}dB[music];" +
+        val filter = "[0:a]volume=${"%.2f".format(java.util.Locale.US, voiceVolumeDb)}dB[voice];" +
+            "[1:a]volume=${"%.2f".format(java.util.Locale.US, musicVolumeDb)}dB[music];" +
             "[voice][music]sidechaincompress=threshold=0.05:ratio=8:attack=20:release=1000:" +
-            "makeup=${"%.2f".format(-duckingDb)}[ducked];" +
+            "makeup=${"%.2f".format(java.util.Locale.US, -duckingDb)}[ducked];" +
             "[ducked]aresample=44100[out]"
         val cmd = listOf(
             "-y",
@@ -132,7 +132,7 @@ object FFmpegBridge {
             "-i", music.absolutePath,
             "-filter_complex", filter,
             "-map", "[out]",
-            "-c:a", if (format == "mp3") "libmp3lame" else "pcm_s16le",
+            "-c:a", codecFor(format),
             "-b:a", bitrate,
             "-shortest",
             target.absolutePath,
