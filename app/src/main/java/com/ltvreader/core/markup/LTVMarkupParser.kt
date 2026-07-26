@@ -64,6 +64,14 @@ class LTVMarkupParser(
         if (tokens.isEmpty()) return null
         val name = tokens[0]
         val args = tokens.drop(1)
+        val dottedPause = name.lowercase().removePrefix("pause.")
+            .takeIf { name.startsWith("pause.", ignoreCase = true) }
+        if (dottedPause != null) {
+            return MarkupCommand.Pause(
+                parsePauseArgs(listOf(dottedPause) + args, defaultPauseMs),
+                offset,
+            )
+        }
         return when (name.lowercase()) {
             "chapter" -> MarkupCommand.Chapter(textArg(args, 0, ""), offset)
             "voice" -> MarkupCommand.Voice(textArg(args, 0, ""), offset)
