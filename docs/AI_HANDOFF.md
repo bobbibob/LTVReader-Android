@@ -2,7 +2,7 @@
 
 Последнее обновление: 2026-07-27
 Рабочая ветка большого аудиомодуля: `codex/audio-production`
-Текущий коммит ветки на момент записи: `efcfec1` (CI run 30227504417 in flight)
+Текущий коммит ветки на момент записи: `bb9b374` (CI run 30248614315 green, APK на R5CN30LJS4W)
 
 Этот файл — главный оперативный контекст для следующего ИИ-агента. Его нужно
 обновлять после каждого существенного изменения архитектуры, поведения,
@@ -274,6 +274,32 @@ gh run list --workflow android.yml --branch codex/audio-production --limit 3
   на instruction-строку для OpenAI/Gemini и на пустой `elevenV3Prefix`.
 - Коммит `efcfec1` отправлен в `codex/audio-production`; CI 30227504417
   ожидается. После зелёного CI — `adb install -r` на `R5CN30LJS4W`.
+
+### Журнал активной задачи: music/sound generators + 3-track editor
+
+- Добавлен `com.t2v.generators.Generator` контракт (Music / Sound) и параллельный
+  `GeneratorRegistry`, прокинутый через `AppContainer.generatorRegistry`.
+- Реализованы `BundledMusicGenerator` / `BundledSoundGenerator` поверх 6
+  плейсхолдеров в `app/src/main/assets/{music,sound}` (whitelisted в
+  `.gitignore`). Это даёт рабочий smoke-test дорожек Music и Sound на любом
+  устройстве без модели или API-ключа.
+- Реализован `ElevenLabsSoundEffectsGenerator` (cloud, public
+  `POST /v1/sound-generation`).
+- `SettingsRepository` получил два новых ключа:
+  `selected_music_generator`, `selected_sound_generator`.
+- `AudioEditorScreen` показывает два `GeneratorPanel` (Music и Sound) с
+  prompt, чипами выбора генератора и кнопкой Run. После генерации клип
+  автоматически добавляется в нужную дорожку (VOICE / MUSIC / SOUND).
+  Существующие `TrackEditor` карточки и Save / Export MP3 не тронуты.
+- 5 unit-тестов в `GeneratorRegistryTest`.
+- Коммиты `fecc56e`, `6f2f0c3`, `bb9b374` отправлены в
+  `codex/audio-production`. CI 30248614315 — зелёный. APK 42.6 МБ
+  установлен на `R5CN30LJS4W` через `adb install -r`, проверен запуск
+  (`pidof com.t2v.debug = 5867`, `dumpsys window` показывает MainActivity
+  в foreground, в logcat нет FATAL/Exception).
+- Что осталось: визуальный waveform timeline, реальные on-device генераторы
+  музыки/звуков (LiteRT), Music cloud-провайдеры, привязка
+  `{{music ...}}`/`{{sfx ...}}` к TTS-времени.
 
 ## Правила безопасной реализации моделей
 
