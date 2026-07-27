@@ -31,6 +31,7 @@ logs/
 
 # Output
 output/
+artifacts/
 *.mp3
 # Bundled placeholders for music/sound are checked in.
 *.wav
