@@ -258,7 +258,7 @@ object GenerationModelCatalog {
     private val CUSTOM_HTTP_TAGS = TagDocs(
         tagline = "User-defined HTTP endpoint. The body template you configure decides what tags reach the server - T2V only substitutes {{text}}, {{voice}} and {{lang}} placeholders.",
         supported = listOf(
-            "{{voice "..."}} - interpolated into the body template as {{voice}}",
+            "{{voice \"...\"}} - interpolated into the body template as {{voice}}",
             "{{lang en-US|ru-RU|...}} - interpolated as {{lang}}",
             "{{speed 0.5..2.0}} - applied as a local PCM time-stretch; server is not contacted twice",
             "{{pause 500ms}} / {{pause 0.7s}} / {{pause.short}} / {{pause.long}} - inserted as PCM silence",
@@ -268,10 +268,10 @@ object GenerationModelCatalog {
         ),
         ignored = listOf(
             "Vocal reactions ({{breath}}, {{laugh}}, ...) and {{reset}} - sent as raw words to the endpoint; configure your body template to strip them if needed",
-            "{{chapter "..."}} / {{music ...}} / {{sfx ...}} - handled locally, never reach the server",
+            "{{chapter \"...\"}} / {{music ...}} / {{sfx ...}} - handled locally, never reach the server",
         ),
         examples = listOf(
-            "{{voice "narrator"}}{{lang en-US}}Once upon a time...",
+            "{{voice \"narrator\"}}{{lang en-US}}Once upon a time...",
             "{{speed 0.9}}{{pause 500ms}}take a breath.",
         ),
         promptHelp = "Test your template with the 'Custom HTTP TTS' engine in the Models screen. The server must return raw audio bytes or a JSON object containing an 'audio' (base64) or 'url' field.",
@@ -280,7 +280,7 @@ object GenerationModelCatalog {
     private val POCKET_TAGS = TagDocs(
         tagline = "PocketTTS is not yet verified for Android. Treat its tag mapping as a placeholder pending a device smoke-test.",
         supported = listOf(
-            "{{voice "..."}} - speaker id from the catalog",
+            "{{voice \"...\"}} - speaker id from the catalog",
             "{{lang en-US}}",
             "{{speed 0.5..2.0}}",
             "{{pause 500ms}} / {{pause 0.7s}}",
@@ -292,14 +292,14 @@ object GenerationModelCatalog {
             "Vocal reactions - stripped before synthesis",
         ),
         examples = listOf(
-            "{{voice "default"}}Hello there.",
+            "{{voice \"default\"}}Hello there.",
         ),
     )
 
     private val ZIPVOICE_TAGS = TagDocs(
         tagline = "ZipVoice Distill is a zero-shot voice-cloning model. The expressive markup mapping matches Piper until the Android runtime ships a real phoneme pipeline.",
         supported = listOf(
-            "{{voice "<reference-id>"}} - reference speaker id",
+            "{{voice \"<reference-id>\"}} - reference speaker id",
             "{{lang en-US}}",
             "{{speed 0.5..2.0}}",
             "{{pause 500ms}} / {{pause 0.7s}}",
@@ -314,7 +314,7 @@ object GenerationModelCatalog {
             "{{emphasis ...}} / {{reset ...}} - accepted but ignored",
         ),
         examples = listOf(
-            "{{voice "speaker-01"}}Reference audio plus transcript required.",
+            "{{voice \"speaker-01\"}}Reference audio plus transcript required.",
         ),
         promptHelp = "Upload the reference WAV and transcript in the Models screen before selecting this engine.",
     )
