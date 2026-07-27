@@ -283,6 +283,7 @@ object GenerationModelCatalog {
                 runtime = Runtime.SherpaOnnx,
                 runtimeBundled = true,
         ),
+            tags = PIPER_TAGS,
             support = Support.Verified,
             approximateDownloadBytes = 65_000_000,
             license = "Model-specific",
