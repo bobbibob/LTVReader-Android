@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -27,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -77,13 +79,60 @@ fun AudioEditorScreen(
             Modifier.fillMaxSize().padding(padding).padding(12.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            TrackEditor("Voice track", AudioTrackKind.Voice, state.project.voiceClips, vm, state.previewingClipId)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Background music", style = MaterialTheme.typography.titleMedium)
-                OutlinedButton(onClick = { musicPicker.launch("audio/*") }) { Text("Add clip") }
-                OutlinedButton(onClick = vm::generateMusic) { Text("Generate") }
+            // ── Timeline ──────────────────────────────────────────────
+            val scrollState = rememberScrollState()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                OutlinedButton(onClick = { vm.setZoom(state.pixelsPerSecond * 0.7f) }) { Text("−") }
+                Text("Zoom", style = MaterialTheme.typography.labelSmall)
+                OutlinedButton(onClick = { vm.setZoom(state.pixelsPerSecond * 1.4f) }) { Text("+") }
             }
-            TrackEditor("Music track", AudioTrackKind.Music, state.project.musicClips, vm, state.previewingClipId)
+            androidx.compose.foundation.horizontalScroll(scrollState, state.pixelsPerSecond > 0f) {
+                TimelineView(
+                    voiceClips = state.project.voiceClips,
+                    musicClips = state.project.musicClips,
+                    soundClips = state.project.soundClips,
+                    selectedClipId = state.selectedClipId,
+                    playheadMs = state.playheadMs,
+                    pixelsPerSecond = state.pixelsPerSecond,
+                    onClipTap = vm::selectClip,
+                )
+            }
+
+            // ── Selected clip properties ───────────────────────────────
+            state.selectedClipId?.let { clipId ->
+                val kind = state.selectedClipKind ?: AudioTrackKind.Voice
+                val clips = when (kind) {
+                    AudioTrackKind.Voice -> state.project.voiceClips
+                    AudioTrackKind.Music -> state.project.musicClips
+                    AudioTrackKind.Sound -> state.project.soundClips
+                }
+                val clip = clips.firstOrNull { it.id == clipId }
+                if (clip != null) {
+                    SelectedClipPanel(
+                        clip = clip,
+                        kind = kind,
+                        isPlaying = state.previewingClipId == clip.id,
+                        onPlay = { vm.previewClip(clip) },
+                        onDelete = { vm.delete(kind, clip.id) },
+                        onTimelineStart = { vm.setTimelineStart(kind, clip.id, it) },
+                        onStart = { vm.setStart(kind, clip.id, it) },
+                        onEnd = { vm.setEnd(kind, clip.id, it) },
+                        onGain = { vm.setGain(kind, clip.id, it) },
+                        onSpeed = { vm.setSpeed(kind, clip.id, it) },
+                        onSplit = { vm.split(kind, clip.id) },
+                    )
+                }
+            }
+
+            // ── Generators ─────────────────────────────────────────────
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { musicPicker.launch("audio/*") }) { Text("Import music") }
+                OutlinedButton(onClick = { soundPicker.launch("audio/*") }) { Text("Import sound") }
+            }
             GeneratorPanel(
                 title = "Generate music",
                 prompt = state.musicPrompt,
@@ -95,12 +144,6 @@ fun AudioEditorScreen(
                 generating = state.generatingMusic,
                 error = state.error,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Sound effects", style = MaterialTheme.typography.titleMedium)
-                OutlinedButton(onClick = { soundPicker.launch("audio/*") }) { Text("Add sound") }
-                OutlinedButton(onClick = vm::generateSound) { Text("Generate") }
-            }
-            TrackEditor("Sound track", AudioTrackKind.Sound, state.project.soundClips, vm, state.previewingClipId)
             GeneratorPanel(
                 title = "Generate sound effect",
                 prompt = state.soundPrompt,
@@ -112,6 +155,8 @@ fun AudioEditorScreen(
                 generating = state.generatingSound,
                 error = state.error,
             )
+
+            // ── Actions ────────────────────────────────────────────────
             state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(
@@ -220,6 +265,80 @@ data class GeneratorOption(
 )
 
 @Composable
+private fun SelectedClipPanel(
+    clip: AudioEditClip,
+    kind: AudioTrackKind,
+    isPlaying: Boolean,
+    onPlay: () -> Unit,
+    onDelete: () -> Unit,
+    onTimelineStart: (Long) -> Unit,
+    onStart: (Long) -> Unit,
+    onEnd: (Long) -> Unit,
+    onGain: (Double) -> Unit,
+    onSpeed: (Double) -> Unit,
+    onSplit: () -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilledTonalIconButton(onClick = onPlay) {
+                    Icon(
+                        if (isPlaying) Icons.Filled.Stop else Icons.Filled.PlayArrow,
+                        contentDescription = if (isPlaying) "Stop" else "Play",
+                    )
+                }
+                Text(
+                    "${kind.name}: ${File(clip.sourcePath).name}",
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                OutlinedButton(onClick = onSplit) { Text("Split") }
+                OutlinedButton(onClick = onDelete) { Text("Delete") }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = clip.timelineStartMs.toString(),
+                    onValueChange = { onTimelineStart(it.toLongOrNull() ?: 0) },
+                    label = { Text("Timeline ms") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = clip.startMs.toString(),
+                    onValueChange = { onStart(it.toLongOrNull() ?: 0) },
+                    label = { Text("Start ms") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = clip.endMs.toString(),
+                    onValueChange = { onEnd(it.toLongOrNull() ?: 0) },
+                    label = { Text("End ms") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = clip.gainDb.toString(),
+                    onValueChange = { onGain(it.toDoubleOrNull() ?: 0.0) },
+                    label = { Text("Gain dB") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                )
+                Text("Speed: ${"%.2f".format(clip.speed)}×")
+                Slider(
+                    value = clip.speed.toFloat(),
+                    onValueChange = { onSpeed(it.toDouble()) },
+                    valueRange = 0.5f..2f,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun GeneratorPanel(
     title: String,
     prompt: String,
@@ -287,6 +406,10 @@ data class AudioEditorState(
     val generatingMusic: Boolean = false,
     val generatingSound: Boolean = false,
     val previewingClipId: String? = null,
+    val selectedClipId: String? = null,
+    val selectedClipKind: AudioTrackKind? = null,
+    val pixelsPerSecond: Float = 50f,
+    val playheadMs: Long = 0L,
 )
 
 class AudioEditorViewModel(
@@ -406,14 +529,27 @@ class AudioEditorViewModel(
             return
         }
         audioPlayer.play(file) {
-            _state.update { it.copy(previewingClipId = null) }
+            _state.update { it.copy(previewingClipId = null, playheadMs = 0L) }
         }
-        _state.update { it.copy(previewingClipId = clip.id) }
+        _state.update { it.copy(previewingClipId = clip.id, playheadMs = clip.timelineStartMs) }
     }
 
     fun stopPreview() {
         audioPlayer.stop()
-        _state.update { it.copy(previewingClipId = null) }
+        _state.update { it.copy(previewingClipId = null, playheadMs = 0L) }
+    }
+
+    fun selectClip(kind: AudioTrackKind, clip: AudioEditClip) {
+        _state.update {
+            it.copy(
+                selectedClipId = if (it.selectedClipId == clip.id) null else clip.id,
+                selectedClipKind = if (it.selectedClipId == clip.id) null else kind,
+            )
+        }
+    }
+
+    fun setZoom(pps: Float) {
+        _state.update { it.copy(pixelsPerSecond = pps.coerceIn(10f, 300f)) }
     }
 
     fun addMusic(uri: Uri) = viewModelScope.launch {
