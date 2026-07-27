@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.RecordVoiceOver
@@ -106,7 +107,7 @@ fun MarkupToolbar(
         )
         MarkupChip(
             label = stringResource(R.string.markup_music),
-            icon = androidx.compose.material.icons.Icons.Filled.LibraryMusic,
+            icon = androidx.compose.material.icons.Icons.Filled.Add,
             color = LTVColors.Accent,
             bg = LTVColors.ChapterBg,
             snippet = "<music>ambient pad, 5 sec</music>",
@@ -114,7 +115,7 @@ fun MarkupToolbar(
         )
         MarkupChip(
             label = stringResource(R.string.markup_sfx),
-            icon = androidx.compose.material.icons.Icons.Filled.GraphicEq,
+            icon = androidx.compose.material.icons.Icons.Filled.VolumeUp,
             color = LTVColors.Accent,
             bg = LTVColors.ChapterBg,
             snippet = "<sfx>door close</sfx>",

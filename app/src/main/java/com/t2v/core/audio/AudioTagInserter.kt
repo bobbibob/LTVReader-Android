@@ -122,8 +122,8 @@ internal object AppDatabaseProxy {
  * tag lands at 0 ms (which is fine for fresh audiobooks).
  */
 internal interface TagPersistence {
-    fun positionFor(tag: AudioTag): Long
-    fun persist(track: AudioTrackEntity, clip: AudioClipEntity)
+    suspend fun positionFor(tag: AudioTag): Long
+    suspend fun persist(track: AudioTrackEntity, clip: AudioClipEntity)
 }
 
 internal class RoomTagPersistence(
@@ -133,12 +133,12 @@ internal class RoomTagPersistence(
 
     private val database = com.t2v.data.AppDatabase.get(context)
 
-    override fun positionFor(tag: AudioTag): Long {
+    override suspend fun positionFor(tag: AudioTag): Long {
         val segments = database.segments().listForAudiobook(audiobookId)
         return segments.sumOf { (it.pauseBeforeMs + it.durationMs).toLong() }
     }
 
-    override fun persist(track: AudioTrackEntity, clip: AudioClipEntity) {
+    override suspend fun persist(track: AudioTrackEntity, clip: AudioClipEntity) {
         database.audioTimeline().upsertTracks(listOf(track))
         database.audioTimeline().upsertClips(listOf(clip))
     }
