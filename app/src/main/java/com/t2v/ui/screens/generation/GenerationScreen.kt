@@ -62,6 +62,21 @@ fun GenerationScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
+    // Auto-jump to the audio editor when the run produced any <music>/<sfx>
+    // clips. This only fires once per generation.
+    androidx.compose.runtime.LaunchedEffect(state.audiobookId, state.progress.phase, state.progress.audioTagClips) {
+        val id = state.audiobookId ?: return@LaunchedEffect
+        val completed = state.progress.phase == GenerationPipeline.Progress.Phase.Completed
+        val hasExtras = state.progress.audioTagClips > 0
+        if (completed && hasExtras && !state.autoNavigatedToEditor) {
+            vm.markAutoNavigated()
+            nav.navigate(com.t2v.ui.navigation.Routes.audioEditor(id)) {
+                popUpTo(com.t2v.ui.navigation.Routes.Generation) { inclusive = false }
+                launchSingleTop = true
+            }
+        }
+    }
+
     LTVScaffold(
         nav = nav,
         title = stringResource(R.string.nav_generation),
@@ -195,6 +210,8 @@ data class GenState(
     val isRunning: Boolean = false,
     val progress: GenerationPipeline.Progress = GenerationPipeline.Progress(),
     val audiobookId: Long? = null,
+    /** True once we've already auto-navigated to the audio editor for this run. */
+    val autoNavigatedToEditor: Boolean = false,
 )
 
 class GenerationViewModel(
@@ -245,6 +262,9 @@ class GenerationViewModel(
     fun setChapterTitle(value: String) = _state.update { it.copy(chapterTitle = value) }
     fun setSpeed(v: Double) = _state.update { it.copy(speed = v) }
     fun cancel() = viewModelScope.launch { pipeline.cancel() }
+    fun markAutoNavigated() {
+        _state.update { it.copy(autoNavigatedToEditor = true) }
+    }
 
     suspend fun startGeneration(context: android.content.Context) {
         val s = settings.flow.first()

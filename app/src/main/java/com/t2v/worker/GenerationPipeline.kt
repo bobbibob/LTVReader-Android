@@ -49,6 +49,8 @@ class GenerationPipeline(
         val currentSegment: String? = null,
         val phase: Phase = Phase.Idle,
         val error: String? = null,
+        /** Number of audio clips generated from <music>/<sfx> tags in this run. */
+        val audioTagClips: Int = 0,
     ) {
         enum class Phase { Idle, Processing, Synthesizing, Encoding, Completed, Failed, Cancelled }
     }
@@ -105,6 +107,9 @@ class GenerationPipeline(
             // tag splits the voice stream so we can place the clip exactly where
             // the tag opened in the source text.
             val insertedClips = audioTagInserter?.insert(audioTags, audiobookId) ?: 0
+            if (insertedClips > 0) {
+                _progress.update { it.copy(audioTagClips = insertedClips) }
+            }
 
             for ((idx, chunk) in chunks.withIndex()) {
                 if (cancelled) {

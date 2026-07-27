@@ -28,6 +28,15 @@
 - `AudioTimelineDao` now exposes `trackByType()` so the inserter can
   reuse a single track id per audiobook per category.
 
+### Changed
+- After generation, if the source text contained `<music>` or `<sfx>` tags
+  and at least one clip was generated, the Generation screen now auto-jumps
+  to the AudioEditor for that audiobook. Otherwise it still shows the
+  Audiobook-ready card with manual navigation to Review / Music Mix.
+- `GenerationPipeline.Progress.audioTagClips` carries the count of clips
+  generated from markup tags so the UI can decide between routes without
+  re-querying Room.
+
 ## [Unreleased]
 
 ### Added

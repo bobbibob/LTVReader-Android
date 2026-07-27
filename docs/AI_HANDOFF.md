@@ -372,6 +372,16 @@ gh run list --workflow android.yml --branch codex/audio-production --limit 3
   APK скачан, готов к `adb install -r` на `R5CN30LJS4W`. После правки русского
   текста будет ещё один коммит + CI.
 
+## Журнал активной задачи: автопереход в AudioEditor после генерации
+
+- Если во время генерации был вставлен хотя бы один клип из `<music>`/`<sfx>`,
+  экран Generation теперь автоматически переходит в AudioEditor для этого
+  audiobook. Если тегов не было — поведение прежнее: Audiobook-ready карточка
+  с ручным переходом в Review / Music Mix.
+- `GenerationPipeline.Progress` получил поле `audioTagClips: Int`. UI
+  принимает решение о маршруте по этому полю, не делая повторных запросов в
+  Room.
+
 ## Журнал активной задачи: XML-теги <music>/<sfx> с привязкой к TTS
 
 - `LTVMarkupParser` распознаёт два новых тега: `<music>промпт</music>` и
