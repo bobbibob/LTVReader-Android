@@ -1,5 +1,6 @@
 package com.t2v.core.markup
 
+import com.t2v.core.text.TextProcessor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -68,5 +69,51 @@ class LTVMarkupParserTest {
         val custom = parsed.commands.filterIsInstance<MarkupCommand.Custom>().first()
         assertEquals("narrator", custom.values["style"])
         assertEquals("calm", custom.values["tone"])
+    }
+
+    @Test
+    fun `parses expressive delivery reactions and reset`() {
+        val parsed = parser.parse(
+            """{{emotion sad}}{{delivery whisper}}{{breath in}}{{sigh}}Text{{reset all}}""",
+        )
+
+        assertTrue(parsed.commands.any { it is MarkupCommand.Emotion && it.value == "sad" })
+        assertTrue(parsed.commands.any { it is MarkupCommand.Delivery && it.value == "whisper" })
+        assertEquals(
+            listOf("breath:in", "sigh"),
+            parsed.commands
+                .filterIsInstance<MarkupCommand.VocalCue>()
+                .map { listOf(it.cue, it.detail).filter(String::isNotBlank).joinToString(":") },
+        )
+        assertEquals(MarkupState(), parsed.finalState)
+    }
+
+    @Test
+    fun `spans apply tags at exact positions and consume reaction once`() {
+        val spans = parser.parseSpans(
+            """Neutral. {{emotion sad}}{{breath}}{{pause 300ms}}Sad one. Sad two. {{reset all}}Neutral again.""",
+        )
+
+        assertEquals(3, spans.size)
+        assertEquals(null, spans[0].state.emotion)
+        assertEquals("sad", spans[1].state.emotion)
+        assertEquals(listOf("breath"), spans[1].state.vocalCues)
+        assertEquals(300, spans[1].pauseBeforeMs)
+        assertEquals(MarkupState(), spans[2].state)
+    }
+
+    @Test
+    fun `text processor removes tags and preserves expressive state`() {
+        val chunks = TextProcessor(
+            chunkSize = 200,
+            minChunkSize = 1,
+            random = kotlin.random.Random(7),
+        ).process("""{{emotion happy}}{{delivery soft}}{{laugh}}Привет!""").second
+
+        assertEquals(1, chunks.size)
+        assertEquals("Привет!", chunks.single().text)
+        assertEquals("happy", chunks.single().markupState.emotion)
+        assertEquals("soft", chunks.single().markupState.delivery)
+        assertEquals(listOf("laugh"), chunks.single().markupState.vocalCues)
     }
 }

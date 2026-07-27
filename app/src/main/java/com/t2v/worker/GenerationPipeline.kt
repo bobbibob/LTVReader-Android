@@ -5,7 +5,9 @@ import com.t2v.core.audio.AudioEncoder
 import com.t2v.core.text.TextProcessor
 import com.t2v.data.AppDatabase
 import com.t2v.data.SegmentEntity
+import com.t2v.tts.EngineInfo
 import com.t2v.tts.TtsEngineException
+import com.t2v.tts.ExpressiveSpeech
 import com.t2v.tts.TtsRequest
 import com.t2v.tts.VoiceConfig
 import com.t2v.tts.engines.TtsEngine
@@ -109,16 +111,32 @@ class GenerationPipeline(
                 val pendingSegment = database.segments().byId(segmentId)
                     ?: error("Segment $segmentId disappeared")
                 database.segments().update(pendingSegment.copy(status = "running"))
+                val expressiveVoice = voice.copy(
+                    speed = chunk.markupState.speed ?: voice.speed,
+                    volume = chunk.markupState.volume ?: voice.volume,
+                    pitch = chunk.markupState.pitch ?: voice.pitch,
+                    lang = chunk.markupState.language ?: voice.lang,
+                    voice = chunk.markupState.voice ?: voice.voice,
+                    emotion = chunk.markupState.emotion ?: voice.emotion,
+                    extras = voice.extras + chunk.markupState.custom + mapOf(
+                        ExpressiveSpeech.DELIVERY to chunk.markupState.delivery.orEmpty(),
+                        ExpressiveSpeech.EMPHASIS to chunk.markupState.emphasis.orEmpty(),
+                        ExpressiveSpeech.VOCAL_CUES to chunk.markupState.vocalCues.joinToString("|"),
+                    ),
+                ).let {
+                    if (engine.info.kind == EngineInfo.EngineKind.Local) {
+                        // Any local engine (Kokoro, Piper, future on-device) cannot
+                        // honour cloud-only semantic keys; fall back to honest
+                        // prosody approximation.
+                        ExpressiveSpeech.localFallback(it)
+                    } else {
+                        it
+                    }
+                }
                 val req = TtsRequest(
                     text = chunk.text,
                     outputFile = wav,
-                    voice = voice.copy(
-                        speed = chunk.markupState.speed ?: voice.speed,
-                        volume = chunk.markupState.volume ?: voice.volume,
-                        pitch = chunk.markupState.pitch ?: voice.pitch,
-                        lang = chunk.markupState.language ?: voice.lang,
-                        voice = chunk.markupState.voice ?: voice.voice,
-                    ),
+                    voice = expressiveVoice,
                 )
                 val result = withRetry(maxAttempts = 2) { engine.synthesize(req) }
                 database.segments().update(

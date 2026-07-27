@@ -48,4 +48,20 @@ This part is slower and softer.
 - Парсер: `app/src/main/java/com/t2v/core/markup/LTVMarkupParser.kt`
 - Состояние: `MarkupState` (прикрепляется к каждому `TextChunk`)
 - Подсветка в редакторе: `app/src/main/java/com/t2v/ui/markup/MarkupHighlighter.kt`
+# Выразительные голосовые теги
+
+Полный актуальный список, семантика области действия и таблица поддержки
+движков находятся в [`../tags.md`](../tags.md).
+
+Основные примеры:
+
+```text
+{{emotion sad}}{{delivery whisper}}{{breath}}Я не уверена, что нам стоит туда идти.
+{{pause 700ms}}{{emotion surprised}}{{gasp}}Что это было?
+{{reset all}}Обычное повествование продолжается.
+```
+
+Emotion и delivery действуют на следующий текст до изменения или reset.
+Breath/laugh/sigh и другие vocal reactions одноразовые. Неподдерживаемая
+локальной моделью реакция удаляется из произносимого текста.
 

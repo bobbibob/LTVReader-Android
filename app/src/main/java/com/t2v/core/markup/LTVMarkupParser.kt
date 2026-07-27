@@ -59,6 +59,34 @@ class LTVMarkupParser(
         return ParsedMarkup(plainText = textForChunks, commands = commands, finalState = state)
     }
 
+    /** Splits source into spoken spans with the state active at each tag position. */
+    fun parseSpans(input: String): List<MarkupSpan> {
+        val spans = mutableListOf<MarkupSpan>()
+        var cursor = 0
+        var state = MarkupState()
+        var pauseBeforeMs = 0
+
+        fun emit(text: String) {
+            if (text.isBlank()) return
+            spans += MarkupSpan(text, state, pauseBeforeMs)
+            pauseBeforeMs = 0
+            state = state.copy(vocalCues = emptyList())
+        }
+
+        for (match in commandPattern.findAll(input)) {
+            emit(input.substring(cursor, match.range.first))
+            val command = parseCommand(match.groupValues[1].trim(), match.range.first)
+            if (command is MarkupCommand.Pause) {
+                pauseBeforeMs += command.durationMs.coerceAtLeast(0)
+            } else if (command != null) {
+                state = applyCommand(state, command)
+            }
+            cursor = match.range.last + 1
+        }
+        emit(input.substring(cursor))
+        return spans
+    }
+
     private fun parseCommand(inside: String, offset: Int): MarkupCommand? {
         val tokens = tokenize(inside)
         if (tokens.isEmpty()) return null
@@ -80,6 +108,18 @@ class LTVMarkupParser(
             "volume" -> MarkupCommand.Volume(volumeArg(args, 0, 1.0), offset)
             "pitch" -> MarkupCommand.Pitch(doubleArg(args, 0, 1.0), offset)
             "emotion" -> MarkupCommand.Emotion(textArg(args, 0, ""), offset)
+            "delivery", "style" -> MarkupCommand.Delivery(textArg(args, 0, "normal"), offset)
+            "whisper" -> MarkupCommand.Delivery("whisper", offset)
+            "shout" -> MarkupCommand.Delivery("shout", offset)
+            "emphasis" -> MarkupCommand.Emphasis(textArg(args, 0, "moderate"), offset)
+            "breath", "sigh", "laugh", "chuckle", "giggle", "cry", "sob",
+            "gasp", "yawn", "cough", "clear_throat", "sniff", "pant", "hmm" ->
+                MarkupCommand.VocalCue(
+                    cue = name.lowercase(),
+                    detail = textArg(args, 0, ""),
+                    offset = offset,
+                )
+            "reset" -> MarkupCommand.Reset(textArg(args, 0, "all").lowercase(), offset)
             "pause" -> MarkupCommand.Pause(parsePauseArgs(args, defaultPauseMs), offset)
             "sfx" -> MarkupCommand.Sfx(textArg(args, 0, ""), intArg(args, 1, 0), offset)
             "music" -> MarkupCommand.Music(textArg(args, 0, ""), doubleArg(args, 1, -3.0), offset)
@@ -190,6 +230,21 @@ class LTVMarkupParser(
         is MarkupCommand.Volume -> state.copy(volume = cmd.value)
         is MarkupCommand.Pitch -> state.copy(pitch = cmd.value)
         is MarkupCommand.Emotion -> state.copy(emotion = cmd.value)
+        is MarkupCommand.Delivery -> state.copy(delivery = cmd.value)
+        is MarkupCommand.Emphasis -> state.copy(emphasis = cmd.value)
+        is MarkupCommand.VocalCue -> state.copy(
+            vocalCues = state.vocalCues + listOfNotNull(
+                cmd.cue,
+                cmd.detail.takeIf { it.isNotBlank() },
+            ).joinToString(":"),
+        )
+        is MarkupCommand.Reset -> when (cmd.target) {
+            "emotion" -> state.copy(emotion = null)
+            "delivery" -> state.copy(delivery = null)
+            "prosody" -> state.copy(speed = null, volume = null, pitch = null, emphasis = null)
+            "voice" -> state.copy(voice = null, language = null)
+            else -> MarkupState()
+        }
         is MarkupCommand.Pause -> state
         is MarkupCommand.Sfx -> state
         is MarkupCommand.Music -> state
@@ -213,6 +268,14 @@ sealed interface MarkupCommand {
     data class Volume(val value: Double, override val offset: Int) : MarkupCommand
     data class Pitch(val value: Double, override val offset: Int) : MarkupCommand
     data class Emotion(val value: String, override val offset: Int) : MarkupCommand
+    data class Delivery(val value: String, override val offset: Int) : MarkupCommand
+    data class Emphasis(val value: String, override val offset: Int) : MarkupCommand
+    data class VocalCue(
+        val cue: String,
+        val detail: String = "",
+        override val offset: Int,
+    ) : MarkupCommand
+    data class Reset(val target: String, override val offset: Int) : MarkupCommand
     data class Pause(val durationMs: Int, override val offset: Int) : MarkupCommand
     data class Sfx(val name: String, val offsetMs: Int, override val offset: Int) : MarkupCommand
     data class Music(val name: String, val volumeDb: Double, override val offset: Int) : MarkupCommand
@@ -225,4 +288,10 @@ data class ParsedMarkup(
     val plainText: String,
     val commands: List<MarkupCommand>,
     val finalState: MarkupState,
+)
+
+data class MarkupSpan(
+    val text: String,
+    val state: MarkupState,
+    val pauseBeforeMs: Int = 0,
 )

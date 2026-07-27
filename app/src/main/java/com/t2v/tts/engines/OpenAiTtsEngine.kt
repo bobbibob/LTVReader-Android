@@ -2,6 +2,7 @@ package com.t2v.tts.engines
 
 import com.t2v.tts.EngineInfo
 import com.t2v.tts.EngineInfo.EngineKind
+import com.t2v.tts.ExpressiveSpeech
 import com.t2v.tts.TtsRequest
 import com.t2v.tts.VoiceInfo
 import kotlinx.serialization.json.JsonObject
@@ -37,6 +38,7 @@ class OpenAiTtsEngine(
         put("voice", request.voice.voice.ifEmpty { defaultVoice })
         put("response_format", "wav")
         put("speed", request.voice.speed.coerceIn(0.25, 4.0))
+        ExpressiveSpeech.instruction(request.voice)?.let { put("instructions", it) }
     }
 
     override suspend fun listVoices(): List<VoiceInfo> = listOf(

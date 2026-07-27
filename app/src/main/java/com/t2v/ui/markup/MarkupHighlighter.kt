@@ -48,7 +48,10 @@ object MarkupHighlighter {
             "speed" -> Quad(LTVColors.SpeedColor, LTVColors.SpeedBg, false, true)
             "volume" -> Quad(LTVColors.VolumeColor, LTVColors.VolumeBg, false, true)
             "chapter" -> Quad(LTVColors.ChapterColor, LTVColors.ChapterBg, false, true)
-            "pitch", "emotion" -> Quad(LTVColors.ChapterColor, LTVColors.ChapterBg, true, false)
+            "pitch", "emotion", "delivery", "style", "emphasis", "whisper", "shout",
+            "breath", "sigh", "laugh", "chuckle", "giggle", "cry", "sob", "gasp",
+            "yawn", "cough", "clear_throat", "sniff", "pant", "hmm", "reset" ->
+                Quad(LTVColors.ChapterColor, LTVColors.ChapterBg, true, false)
             "sfx", "music" -> Quad(LTVColors.Accent, LTVColors.ChapterBg, true, true)
             "cmd", "set" -> Quad(Color.DarkGray, Color(0xFFEEEEEE), true, false)
             else -> Quad(Color.Gray, Color.Transparent, true, false)

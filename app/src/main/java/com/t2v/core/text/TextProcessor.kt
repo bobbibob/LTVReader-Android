@@ -1,5 +1,7 @@
 package com.t2v.core.text
 
+import com.t2v.core.markup.LTVMarkupParser
+
 /**
  * Прямой порт [TextProcessor] из `app/core/text_processor.py` (372 строки).
  *
@@ -213,6 +215,32 @@ class TextProcessor(
 
     /** Полный пайплайн: очистка → секции → чанки. */
     fun process(raw: String): Pair<List<TextSection>, List<TextChunk>> {
+        if ("{{" in raw) {
+            val parser = LTVMarkupParser(
+                paragraphPauseMinMs = paragraphPauseMinMs,
+                paragraphPauseMaxMs = paragraphPauseMaxMs,
+                random = random,
+            )
+            val allSections = mutableListOf<TextSection>()
+            val allChunks = mutableListOf<TextChunk>()
+            parser.parseSpans(raw).forEach { span ->
+                val (sections, chunks) = processPlain(span.text)
+                allSections += sections
+                val paragraphBase = allChunks.size
+                chunks.forEachIndexed { index, chunk ->
+                    allChunks += chunk.copy(
+                        paragraphNumber = chunk.paragraphNumber + paragraphBase,
+                        markupPauseBeforeMs = if (index == 0) span.pauseBeforeMs else 0,
+                        markupState = span.state,
+                    )
+                }
+            }
+            return allSections to allChunks
+        }
+        return processPlain(raw)
+    }
+
+    private fun processPlain(raw: String): Pair<List<TextSection>, List<TextChunk>> {
         val cleaned = clean(raw)
         val sections = splitSections(cleaned)
         val chunks = mutableListOf<TextChunk>()

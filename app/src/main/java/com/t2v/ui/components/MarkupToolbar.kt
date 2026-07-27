@@ -49,6 +49,30 @@ fun MarkupToolbar(
             onInsert = onInsert,
         )
         MarkupChip(
+            label = "Эмоция",
+            icon = Icons.Default.RecordVoiceOver,
+            color = LTVColors.ChapterColor,
+            bg = LTVColors.ChapterBg,
+            snippet = "{{emotion happy}}",
+            onInsert = onInsert,
+        )
+        MarkupChip(
+            label = "Шёпот",
+            icon = Icons.Default.RecordVoiceOver,
+            color = LTVColors.ChapterColor,
+            bg = LTVColors.ChapterBg,
+            snippet = "{{delivery whisper}}",
+            onInsert = onInsert,
+        )
+        MarkupChip(
+            label = "Вдох",
+            icon = Icons.Default.RecordVoiceOver,
+            color = LTVColors.ChapterColor,
+            bg = LTVColors.ChapterBg,
+            snippet = "{{breath}}",
+            onInsert = onInsert,
+        )
+        MarkupChip(
             label = stringResource(R.string.markup_pause),
             icon = Icons.Default.Pause,
             color = LTVColors.PauseColor,

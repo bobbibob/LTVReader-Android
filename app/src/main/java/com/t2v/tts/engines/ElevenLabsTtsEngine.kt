@@ -2,6 +2,7 @@ package com.t2v.tts.engines
 
 import com.t2v.tts.EngineInfo
 import com.t2v.tts.EngineInfo.EngineKind
+import com.t2v.tts.ExpressiveSpeech
 import com.t2v.tts.TtsEngineException
 import com.t2v.tts.TtsRequest
 import com.t2v.tts.VoiceInfo
@@ -44,7 +45,8 @@ class ElevenLabsTtsEngine(
     )
 
     override fun buildBody(request: TtsRequest): JsonObject = buildJsonObject {
-        put("text", request.text)
+        val prefix = if (modelId == "eleven_v3") ExpressiveSpeech.elevenV3Prefix(request.voice) else ""
+        put("text", listOf(prefix, request.text).filter { it.isNotBlank() }.joinToString(" "))
         put("model_id", modelId)
         put(
             "voice_settings",

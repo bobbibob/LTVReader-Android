@@ -2,6 +2,7 @@ package com.t2v.tts.engines
 
 import com.t2v.tts.EngineInfo
 import com.t2v.tts.EngineInfo.EngineKind
+import com.t2v.tts.ExpressiveSpeech
 import com.t2v.tts.TtsRequest
 import com.t2v.tts.VoiceInfo
 import kotlinx.serialization.json.JsonObject
@@ -84,10 +85,28 @@ class AzureTtsEngine(
         val pitchPercent = ((request.voice.pitch - 1.0) * 100).toInt()
         val pitch = if (pitchPercent == 0) "" else "<prosody pitch=\"${pitchPercent}%\">"
         val pitchClose = if (pitchPercent == 0) "" else "</prosody>"
+        val style = azureStyle(
+            request.voice.extras[ExpressiveSpeech.DELIVERY]
+                ?: request.voice.emotion,
+        )
+        val expressiveOpen = style?.let { """<mstts:express-as style="$it">""" }.orEmpty()
+        val expressiveClose = if (style == null) "" else "</mstts:express-as>"
 
-        return """<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="$lang">
-  <voice name="$voice">$vol$pitch$rate${escapeXml(request.text)}$rateClose$pitchClose$volClose</voice>
+        return """<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="$lang">
+  <voice name="$voice">$expressiveOpen$vol$pitch$rate${escapeXml(request.text)}$rateClose$pitchClose$volClose$expressiveClose</voice>
 </speak>"""
+    }
+
+    private fun azureStyle(value: String?): String? {
+        val normalized = value?.lowercase()
+        return when (normalized) {
+            "happy" -> "cheerful"
+            "sad", "angry", "afraid", "calm", "excited", "friendly", "hopeful",
+            "shouting", "whispering", "terrified", "serious", "empathetic" -> normalized
+            "whisper" -> "whispering"
+            "shout" -> "shouting"
+            else -> null
+        }
     }
 
     private fun escapeXml(s: String): String =

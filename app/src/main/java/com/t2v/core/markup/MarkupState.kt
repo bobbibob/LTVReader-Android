@@ -13,6 +13,10 @@ data class MarkupState(
     val volume: Double? = null,         // линейный множитель, 1.0 = 100%
     val pitch: Double? = null,
     val emotion: String? = null,
+    val delivery: String? = null,
+    val emphasis: String? = null,
+    /** One-shot cues consumed by the next spoken span. */
+    val vocalCues: List<String> = emptyList(),
     val chapter: String? = null,
     val custom: Map<String, String> = emptyMap(),
 ) {
@@ -23,6 +27,9 @@ data class MarkupState(
         volume = other.volume ?: volume,
         pitch = other.pitch ?: pitch,
         emotion = other.emotion ?: emotion,
+        delivery = other.delivery ?: delivery,
+        emphasis = other.emphasis ?: emphasis,
+        vocalCues = vocalCues + other.vocalCues,
         chapter = other.chapter ?: chapter,
         custom = custom + other.custom,
     )

@@ -2,6 +2,7 @@ package com.t2v.tts.engines
 
 import com.t2v.tts.EngineInfo
 import com.t2v.tts.EngineInfo.EngineKind
+import com.t2v.tts.ExpressiveSpeech
 import com.t2v.tts.TtsRequest
 import com.t2v.tts.VoiceInfo
 import kotlinx.serialization.json.JsonArray
@@ -41,7 +42,12 @@ class GeminiTtsEngine(
             add(kotlinx.serialization.json.buildJsonObject {
                 put("parts", kotlinx.serialization.json.buildJsonArray {
                     add(kotlinx.serialization.json.buildJsonObject {
-                        put("text", request.text)
+                        val direction = ExpressiveSpeech.instruction(request.voice)
+                        put(
+                            "text",
+                            if (direction == null) request.text
+                            else "$direction.\nRecite exactly this text:\n${request.text}",
+                        )
                     })
                 })
             })
