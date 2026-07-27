@@ -39,4 +39,18 @@
     <string name="status_idle">Готов</string>
     <string name="status_generating">Генерация сегмента %1$d из %2$d</string>
     <string name="status_completed">Готово</string>
+    <string name="info_title">О движке</string>
+    <string name="info_supported">Поддерживаемые теги</string>
+    <string name="info_partial">Частичная поддержка / приближение</string>
+    <string name="info_ignored">Игнорируется</string>
+    <string name="info_examples">Примеры</string>
+    <string name="info_prompt_help">Подсказка по промпту</string>
+    <string name="info_no_docs">Для этого движка пока нет документации по разметке.</string>
+    <string name="info_close">Закрыть</string>
+    <string name="info_runtime">Рантайм</string>
+    <string name="info_repository">Репозиторий</string>
+    <string name="info_license">Лицензия</string>
+    <string name="info_category_local">На устройстве</string>
+    <string name="info_category_cloud">Облако</string>
+    <string name="info_open">Информация о движке</string>
 </resources>

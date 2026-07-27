@@ -148,4 +148,18 @@
     <string name="models_hf_search_action">Search</string>
     <string name="models_hf_open_repo">Open repository</string>
     <string name="models_cancel_download">Cancel download</string>
+    <string name="info_title">Engine information</string>
+    <string name="info_supported">Supported tags</string>
+    <string name="info_partial">Partial / approximated</string>
+    <string name="info_ignored">Ignored</string>
+    <string name="info_examples">Examples</string>
+    <string name="info_prompt_help">Prompt help</string>
+    <string name="info_no_docs">No expressive markup documented for this engine yet.</string>
+    <string name="info_close">Close</string>
+    <string name="info_runtime">Runtime</string>
+    <string name="info_repository">Repository</string>
+    <string name="info_license">License</string>
+    <string name="info_category_local">On-device</string>
+    <string name="info_category_cloud">Cloud</string>
+    <string name="info_open">Engine information</string>
 </resources>

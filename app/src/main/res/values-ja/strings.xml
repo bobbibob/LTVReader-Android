@@ -29,4 +29,18 @@
     <string name="status_idle">アイドル</string>
     <string name="status_generating">セグメント %2$d 中 %1$d を生成中</string>
     <string name="status_completed">完了</string>
+    <string name="info_title">エンジン情報</string>
+    <string name="info_supported">対応タグ</string>
+    <string name="info_partial">部分的 / 近似</string>
+    <string name="info_ignored">無視</string>
+    <string name="info_examples">例</string>
+    <string name="info_prompt_help">プロンプトのヒント</string>
+    <string name="info_no_docs">このエンジンの表現マークアップはまだ文書化されていません。</string>
+    <string name="info_close">閉じる</string>
+    <string name="info_runtime">ランタイム</string>
+    <string name="info_repository">リポジトリ</string>
+    <string name="info_license">ライセンス</string>
+    <string name="info_category_local">端末上</string>
+    <string name="info_category_cloud">クラウド</string>
+    <string name="info_open">エンジン情報</string>
 </resources>

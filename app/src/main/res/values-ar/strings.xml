@@ -29,4 +29,18 @@
     <string name="status_idle">خامل</string>
     <string name="status_generating">توليد الجزء %1$d من %2$d</string>
     <string name="status_completed">اكتمل</string>
+    <string name="info_title">معلومات المحرك</string>
+    <string name="info_supported">الوسوم المدعومة</string>
+    <string name="info_partial">جزئي / تقريبي</string>
+    <string name="info_ignored">تم التجاهل</string>
+    <string name="info_examples">أمثلة</string>
+    <string name="info_prompt_help">مساعدة الموجه</string>
+    <string name="info_no_docs">لا توجد وثائق ترميز تعبيري لهذا المحرك بعد.</string>
+    <string name="info_close">إغلاق</string>
+    <string name="info_runtime">وقت التشغيل</string>
+    <string name="info_repository">المستودع</string>
+    <string name="info_license">الترخيص</string>
+    <string name="info_category_local">على الجهاز</string>
+    <string name="info_category_cloud">سحابي</string>
+    <string name="info_open">معلومات المحرك</string>
 </resources>

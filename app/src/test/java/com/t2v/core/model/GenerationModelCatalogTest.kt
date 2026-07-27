@@ -25,6 +25,8 @@ class GenerationModelCatalogTest {
         val expected = listOf(
             "kokoro-82m",
             "piper-vits",
+            "pocket-tts-int8",
+            "zipvoice-distill-int8",
             "stable-audio-open-small",
             "stable-audio-clip",
         )
@@ -38,7 +40,7 @@ class GenerationModelCatalogTest {
         }
 
         // Cloud TTS engines.
-        for (engine in listOf("openai", "elevenlabs", "gemini", "azure")) {
+        for (engine in listOf("openai", "elevenlabs", "gemini", "azure", "custom_http", "kokoro", "piper_ru")) {
             assertNotNull(
                 "Missing TagDocs for engine $engine",
                 GenerationModelCatalog.tagDocsForEngine(engine),
@@ -46,7 +48,7 @@ class GenerationModelCatalogTest {
         }
 
         // Generators without on-device model id.
-        for (gen in listOf("bundled.music", "bundled.sound", "elevenlabs.sound")) {
+        for (gen in listOf("bundled.music", "bundled.sound", "elevenlabs.sound", "litert.stable-audio-open-small.music", "litert.stable-audio-clip.sound")) {
             assertNotNull(
                 "Missing TagDocs for generator $gen",
                 GenerationModelCatalog.tagDocsForGenerator(gen),

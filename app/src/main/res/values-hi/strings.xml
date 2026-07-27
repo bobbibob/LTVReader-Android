@@ -29,4 +29,18 @@
     <string name="status_idle">निष्क्रिय</string>
     <string name="status_generating">%2$d में से %1$d सेगमेंट जनरेट हो रहा है</string>
     <string name="status_completed">पूरा हुआ</string>
+    <string name="info_title">इंजन की जानकारी</string>
+    <string name="info_supported">समर्थित टैग</string>
+    <string name="info_partial">आंशिक / अनुमानित</string>
+    <string name="info_ignored">अनदेखा</string>
+    <string name="info_examples">उदाहरण</string>
+    <string name="info_prompt_help">प्रॉम्प्ट सहायता</string>
+    <string name="info_no_docs">इस इंजन के लिए अभी तक कोई एक्सप्रेसिव मार्कअप दस्तावेज़ नहीं है।</string>
+    <string name="info_close">बंद करें</string>
+    <string name="info_runtime">रनटाइम</string>
+    <string name="info_repository">रिपॉज़िटरी</string>
+    <string name="info_license">लाइसेंस</string>
+    <string name="info_category_local">डिवाइस पर</string>
+    <string name="info_category_cloud">क्लाउड</string>
+    <string name="info_open">इंजन की जानकारी</string>
 </resources>

@@ -29,4 +29,18 @@
     <string name="status_idle">空闲</string>
     <string name="status_generating">正在生成第 %2$d 段中的第 %1$d 段</string>
     <string name="status_completed">完成</string>
+    <string name="info_title">引擎信息</string>
+    <string name="info_supported">支持的标签</string>
+    <string name="info_partial">部分支持 / 近似</string>
+    <string name="info_ignored">忽略</string>
+    <string name="info_examples">示例</string>
+    <string name="info_prompt_help">提示词帮助</string>
+    <string name="info_no_docs">此引擎尚无表达性标记文档。</string>
+    <string name="info_close">关闭</string>
+    <string name="info_runtime">运行时</string>
+    <string name="info_repository">仓库</string>
+    <string name="info_license">许可证</string>
+    <string name="info_category_local">本地运行</string>
+    <string name="info_category_cloud">云端</string>
+    <string name="info_open">引擎信息</string>
 </resources>

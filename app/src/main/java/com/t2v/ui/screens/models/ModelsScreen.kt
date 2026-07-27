@@ -14,12 +14,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -48,6 +50,7 @@ import com.t2v.server.HuggingFaceRepository
 import com.t2v.tts.catalog.RussianVoiceInstaller
 import com.t2v.tts.engines.PiperRussianTtsEngine
 import com.t2v.ui.components.LTVScaffold
+import com.t2v.ui.components.TagInfoDialog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -63,6 +66,19 @@ fun ModelsScreen(
 ) {
     val state by vm.state.collectAsState()
     var selectedTab by remember { mutableStateOf(ModelTab.Voice) }
+    var infoTarget by remember { mutableStateOf<InfoTarget?>(null) }
+    infoTarget?.let { target ->
+        TagInfoDialog(
+            title = target.title,
+            tagline = target.tagline,
+            tags = target.tags,
+            runtimeLabel = target.runtime,
+            repository = target.repository,
+            license = target.license,
+            categoryLabel = target.categoryLabel,
+            onDismiss = { infoTarget = null },
+        )
+    }
     val context = LocalContext.current
     val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
@@ -122,6 +138,17 @@ fun ModelsScreen(
                 enabled = state.kokoroInstalled,
                 tags = GenerationModelCatalog.tagDocsFor("kokoro-82m"),
                 onSelect = { vm.selectVoiceModel(VOICE_MODEL_KOKORO) },
+                onInfo = {
+                    infoTarget = InfoTarget(
+                        title = "Kokoro 82M (English TTS, on-device)",
+                        tagline = GenerationModelCatalog.tagDocsFor("kokoro-82m")?.tagline,
+                        tags = GenerationModelCatalog.tagDocsFor("kokoro-82m"),
+                        runtime = "SherpaOnnx (bundled)",
+                        repository = GenerationModelCatalog.repositoryFor("kokoro-82m"),
+                        license = GenerationModelCatalog.licenseFor("kokoro-82m"),
+                        categoryLabel = stringResource(R.string.info_category_local),
+                    )
+                },
             )
             if (false) {
             Card(modifier = Modifier.fillMaxWidth()) {
@@ -234,6 +261,17 @@ fun ModelsScreen(
                     enabled = state.liteRtMusicReady,
                     tags = GenerationModelCatalog.tagDocsFor("stable-audio-open-small"),
                     onSelect = { vm.selectMusicModel(MUSIC_MODEL_STABLE_AUDIO_OPEN_SMALL) },
+                    onInfo = {
+                        infoTarget = InfoTarget(
+                            title = "On-device synth (music)",
+                            tagline = GenerationModelCatalog.tagDocsFor("stable-audio-open-small")?.tagline,
+                            tags = GenerationModelCatalog.tagDocsFor("stable-audio-open-small"),
+                            runtime = "LiteRT (procedural, no model)",
+                            repository = "",
+                            license = "T2V procedural synth",
+                            categoryLabel = stringResource(R.string.info_category_local),
+                        )
+                    },
                 )
                 ModelDetailCard(
                     title = "ElevenLabs Sound Effects (cloud)",
@@ -242,6 +280,17 @@ fun ModelsScreen(
                     enabled = state.elevenLabsKeyConfigured,
                     tags = GenerationModelCatalog.tagDocsForGenerator("elevenlabs.sound"),
                     onSelect = { vm.selectMusicModel(SOUND_MODEL_ELEVEN_SFX) },
+                    onInfo = {
+                        infoTarget = InfoTarget(
+                            title = "ElevenLabs Sound Effects (cloud)",
+                            tagline = GenerationModelCatalog.tagDocsForGenerator("elevenlabs.sound")?.tagline,
+                            tags = GenerationModelCatalog.tagDocsForGenerator("elevenlabs.sound"),
+                            runtime = "ElevenLabs Sound Effects API",
+                            repository = "https://api.elevenlabs.io/v1/sound-generation",
+                            license = "ElevenLabs Terms",
+                            categoryLabel = stringResource(R.string.info_category_cloud),
+                        )
+                    },
                 )
                 ModelDetailCard(
                     title = "Bundled placeholder (offline)",
@@ -250,6 +299,17 @@ fun ModelsScreen(
                     enabled = true,
                     tags = GenerationModelCatalog.tagDocsForGenerator("bundled.music"),
                     onSelect = { vm.selectMusicModel(MUSIC_MODEL_BUNDLED) },
+                    onInfo = {
+                        infoTarget = InfoTarget(
+                            title = "Bundled placeholder (offline)",
+                            tagline = GenerationModelCatalog.tagDocsForGenerator("bundled.music")?.tagline,
+                            tags = GenerationModelCatalog.tagDocsForGenerator("bundled.music"),
+                            runtime = "Bundled assets",
+                            repository = "",
+                            license = "T2V placeholder",
+                            categoryLabel = stringResource(R.string.info_category_local),
+                        )
+                    },
                 )
             }
 
@@ -261,6 +321,17 @@ fun ModelsScreen(
                     enabled = state.liteRtSoundReady,
                     tags = GenerationModelCatalog.tagDocsFor("stable-audio-clip"),
                     onSelect = { vm.selectSoundModel(SOUND_MODEL_STABLE_AUDIO_CLIP) },
+                    onInfo = {
+                        infoTarget = InfoTarget(
+                            title = "On-device synth (sound)",
+                            tagline = GenerationModelCatalog.tagDocsFor("stable-audio-clip")?.tagline,
+                            tags = GenerationModelCatalog.tagDocsFor("stable-audio-clip"),
+                            runtime = "LiteRT (procedural, no model)",
+                            repository = "",
+                            license = "T2V procedural synth",
+                            categoryLabel = stringResource(R.string.info_category_local),
+                        )
+                    },
                 )
                 ModelDetailCard(
                     title = "ElevenLabs Sound Effects (cloud)",
@@ -269,6 +340,17 @@ fun ModelsScreen(
                     enabled = state.elevenLabsKeyConfigured,
                     tags = GenerationModelCatalog.tagDocsForGenerator("elevenlabs.sound"),
                     onSelect = { vm.selectSoundModel(SOUND_MODEL_ELEVEN_SFX) },
+                    onInfo = {
+                        infoTarget = InfoTarget(
+                            title = "ElevenLabs Sound Effects (cloud)",
+                            tagline = GenerationModelCatalog.tagDocsForGenerator("elevenlabs.sound")?.tagline,
+                            tags = GenerationModelCatalog.tagDocsForGenerator("elevenlabs.sound"),
+                            runtime = "ElevenLabs Sound Effects API",
+                            repository = "https://api.elevenlabs.io/v1/sound-generation",
+                            license = "ElevenLabs Terms",
+                            categoryLabel = stringResource(R.string.info_category_cloud),
+                        )
+                    },
                 )
                 ModelDetailCard(
                     title = "Bundled placeholder (offline)",
@@ -277,6 +359,17 @@ fun ModelsScreen(
                     enabled = true,
                     tags = GenerationModelCatalog.tagDocsForGenerator("bundled.sound"),
                     onSelect = { vm.selectSoundModel(SOUND_MODEL_BUNDLED) },
+                    onInfo = {
+                        infoTarget = InfoTarget(
+                            title = "Bundled placeholder (offline)",
+                            tagline = GenerationModelCatalog.tagDocsForGenerator("bundled.sound")?.tagline,
+                            tags = GenerationModelCatalog.tagDocsForGenerator("bundled.sound"),
+                            runtime = "Bundled assets",
+                            repository = "",
+                            license = "T2V placeholder",
+                            categoryLabel = stringResource(R.string.info_category_local),
+                        )
+                    },
                 )
             }
 
@@ -316,6 +409,16 @@ fun ModelsScreen(
     }
 }
 
+private data class InfoTarget(
+    val title: String,
+    val tagline: String?,
+    val tags: com.t2v.core.model.GenerationModelCatalog.TagDocs?,
+    val runtime: String? = null,
+    val repository: String? = null,
+    val license: String? = null,
+    val categoryLabel: String? = null,
+)
+
 private enum class ModelTab(val title: String) {
     Voice("Голос"),
     Music("Музыка"),
@@ -338,13 +441,31 @@ fun ModelDetailCard(
     enabled: Boolean,
     tags: com.t2v.core.model.GenerationModelCatalog.TagDocs?,
     onSelect: () -> Unit,
+    onInfo: (() -> Unit)? = null,
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                if (onInfo != null) {
+                    IconButton(onClick = onInfo) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = stringResource(R.string.info_open),
+                        )
+                    }
+                }
+            }
             Text(status, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
             tags?.let { docs ->
                 Text(docs.tagline, style = MaterialTheme.typography.bodySmall)

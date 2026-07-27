@@ -29,4 +29,18 @@
     <string name="status_idle">Inactivo</string>
     <string name="status_generating">Generando segmento %1$d de %2$d</string>
     <string name="status_completed">Completado</string>
+    <string name="info_title">Información del motor</string>
+    <string name="info_supported">Etiquetas compatibles</string>
+    <string name="info_partial">Parcial / aproximado</string>
+    <string name="info_ignored">Ignorado</string>
+    <string name="info_examples">Ejemplos</string>
+    <string name="info_prompt_help">Ayuda con el prompt</string>
+    <string name="info_no_docs">Aún no hay documentación de marcado expresivo para este motor.</string>
+    <string name="info_close">Cerrar</string>
+    <string name="info_runtime">Runtime</string>
+    <string name="info_repository">Repositorio</string>
+    <string name="info_license">Licencia</string>
+    <string name="info_category_local">En el dispositivo</string>
+    <string name="info_category_cloud">Nube</string>
+    <string name="info_open">Información del motor</string>
 </resources>

@@ -29,4 +29,18 @@
     <string name="status_idle">Inactif</string>
     <string name="status_generating">Génération du segment %1$d sur %2$d</string>
     <string name="status_completed">Terminé</string>
+    <string name="info_title">Informations sur le moteur</string>
+    <string name="info_supported">Balises prises en charge</string>
+    <string name="info_partial">Partiel / approximatif</string>
+    <string name="info_ignored">Ignoré</string>
+    <string name="info_examples">Exemples</string>
+    <string name="info_prompt_help">Aide au prompt</string>
+    <string name="info_no_docs">Aucune documentation expressive n\'est encore disponible pour ce moteur.</string>
+    <string name="info_close">Fermer</string>
+    <string name="info_runtime">Runtime</string>
+    <string name="info_repository">Dépôt</string>
+    <string name="info_license">Licence</string>
+    <string name="info_category_local">Sur l\'appareil</string>
+    <string name="info_category_cloud">Cloud</string>
+    <string name="info_open">Informations sur le moteur</string>
 </resources>

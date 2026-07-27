@@ -254,6 +254,71 @@ object GenerationModelCatalog {
     )
 
 
+
+    private val CUSTOM_HTTP_TAGS = TagDocs(
+        tagline = "User-defined HTTP endpoint. The body template you configure decides what tags reach the server - T2V only substitutes {{text}}, {{voice}} and {{lang}} placeholders.",
+        supported = listOf(
+            "{{voice "..."}} - interpolated into the body template as {{voice}}",
+            "{{lang en-US|ru-RU|...}} - interpolated as {{lang}}",
+            "{{speed 0.5..2.0}} - applied as a local PCM time-stretch; server is not contacted twice",
+            "{{pause 500ms}} / {{pause 0.7s}} / {{pause.short}} / {{pause.long}} - inserted as PCM silence",
+        ),
+        partial = listOf(
+            "{{emotion ...}} / {{delivery ...}} / {{emphasis ...}} - passed through only if your body template forwards them; otherwise the server sees raw text",
+        ),
+        ignored = listOf(
+            "Vocal reactions ({{breath}}, {{laugh}}, ...) and {{reset}} - sent as raw words to the endpoint; configure your body template to strip them if needed",
+            "{{chapter "..."}} / {{music ...}} / {{sfx ...}} - handled locally, never reach the server",
+        ),
+        examples = listOf(
+            "{{voice "narrator"}}{{lang en-US}}Once upon a time...",
+            "{{speed 0.9}}{{pause 500ms}}take a breath.",
+        ),
+        promptHelp = "Test your template with the 'Custom HTTP TTS' engine in the Models screen. The server must return raw audio bytes or a JSON object containing an 'audio' (base64) or 'url' field.",
+    )
+
+    private val POCKET_TAGS = TagDocs(
+        tagline = "PocketTTS is not yet verified for Android. Treat its tag mapping as a placeholder pending a device smoke-test.",
+        supported = listOf(
+            "{{voice "..."}} - speaker id from the catalog",
+            "{{lang en-US}}",
+            "{{speed 0.5..2.0}}",
+            "{{pause 500ms}} / {{pause 0.7s}}",
+        ),
+        partial = listOf(
+            "{{emotion ...}} / {{delivery ...}} - mapped to speed/pitch deltas only",
+        ),
+        ignored = listOf(
+            "Vocal reactions - stripped before synthesis",
+        ),
+        examples = listOf(
+            "{{voice "default"}}Hello there.",
+        ),
+    )
+
+    private val ZIPVOICE_TAGS = TagDocs(
+        tagline = "ZipVoice Distill is a zero-shot voice-cloning model. The expressive markup mapping matches Piper until the Android runtime ships a real phoneme pipeline.",
+        supported = listOf(
+            "{{voice "<reference-id>"}} - reference speaker id",
+            "{{lang en-US}}",
+            "{{speed 0.5..2.0}}",
+            "{{pause 500ms}} / {{pause 0.7s}}",
+            "{{chapter "..."}}",
+        ),
+        partial = listOf(
+            "{{emotion ...}} / {{delivery ...}} - approximated via speed and pitch only",
+            "{{volume 0..4}} / {{pitch 0.5..2.0}} - forwarded only if the runtime accepts them",
+        ),
+        ignored = listOf(
+            "Vocal reactions ({{breath}}, {{laugh}}, ...) - stripped from text",
+            "{{emphasis ...}} / {{reset ...}} - accepted but ignored",
+        ),
+        examples = listOf(
+            "{{voice "speaker-01"}}Reference audio plus transcript required.",
+        ),
+        promptHelp = "Upload the reference WAV and transcript in the Models screen before selecting this engine.",
+    )
+
         val entries: List<Entry> = listOf(
         Entry(
             id = "kokoro-82m",
@@ -301,6 +366,7 @@ object GenerationModelCatalog {
                 runtime = Runtime.SherpaOnnx,
                 runtimeBundled = true,
         ),
+            tags = POCKET_TAGS,
             support = Support.RuntimeInDevelopment,
             approximateDownloadBytes = null,
             license = "Model-specific",
@@ -318,7 +384,7 @@ object GenerationModelCatalog {
                 runtime = Runtime.SherpaOnnx,
                 runtimeBundled = true,
         ),
-            tags = PIPER_TAGS,
+            tags = ZIPVOICE_TAGS,
             support = Support.Experimental,
             approximateDownloadBytes = null,
             license = "Model-specific",
@@ -396,7 +462,9 @@ object GenerationModelCatalog {
         "elevenlabs" to ELEVEN_TAGS,
         "gemini" to GEMINI_TAGS,
         "azure" to AZURE_TAGS,
-        "custom_http" to BUNDLED_TAGS, // best-effort fallback for user-defined engines
+        "custom_http" to CUSTOM_HTTP_TAGS,
+        "kokoro" to KOKORO_TAGS,
+        "piper_ru" to PIPER_TAGS,
     )
 
     /** Returns the TagDocs for a TTS engine id (cloud or custom). */
@@ -407,4 +475,10 @@ object GenerationModelCatalog {
 
     fun requiredRuntime(modelId: String): Runtime? =
         entries.firstOrNull { it.id == modelId }?.requirements?.runtime
+
+    fun repositoryFor(modelId: String): String? =
+        entries.firstOrNull { it.id == modelId }?.repository?.takeIf { it.isNotBlank() }
+
+    fun licenseFor(modelId: String): String? =
+        entries.firstOrNull { it.id == modelId }?.license?.takeIf { it.isNotBlank() }
 }
