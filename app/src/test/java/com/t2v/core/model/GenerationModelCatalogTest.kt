@@ -1,7 +1,6 @@
 package com.t2v.core.model
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -20,19 +19,25 @@ class GenerationModelCatalogTest {
     }
 
     @Test
-    fun `stable audio shares LiteRT runtime but cannot install before verification`() {
+    fun `stable audio shares LiteRT runtime and is verified for install`() {
         val music = GenerationModelCatalog.forCategory(
             GenerationModelCatalog.Category.Music,
-        ).single()
+        ).single { it.id == "stable-audio-open-small" }
         val sound = GenerationModelCatalog.forCategory(
             GenerationModelCatalog.Category.Sound,
-        ).single()
+        ).single { it.id == "stable-audio-open-small" }
 
         assertEquals(music.id, sound.id)
         assertEquals(
             GenerationModelCatalog.Runtime.LiteRt,
             GenerationModelCatalog.requiredRuntime(music.id),
         )
-        assertFalse(music.canInstall)
+        assertTrue(music.canInstall)
+        // The clip variant stays exclusive to Sound.
+        val clips = GenerationModelCatalog.forCategory(
+            GenerationModelCatalog.Category.Sound,
+        ).filter { it.id == "stable-audio-clip" }
+        assertEquals(1, clips.size)
+        assertTrue(clips.single().canInstall)
     }
 }
