@@ -19,6 +19,8 @@ import java.security.MessageDigest
 class LiteRtModelInstaller(
     private val runtime: LiteRtModelRuntime,
 ) {
+    private val effectiveRoot: File get() = runtime.rootDirectory
+
     data class Plan(
         val modelId: String,
         val catalog: GenerationModelCatalog.Entry,
@@ -35,7 +37,7 @@ class LiteRtModelInstaller(
         manifest: LiteRtModelRuntime.BundleManifest,
         catalog: GenerationModelCatalog.Entry,
     ): Plan {
-        val destination = File(runtime.rootDirectory, manifest.modelId)
+        val destination = File(effectiveRoot, manifest.modelId)
         return Plan(
             modelId = manifest.modelId,
             catalog = catalog,
