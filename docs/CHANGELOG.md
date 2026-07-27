@@ -4,6 +4,13 @@
 
 ## [Unreleased]
 
+### Added
+- Music/sound generator runtime works end-to-end: generator selection with
+  available/unavailable labels, audio preview (play/stop per clip), default
+  prompts, WAV header metadata parsing.
+- BundledAssetGeneratorTest (6 JVM tests) verifies all 6 bundled WAV assets,
+  header parsing, and keyword matching.
+
 ### Fixed
 - `AudioMixerTest > writeSilence`: `AudioEncoder.readWav` переведён на `RandomAccessFile`
   с ручным little-endian чтением; dataSize/2 даёт корректное число сэмплов (11025 для 500 мс @ 22050 Гц).
