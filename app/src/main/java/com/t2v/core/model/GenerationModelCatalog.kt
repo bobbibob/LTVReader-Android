@@ -59,7 +59,7 @@ object GenerationModelCatalog {
         val tags: TagDocs? = null,
     ) {
         val canInstall: Boolean
-            get() = support == Support.Verified
+            get() = support == Support.Verified && approximateDownloadBytes != null
     }
 
     private val KOKORO_TAGS = TagDocs(
@@ -328,39 +328,39 @@ object GenerationModelCatalog {
         ),
         Entry(
             id = "stable-audio-open-small",
-            title = "Stable Audio Open Small",
+            title = "On-device synth (music)",
             categories = setOf(Category.Music, Category.Sound),
             capabilities = setOf(Capability.MusicGeneration, Capability.SoundGeneration),
             requirements = Requirements(
-                minimumRamMb = 6_144,
+                minimumRamMb = 256,
                 runtime = Runtime.LiteRt,
-                runtimeBundled = false,
+                runtimeBundled = true,
         ),
             tags = STABLE_AUDIO_TAGS,
             support = Support.Verified,
-            approximateDownloadBytes = 604_000_000,
-            license = "Stability AI Community License",
-            repository = "stabilityai/stable-audio-open-small",
+            approximateDownloadBytes = null,
+            license = "T2V procedural synth (no external model)",
+            repository = "",
             revision = null,
-            notes = "One installation serves both music and sound tabs; up to 11 seconds",
+            notes = "Procedural synthesis from prompt keywords; no download; up to 11 seconds",
         ),
         Entry(
             id = "stable-audio-clip",
-            title = "Stable Audio Clip",
+            title = "On-device synth (sound)",
             categories = setOf(Category.Sound),
             capabilities = setOf(Capability.SoundGeneration),
             requirements = Requirements(
-                minimumRamMb = 4_096,
+                minimumRamMb = 256,
                 runtime = Runtime.LiteRt,
-                runtimeBundled = false,
+                runtimeBundled = true,
         ),
             tags = STABLE_AUDIO_CLIP_TAGS,
             support = Support.Verified,
-            approximateDownloadBytes = 96_000_000,
-            license = "Stability AI Community License",
-            repository = "stabilityai/stable-audio-open-small",
+            approximateDownloadBytes = null,
+            license = "T2V procedural synth (no external model)",
+            repository = "",
             revision = null,
-            notes = "Single-file LiteRT variant for short sound effects",
+            notes = "Procedural SFX synthesis; no download; up to 5 seconds",
         ),
     )
 

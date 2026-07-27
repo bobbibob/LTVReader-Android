@@ -228,8 +228,8 @@ fun ModelsScreen(
 
             if (selectedTab == ModelTab.Music) {
                 ModelDetailCard(
-                    title = "Stable Audio Open Small",
-                    status = "On-device LiteRT runtime • up to 11 seconds • ARM64",
+                    title = "On-device synth (music)",
+                    status = "Procedural synthesis • up to 11 seconds • no download needed",
                     selected = state.selectedMusicModelId == MUSIC_MODEL_STABLE_AUDIO_OPEN_SMALL,
                     enabled = state.liteRtMusicReady,
                     tags = GenerationModelCatalog.tagDocsFor("stable-audio-open-small"),
@@ -255,8 +255,8 @@ fun ModelsScreen(
 
             if (selectedTab == ModelTab.Sound) {
                 ModelDetailCard(
-                    title = "Stable Audio Clip (on-device)",
-                    status = "LiteRT single-file runtime • up to 5 seconds",
+                    title = "On-device synth (sound)",
+                    status = "Procedural synthesis • up to 5 seconds • no download needed",
                     selected = state.selectedSoundModelId == SOUND_MODEL_STABLE_AUDIO_CLIP,
                     enabled = state.liteRtSoundReady,
                     tags = GenerationModelCatalog.tagDocsFor("stable-audio-clip"),

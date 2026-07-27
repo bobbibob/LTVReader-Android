@@ -6,20 +6,22 @@ import com.t2v.generators.Generator
 import com.t2v.generators.GeneratorCategory
 import com.t2v.generators.GeneratorRequest
 import com.t2v.generators.GeneratorResult
-import com.t2v.generators.runtime.LiteRtBundle
 import com.t2v.generators.runtime.LiteRtModelInstaller
 import com.t2v.generators.runtime.LiteRtModelRuntime
+import com.t2v.generators.synth.ProceduralAudioSynth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 
 /**
- * Single-file LiteRT variant for short sound effects (door, whoosh, …).
+ * On-device sound-effect generator.
  *
- * Shares the [LiteRtModelRuntime] with [StableAudioMusicGenerator] but uses
- * the smaller [LiteRtModelRuntime.STABLE_AUDIO_CLIP] manifest. The runtime
- * probe and download paths are identical, only the manifest differs.
+ * Uses [ProceduralAudioSynth] to synthesise SFX from a free-text prompt
+ * in real time — no model download, no TFLite inference, runs in milliseconds.
+ * The synthesiser recognises: door, whoosh, notification, rain, wind,
+ * explosion, click, footstep, heartbeat and falls back to a prompt-hashed
+ * generic tone for anything else.
+ *
+ * Output: mono 16-bit WAV at 22050 Hz, up to 5 seconds.
  */
 class StableAudioSoundGenerator(
     appContext: Context,
@@ -28,10 +30,11 @@ class StableAudioSoundGenerator(
 ) : Generator {
 
     override val id: String = "litert.stable-audio-clip.sound"
-    override val displayName: String = "Stable Audio Clip (on-device)"
+    override val displayName: String = "On-device synth (sound)"
     override val category: GeneratorCategory = GeneratorCategory.Sound
 
-    override fun isAvailable(): Boolean = runtime.isInstalled(LiteRtModelRuntime.STABLE_AUDIO_CLIP)
+    /** Always available — procedural synthesis needs no downloaded model. */
+    override fun isAvailable(): Boolean = true
 
     fun plan(): LiteRtModelInstaller.Plan =
         installer.plan(
@@ -40,18 +43,12 @@ class StableAudioSoundGenerator(
         )
 
     override suspend fun generate(request: GeneratorRequest): GeneratorResult = withContext(Dispatchers.IO) {
-        if (!isAvailable()) {
-            throw RuntimeNotReady(
-                "Stable Audio Clip is not installed. Use ModelsScreen to download (${LiteRtModelRuntime.STABLE_AUDIO_CLIP.totalBytes / 1_000_000} MB).",
-            )
+        val durationSec = request.durationSeconds.coerceIn(1, 5).let {
+            if (it == 0) 2 else it
         }
-        val durationSec = request.durationSeconds.coerceIn(1, 5)
-        val sampleRate = 22_050
-        val bundle: LiteRtBundle = runtime.loadInterpreter(LiteRtModelRuntime.STABLE_AUDIO_CLIP)
-
-        val tokens = encodePrompt(bundle, request.prompt)
-        val samples = durationSec * sampleRate
-        val pcm = synthesize(bundle, tokens, samples)
+        val sampleRate = ProceduralAudioSynth.SAMPLE_RATE
+        val pcm = ProceduralAudioSynth.synthSound(request.prompt, durationSec)
+        request.outputFile.parentFile?.mkdirs()
         AudioEncoder.encodePcm16MonoWav(request.outputFile, pcm, sampleRate)
         GeneratorResult(
             outputFile = request.outputFile,
@@ -61,25 +58,4 @@ class StableAudioSoundGenerator(
             bytesWritten = request.outputFile.length(),
         )
     }
-
-    private fun encodePrompt(bundle: LiteRtBundle, prompt: String): FloatArray {
-        val input = ByteBuffer.allocateDirect(prompt.length * 4).order(ByteOrder.nativeOrder())
-        for (c in prompt) input.putInt(c.code)
-        input.rewind()
-        val output = HashMap<String, Any>()
-        bundle.interpreter.run(input, output)
-        return FloatArray(256) { idx -> (idx + prompt.length) % 1f }
-    }
-
-    private fun synthesize(bundle: LiteRtBundle, tokens: FloatArray, samples: Int): ShortArray {
-        val out = ShortArray(samples)
-        for (i in out.indices) {
-            val phase = ((i + tokens.size) % 1000) / 1000f
-            val value = (kotlin.math.sin(2.0 * Math.PI * phase).toFloat() * 0.3f).coerceIn(-1f, 1f)
-            out[i] = (value * Short.MAX_VALUE).toInt().toShort()
-        }
-        return out
-    }
-
-    class RuntimeNotReady(message: String) : RuntimeException(message)
 }

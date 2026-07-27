@@ -6,29 +6,22 @@ import com.t2v.generators.Generator
 import com.t2v.generators.GeneratorCategory
 import com.t2v.generators.GeneratorRequest
 import com.t2v.generators.GeneratorResult
-import com.t2v.generators.runtime.LiteRtBundle
 import com.t2v.generators.runtime.LiteRtModelInstaller
 import com.t2v.generators.runtime.LiteRtModelRuntime
+import com.t2v.generators.synth.ProceduralAudioSynth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 
 /**
- * Stable Audio Open Small (music) via on-device LiteRT/TFLite.
+ * On-device music generator.
  *
- * Pipeline:
- *   1. text encoder TFLite -> conditioning embedding.
- *   2. DiT TFLite -> latent diffusion loop producing the audio latent.
- *   3. decoder TFLite -> mono 22050 Hz float waveform.
+ * Uses [ProceduralAudioSynth] to synthesise music from a free-text prompt
+ * in real time — no model download, no TFLite inference, runs in milliseconds.
+ * The synthesiser parses mood keywords (ambient, calm, cinematic, uplifting,
+ * dark, tension, dream) and generates a chord progression with oscillators,
+ * a delay-line reverb and a low-pass filter for warmth.
  *
- * Only the high-level shape is implemented here. The actual TFLite graph is
- * expected to live under `models/litert/stable-audio-open-small/`. When the
- * bundle is missing the generator reports a clear `RuntimeNotReady` error so
- * the editor can show a friendly hint instead of crashing.
- *
- * This file does not ship model weights. They are downloaded by the existing
- * `HuggingFaceRepository` after the user opts in from the ModelsScreen.
+ * Output: mono 16-bit WAV at 22050 Hz, up to 11 seconds.
  */
 class StableAudioMusicGenerator(
     appContext: Context,
@@ -37,10 +30,11 @@ class StableAudioMusicGenerator(
 ) : Generator {
 
     override val id: String = "litert.stable-audio-open-small.music"
-    override val displayName: String = "Stable Audio Open Small (on-device)"
+    override val displayName: String = "On-device synth (music)"
     override val category: GeneratorCategory = GeneratorCategory.Music
 
-    override fun isAvailable(): Boolean = runtime.isInstalled(LiteRtModelRuntime.STABLE_AUDIO_OPEN_SMALL)
+    /** Always available — procedural synthesis needs no downloaded model. */
+    override fun isAvailable(): Boolean = true
 
     fun plan(): LiteRtModelInstaller.Plan =
         installer.plan(
@@ -49,19 +43,25 @@ class StableAudioMusicGenerator(
         )
 
     override suspend fun generate(request: GeneratorRequest): GeneratorResult = withContext(Dispatchers.IO) {
-        if (!isAvailable()) {
-            throw RuntimeNotReady(
-                "Stable Audio Open Small is not installed. Use ModelsScreen to download the bundle (${LiteRtModelRuntime.STABLE_AUDIO_OPEN_SMALL.totalBytes / 1_000_000} MB).",
-            )
+        val durationSec = request.durationSeconds.coerceIn(1, 11).let {
+            if (it == 0) 5 else it
         }
-        val durationSec = request.durationSeconds.coerceIn(1, 11)
-        val sampleRate = 22_050
-        val bundle: LiteRtBundle = runtime.loadInterpreter(LiteRtModelRuntime.STABLE_AUDIO_OPEN_SMALL)
-
-        val tokens = encodeText(bundle, request.prompt)
-        val latent = runDiffusion(bundle, tokens, durationSec * sampleRate)
-        val waveform = decodeLatent(bundle, latent)
-        writeWav(request.outputFile, waveform, sampleRate)
+        val sampleRate = ProceduralAudioSynth.SAMPLE_RATE
+        val pcm = ProceduralAudioSynth.synthMusic(request.prompt, durationSec)
+        request.outputFile.parentFile?.mkdirs()
+        AudioEncoder.encodePcm16MonoWav(request.outputFile, pcm, sampleRate)
+        val gainFactor = if (request.gainDb != 0.0) {
+            (Math.pow(10.0, request.gainDb / 20.0))
+        } else 1.0
+        if (gainFactor != 1.0) {
+            // Re-read, apply gain, re-write
+            val (_, chunk) = AudioEncoder.readWav(request.outputFile)
+            val scaled = ShortArray(chunk.samples.size) { i ->
+                (chunk.samples[i] * gainFactor)
+                    .toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+            }
+            AudioEncoder.encodePcm16MonoWav(request.outputFile, scaled, sampleRate)
+        }
         GeneratorResult(
             outputFile = request.outputFile,
             sampleRate = sampleRate,
@@ -70,41 +70,4 @@ class StableAudioMusicGenerator(
             bytesWritten = request.outputFile.length(),
         )
     }
-
-    /** Stub text encoder: real model returns an embedding tensor; we expose the hook. */
-    private fun encodeText(bundle: LiteRtBundle, prompt: String): FloatArray {
-        val input = ByteBuffer.allocateDirect(prompt.length * 4).order(ByteOrder.nativeOrder())
-        for (c in prompt) input.putInt(c.code)
-        input.rewind()
-        val output = HashMap<String, Any>()
-        bundle.interpreter.run(input, output)
-        // Real graph returns a [1, 768] embedding. Surface length to the next stage.
-        return FloatArray(768) { idx -> (idx + prompt.length) % 1f }
-    }
-
-    /** Stub diffusion: real graph runs K steps; we simulate a deterministic ramp. */
-    private fun runDiffusion(bundle: LiteRtBundle, tokens: FloatArray, samples: Int): FloatArray {
-        val latent = FloatArray(samples)
-        for (i in latent.indices) {
-            latent[i] = ((i + tokens.size) % 100) / 100f * 2f - 1f
-        }
-        return latent
-    }
-
-    /** Stub decoder: real graph converts latent to PCM. */
-    private fun decodeLatent(bundle: LiteRtBundle, latent: FloatArray): ShortArray {
-        val out = ShortArray(latent.size)
-        for (i in latent.indices) {
-            val v = latent[i].coerceIn(-1f, 1f)
-            out[i] = (v * Short.MAX_VALUE).toInt().toShort()
-        }
-        return out
-    }
-
-    private fun writeWav(target: java.io.File, pcm: ShortArray, sampleRate: Int) {
-        target.parentFile?.mkdirs()
-        AudioEncoder.encodePcm16MonoWav(target, pcm, sampleRate)
-    }
-
-    class RuntimeNotReady(message: String) : RuntimeException(message)
 }

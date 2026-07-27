@@ -68,12 +68,12 @@ class GenerationModelCatalogTest {
             GenerationModelCatalog.Runtime.LiteRt,
             GenerationModelCatalog.requiredRuntime(music.id),
         )
-        assertTrue(music.canInstall)
+        assertEquals(GenerationModelCatalog.Support.Verified, music.support)
         // The clip variant stays exclusive to Sound.
         val clips = GenerationModelCatalog.forCategory(
             GenerationModelCatalog.Category.Sound,
         ).filter { it.id == "stable-audio-clip" }
         assertEquals(1, clips.size)
-        assertTrue(clips.single().canInstall)
+        assertEquals(GenerationModelCatalog.Support.Verified, clips.single().support)
     }
 }
