@@ -68,12 +68,40 @@ class SettingsRepository(private val context: Context) {
     val flow: Flow<Settings> = context.dataStore.data.map { p -> p.toSettings() }
 
     /** Hot state flow for synchronous reads from non-coroutine callers. */
-    val state: StateFlow<Settings> = MutableStateFlow(Settings()).also { mutable ->
+    val state: StateFlow<Settings> = MutableStateFlow(defaultSettings()).also { mutable ->
         // Bridge the cold flow into the state flow on a process-wide scope.
         GlobalScope.launch(Dispatchers.Default) {
             flow.collect { mutable.value = it }
         }
     }
+
+    private fun defaultSettings(): Settings = Settings(
+        uiLanguage = "en",
+        outputDir = "output",
+        ttsEngine = "",
+        voiceId = "",
+        language = "",
+        speed = 1.0,
+        splitMode = "safe_chunks",
+        exportMode = "single",
+        chunkSize = 2500,
+        pauseBetweenBlocksMs = 350,
+        pauseBetweenChaptersMs = 900,
+        paragraphPauseMinMs = 450,
+        paragraphPauseMaxMs = 900,
+        markupToolbar = true,
+        syntaxHighlight = true,
+        selectedModelId = "",
+        selectedVoiceModelId = "",
+        selectedMusicModelId = "",
+        selectedSoundModelId = "",
+        selectedMusicGenerator = "",
+        selectedSoundGenerator = "",
+        ttsMode = "",
+        modelsTreeUri = "",
+        onboardingCompleted = false,
+        engines = emptyMap(),
+    )
 
     suspend fun update(transform: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         context.dataStore.edit { p -> transform(p) }

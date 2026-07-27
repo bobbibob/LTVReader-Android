@@ -89,8 +89,12 @@ class LiteRtModelInstaller(
     }
 
     /** True when [markSmokeTested] has been called for [plan]. */
-    fun isSmokeTested(plan: Plan = plan): Boolean =
+    fun isSmokeTested(plan: Plan): Boolean =
         File(plan.destinationRoot, ".smoke-tested").isFile
+
+    /** Convenience overload: smoke-tested for the NSynth bundle. */
+    fun isSmokeTested(): Boolean =
+        File(effectiveRoot, "${LiteRtModelRuntime.NSYNTH_WAVENET.modelId}/.smoke-tested").isFile
 
     private fun sha256Of(file: File): String {
         val digest = MessageDigest.getInstance("SHA-256")

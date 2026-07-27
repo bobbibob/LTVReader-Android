@@ -30,7 +30,7 @@ import java.util.UUID
  * `generate()` method here is the single place to wire real inference.
  */
 class NSynthSoundGenerator(
-    appContext: Context,
+    private val appContext: Context,
     private val runtime: LiteRtModelRuntime = LiteRtModelRuntime(appContext),
     private val installer: LiteRtModelInstaller = LiteRtModelInstaller(runtime),
 ) : Generator {
