@@ -23,13 +23,22 @@ class PiperRussianCatalogTest {
     fun `catalog exposes additional verified Piper languages`() {
         val voices = PiperRussianTtsEngine.RUSSIAN_VOICES
         val expectedLanguages = setOf(
-            "ru-RU", "en-US", "en-GB", "de-DE", "fr-FR", "es-ES", "es-MX", "it-IT", "zh-CN", "ja-JP",
+            "ru-RU", "en-US", "en-GB", "de-DE", "de-AT", "fr-FR",
+            "es-ES", "es-MX", "it-IT", "zh-CN", "ja-JP", "hi-IN",
+            "bn-IN", "ar", "ko-KR",
         )
         val actualLanguages = voices.map { it.language }.toSet()
         assertTrue(
             "Missing Piper languages in catalog: ${expectedLanguages - actualLanguages}",
             expectedLanguages.all { it in actualLanguages },
         )
+    }
+
+    @Test
+    fun `every en-us voice id is unique`() {
+        val voices = PiperRussianTtsEngine.RUSSIAN_VOICES.filter { it.language == "en-US" }
+        assertTrue(voices.size >= 4)
+        assertEquals(voices.size, voices.map { it.id }.distinct().size)
     }
 
     @Test

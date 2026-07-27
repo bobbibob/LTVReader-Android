@@ -9,7 +9,12 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.flow.StateFlow
 
 private val Context.dataStore by preferencesDataStore(name = "t2v_settings")
 
@@ -61,6 +66,14 @@ class SettingsRepository(private val context: Context) {
     }
 
     val flow: Flow<Settings> = context.dataStore.data.map { p -> p.toSettings() }
+
+    /** Hot state flow for synchronous reads from non-coroutine callers. */
+    val state: StateFlow<Settings> = MutableStateFlow(Settings()).also { mutable ->
+        // Bridge the cold flow into the state flow on a process-wide scope.
+        GlobalScope.launch(Dispatchers.Default) {
+            flow.collect { mutable.value = it }
+        }
+    }
 
     suspend fun update(transform: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         context.dataStore.edit { p -> transform(p) }

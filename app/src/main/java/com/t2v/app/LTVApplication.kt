@@ -65,6 +65,12 @@ class LTVApplication : Application() {
                             com.t2v.core.audio.AudioTrackKind.Sound to -8.0,
                         )
                     },
+                    selectedMusicId = {
+                        settingsRepo.state.value.selectedMusicGenerator
+                    },
+                    selectedSoundId = {
+                        settingsRepo.state.value.selectedSoundGenerator
+                    },
                 ),
             )
         }

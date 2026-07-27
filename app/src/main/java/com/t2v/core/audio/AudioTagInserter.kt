@@ -31,6 +31,9 @@ class AudioTagInserter(
     private val appContext: Context,
     private val generatorRegistry: () -> GeneratorRegistry,
     private val trackVolumeDb: () -> Map<AudioTrackKind, Double>,
+    /** Returns id selected by the user (without `:music`/`:sound` suffix). */
+    private val selectedMusicId: () -> String = { "" },
+    private val selectedSoundId: () -> String = { "" },
 ) {
     suspend fun insert(tags: List<AudioTag>, audiobookId: Long): Int = withContext(Dispatchers.IO) {
         if (tags.isEmpty()) return@withContext 0
@@ -97,8 +100,20 @@ class AudioTagInserter(
 
     private fun pickGenerator(category: GeneratorCategory): Generator? {
         val registry = generatorRegistry()
-        return registry.forCategory(category).firstOrNull { it.isAvailable() }
-            ?: registry.defaultFor(category)
+        val preferred = when (category) {
+            GeneratorCategory.Music -> selectedMusicId()
+            GeneratorCategory.Sound -> selectedSoundId()
+        }.takeIf { it.isNotBlank() }
+        // Accept the bare id, the suffixed `id:music`/`id:sound` form, and the
+        // historic `bundled.music:music` style.
+        val candidates = registry.all()
+        val match = preferred?.let { pref ->
+            candidates.firstOrNull { gen ->
+                gen.id == pref || gen.id == pref.removeSuffix(":music").removeSuffix(":sound")
+            }
+        }
+        return match?.takeIf { it.isAvailable() }
+            ?: candidates.firstOrNull { it.category == category && it.isAvailable() }
     }
 }
 

@@ -420,15 +420,20 @@ private fun VoiceModelSection(
         .toSortedMap()
     val languageLabels = mapOf(
         "ru-RU" to "Русские голоса (SherpaOnnx + VITS medium)",
-        "en-US" to "Английский (en-US, SherpaOnnx + VITS medium)",
+        "en-US" to "Английский (en-US, SherpaOnnx + VITS medium/low)",
         "en-GB" to "Английский (en-GB, SherpaOnnx + VITS medium)",
-        "de-DE" to "Немецкие голоса (SherpaOnnx + VITS medium)",
+        "de-DE" to "Немецкие голоса (de-DE, SherpaOnnx + VITS)",
+        "de-AT" to "Немецкий (de-AT, SherpaOnnx + VITS medium)",
         "fr-FR" to "Французские голоса (SherpaOnnx + VITS medium)",
         "es-ES" to "Испанские голоса (es-ES, SherpaOnnx + VITS)",
         "es-MX" to "Испанский (es-MX, SherpaOnnx + VITS medium)",
         "it-IT" to "Итальянский (it-IT, SherpaOnnx + VITS)",
         "zh-CN" to "Китайский (zh-CN, SherpaOnnx + VITS medium)",
         "ja-JP" to "Японский (ja-JP, SherpaOnnx + VITS medium)",
+        "hi-IN" to "Хинди (hi-IN, SherpaOnnx + VITS medium)",
+        "bn-IN" to "Бенгальский (bn-IN, SherpaOnnx + VITS medium)",
+        "ar" to "Арабский (ar, SherpaOnnx + VITS medium)",
+        "ko-KR" to "Корейский (ko-KR, SherpaOnnx + VITS medium)",
     )
     groupedLanguages.forEach { (language, voices) ->
         val header = languageLabels[language]
@@ -962,15 +967,26 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
         }
     }
 
+    /**
+     * Selecting a music/sound entry writes BOTH keys so downstream code
+     * (`AudioTagInserter`, `AudioEditorScreen`) can read whichever one is
+     * convenient without having to resolve the alias.
+     */
     fun selectMusicModel(modelId: String) {
         viewModelScope.launch {
-            settings.update { it[SettingsRepository.Keys.SELECTED_MUSIC_MODEL_ID] = modelId }
+            settings.update {
+                it[SettingsRepository.Keys.SELECTED_MUSIC_MODEL_ID] = modelId
+                it[SettingsRepository.Keys.SELECTED_MUSIC_GENERATOR] = modelId
+            }
         }
     }
 
     fun selectSoundModel(modelId: String) {
         viewModelScope.launch {
-            settings.update { it[SettingsRepository.Keys.SELECTED_SOUND_MODEL_ID] = modelId }
+            settings.update {
+                it[SettingsRepository.Keys.SELECTED_SOUND_MODEL_ID] = modelId
+                it[SettingsRepository.Keys.SELECTED_SOUND_GENERATOR] = modelId
+            }
         }
     }
 
@@ -994,12 +1010,20 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
 }
 
 private const val VOICE_MODEL_KOKORO = "kokoro-82m"
-private const val MUSIC_MODEL_STABLE_AUDIO_OPEN_SMALL = "stable-audio-open-small:music"
-private const val SOUND_MODEL_STABLE_AUDIO_OPEN_SMALL = "stable-audio-open-small:sound"
-private const val SOUND_MODEL_STABLE_AUDIO_CLIP = "stable-audio-clip:sound"
-private const val SOUND_MODEL_ELEVEN_SFX = "elevenlabs.sound:sound"
-private const val MUSIC_MODEL_BUNDLED = "bundled.music:music"
-private const val SOUND_MODEL_BUNDLED = "bundled.sound:sound"
+
+/** Canonical generator ids (no category suffix). AudioTagInserter reads these. */
+private const val GEN_STABLE_AUDIO_MUSIC = "litert.stable-audio-open-small.music"
+private const val GEN_STABLE_AUDIO_SOUND = "litert.stable-audio-clip.sound"
+private const val GEN_ELEVENLABS_SOUND = "elevenlabs.sound"
+private const val GEN_BUNDLED_MUSIC = "bundled.music"
+private const val GEN_BUNDLED_SOUND = "bundled.sound"
+
+/** Suffix-bearing ids used by ModelsScreen state to distinguish tabs. */
+private const val MUSIC_MODEL_STABLE_AUDIO_OPEN_SMALL = "$GEN_STABLE_AUDIO_MUSIC:music"
+private const val SOUND_MODEL_STABLE_AUDIO_CLIP = "$GEN_STABLE_AUDIO_SOUND:sound"
+private const val SOUND_MODEL_ELEVEN_SFX = "$GEN_ELEVENLABS_SOUND:sound"
+private const val MUSIC_MODEL_BUNDLED = "$GEN_BUNDLED_MUSIC:music"
+private const val SOUND_MODEL_BUNDLED = "$GEN_BUNDLED_SOUND:sound"
 
 private fun formatBytes(bytes: Long): String {
     if (bytes <= 0) return "size unknown"
