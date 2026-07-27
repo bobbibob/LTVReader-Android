@@ -1,6 +1,7 @@
 package com.t2v.core.model
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -16,6 +17,43 @@ class GenerationModelCatalogTest {
                 size != null && size > 0
             },
         )
+    }
+
+    @Test
+    fun `TagDocs are exposed for every documented model and engine`() {
+        // Catalog models that ship a TagDocs block.
+        val expected = listOf(
+            "kokoro-82m",
+            "piper-vits",
+            "stable-audio-open-small",
+            "stable-audio-clip",
+            "pocket-tts-int8",
+            "zipvoice-distill-int8",
+        )
+        for (id in expected) {
+            val docs = GenerationModelCatalog.tagDocsFor(id)
+            assertNotNull("Missing TagDocs for catalog model $id", docs)
+            assertTrue(
+                "TagDocs for $id must mention at least one supported tag",
+                docs!!.supported.isNotEmpty(),
+            )
+        }
+
+        // Cloud TTS engines.
+        for (engine in listOf("openai", "elevenlabs", "gemini", "azure")) {
+            assertNotNull(
+                "Missing TagDocs for engine $engine",
+                GenerationModelCatalog.tagDocsForEngine(engine),
+            )
+        }
+
+        // Generators without on-device model id.
+        for (gen in listOf("bundled.music", "bundled.sound", "elevenlabs.sound")) {
+            assertNotNull(
+                "Missing TagDocs for generator $gen",
+                GenerationModelCatalog.tagDocsForGenerator(gen),
+            )
+        }
     }
 
     @Test

@@ -42,6 +42,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.t2v.R
 import com.t2v.app.AppContainer
+import com.t2v.core.model.GenerationModelCatalog
 import com.t2v.data.SettingsRepository
 import com.t2v.server.HuggingFaceRepository
 import com.t2v.tts.catalog.RussianVoiceInstaller
@@ -114,6 +115,15 @@ fun ModelsScreen(
 
             if (selectedTab == ModelTab.Voice) {
             Text("Available on-device voice models", style = MaterialTheme.typography.titleMedium)
+            ModelDetailCard(
+                title = "Kokoro 82M (English TTS, on-device)",
+                status = "ONNX • Apache-2.0 • runs entirely on this phone",
+                selected = state.selectedVoiceModelId == VOICE_MODEL_KOKORO,
+                enabled = state.kokoroInstalled,
+                tags = GenerationModelCatalog.tagDocsFor("kokoro-82m"),
+                onSelect = { vm.selectVoiceModel(VOICE_MODEL_KOKORO) },
+            )
+            if (false) {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(
                     modifier = Modifier.padding(12.dp),
@@ -214,46 +224,59 @@ fun ModelsScreen(
                 }
             }
             }
+            }
 
             if (selectedTab == ModelTab.Music) {
-                LocalAudioModelCard(
-                    id = MUSIC_MODEL_STABLE_AUDIO_OPEN_SMALL,
+                ModelDetailCard(
                     title = "Stable Audio Open Small",
-                    description = "Короткие музыкальные петли • до 11 секунд • ARM64 • полностью на устройстве",
-                    status = "Подготовка проверенного LiteRT runtime",
+                    status = "On-device LiteRT runtime • up to 11 seconds • ARM64",
                     selected = state.selectedMusicModelId == MUSIC_MODEL_STABLE_AUDIO_OPEN_SMALL,
-                    enabled = false,
-                    onSelect = vm::selectMusicModel,
+                    enabled = state.liteRtMusicReady,
+                    tags = GenerationModelCatalog.tagDocsFor("stable-audio-open-small"),
+                    onSelect = { vm.selectMusicModel(MUSIC_MODEL_STABLE_AUDIO_OPEN_SMALL) },
                 )
-                LocalAudioModelCard(
-                    id = "stable-audio-3-small-music",
-                    title = "Stable Audio 3 Small Music",
-                    description = "Музыка до 120 секунд • 433M • для мощных устройств",
-                    status = "Experimental • появится только после device smoke-test",
-                    selected = state.selectedMusicModelId == "stable-audio-3-small-music",
-                    enabled = false,
-                    onSelect = vm::selectMusicModel,
+                ModelDetailCard(
+                    title = "ElevenLabs Sound Effects (cloud)",
+                    status = "ElevenLabs API key required • 1-22 seconds",
+                    selected = state.selectedMusicModelId == SOUND_MODEL_ELEVEN_SFX,
+                    enabled = state.elevenLabsKeyConfigured,
+                    tags = GenerationModelCatalog.tagDocsForGenerator("elevenlabs.sound"),
+                    onSelect = { vm.selectMusicModel(SOUND_MODEL_ELEVEN_SFX) },
+                )
+                ModelDetailCard(
+                    title = "Bundled placeholder (offline)",
+                    status = "Keyword match in prompt picks one of the placeholders",
+                    selected = state.selectedMusicModelId == MUSIC_MODEL_BUNDLED,
+                    enabled = true,
+                    tags = GenerationModelCatalog.tagDocsForGenerator("bundled.music"),
+                    onSelect = { vm.selectMusicModel(MUSIC_MODEL_BUNDLED) },
                 )
             }
 
             if (selectedTab == ModelTab.Sound) {
-                LocalAudioModelCard(
-                    id = SOUND_MODEL_STABLE_AUDIO_OPEN_SMALL,
-                    title = "Stable Audio Open Small",
-                    description = "Эффекты, Foley и атмосферы • до 11 секунд • ARM64",
-                    status = "Подготовка проверенного LiteRT runtime",
-                    selected = state.selectedSoundModelId == SOUND_MODEL_STABLE_AUDIO_OPEN_SMALL,
-                    enabled = false,
-                    onSelect = vm::selectSoundModel,
+                ModelDetailCard(
+                    title = "Stable Audio Clip (on-device)",
+                    status = "LiteRT single-file runtime • up to 5 seconds",
+                    selected = state.selectedSoundModelId == SOUND_MODEL_STABLE_AUDIO_CLIP,
+                    enabled = state.liteRtSoundReady,
+                    tags = GenerationModelCatalog.tagDocsFor("stable-audio-clip"),
+                    onSelect = { vm.selectSoundModel(SOUND_MODEL_STABLE_AUDIO_CLIP) },
                 )
-                LocalAudioModelCard(
-                    id = "stable-audio-3-small-sfx",
-                    title = "Stable Audio 3 Small SFX",
-                    description = "Эффекты и атмосферы до 120 секунд • 433M",
-                    status = "Experimental • появится только после device smoke-test",
-                    selected = state.selectedSoundModelId == "stable-audio-3-small-sfx",
-                    enabled = false,
-                    onSelect = vm::selectSoundModel,
+                ModelDetailCard(
+                    title = "ElevenLabs Sound Effects (cloud)",
+                    status = "ElevenLabs API key required • 1-22 seconds",
+                    selected = state.selectedSoundModelId == SOUND_MODEL_ELEVEN_SFX,
+                    enabled = state.elevenLabsKeyConfigured,
+                    tags = GenerationModelCatalog.tagDocsForGenerator("elevenlabs.sound"),
+                    onSelect = { vm.selectSoundModel(SOUND_MODEL_ELEVEN_SFX) },
+                )
+                ModelDetailCard(
+                    title = "Bundled placeholder (offline)",
+                    status = "Keyword match in prompt picks one of the placeholders",
+                    selected = state.selectedSoundModelId == SOUND_MODEL_BUNDLED,
+                    enabled = true,
+                    tags = GenerationModelCatalog.tagDocsForGenerator("bundled.sound"),
+                    onSelect = { vm.selectSoundModel(SOUND_MODEL_BUNDLED) },
                 )
             }
 
@@ -297,6 +320,63 @@ private enum class ModelTab(val title: String) {
     Voice("Голос"),
     Music("Музыка"),
     Sound("Звуки"),
+}
+
+/**
+ * Detail card used by every model/generator/engine entry. Shows:
+ *   - human-readable title + status
+ *   - tagline from TagDocs
+ *   - supported / partial / ignored tag bullets
+ *   - one or two usage examples in monospace
+ *   - select button
+ */
+@Composable
+fun ModelDetailCard(
+    title: String,
+    status: String,
+    selected: Boolean,
+    enabled: Boolean,
+    tags: com.t2v.core.model.GenerationModelCatalog.TagDocs?,
+    onSelect: () -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(status, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
+            tags?.let { docs ->
+                Text(docs.tagline, style = MaterialTheme.typography.bodySmall)
+                if (docs.supported.isNotEmpty()) {
+                    Text("Supported tags:", style = MaterialTheme.typography.labelMedium)
+                    docs.supported.forEach { Text("- $it", style = MaterialTheme.typography.bodySmall) }
+                }
+                if (docs.partial.isNotEmpty()) {
+                    Text("Partial support (approximated):", style = MaterialTheme.typography.labelMedium)
+                    docs.partial.forEach { Text("~ $it", style = MaterialTheme.typography.bodySmall) }
+                }
+                if (docs.ignored.isNotEmpty()) {
+                    Text("Ignored / dropped:", style = MaterialTheme.typography.labelMedium)
+                    docs.ignored.forEach { Text("x $it", style = MaterialTheme.typography.bodySmall) }
+                }
+                if (docs.examples.isNotEmpty()) {
+                    Text("Examples:", style = MaterialTheme.typography.labelMedium)
+                    docs.examples.forEach { Text("  $it", style = MaterialTheme.typography.bodySmall) }
+                }
+                docs.promptHelp?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+            }
+            OutlinedButton(onClick = onSelect, enabled = enabled && !selected) {
+                Text(
+                    when {
+                        selected -> "Selected"
+                        enabled -> "Select"
+                        else -> "Runtime not ready"
+                    },
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -388,7 +468,9 @@ private fun InstalledModelCard(
 data class ModelsState(
     val installed: List<HuggingFaceRepository.InstalledModel> = emptyList(),
     val selectedModelId: String = "",
-    val selectedVoiceModelId: String = "",
+    val liteRtMusicReady: Boolean = false,
+    val liteRtSoundReady: Boolean = false,
+    val elevenLabsKeyConfigured: Boolean = false,
     val selectedMusicModelId: String = "",
     val selectedSoundModelId: String = "",
     val modelsTreeUri: String = "",
@@ -427,6 +509,21 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
                         selectedVoiceModelId = value.selectedVoiceModelId,
                         selectedMusicModelId = value.selectedMusicModelId,
                         selectedSoundModelId = value.selectedSoundModelId,
+                        liteRtMusicReady = com.t2v.generators.GeneratorRegistry(
+                            context,
+                            com.t2v.tts.registry.EngineRegistry.EngineSettings(value.engines),
+                        ).let { reg ->
+                            reg.forCategory(com.t2v.generators.GeneratorCategory.Music)
+                                .any { it.id == "litert.stable-audio-open-small.music" }
+                        },
+                        liteRtSoundReady = com.t2v.generators.GeneratorRegistry(
+                            context,
+                            com.t2v.tts.registry.EngineRegistry.EngineSettings(value.engines),
+                        ).let { reg ->
+                            reg.forCategory(com.t2v.generators.GeneratorCategory.Sound)
+                                .any { it.id == "litert.stable-audio-clip.sound" }
+                        },
+                        elevenLabsKeyConfigured = value.engines["elevenlabs"]?.get("apiKey").orEmpty().isNotBlank(),
                         modelsTreeUri = value.modelsTreeUri,
                         installed = repository().installed(),
                         installedRussianVoices = installedRussianVoiceIds(),
@@ -648,6 +745,10 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
 private const val VOICE_MODEL_KOKORO = "kokoro-82m"
 private const val MUSIC_MODEL_STABLE_AUDIO_OPEN_SMALL = "stable-audio-open-small:music"
 private const val SOUND_MODEL_STABLE_AUDIO_OPEN_SMALL = "stable-audio-open-small:sound"
+private const val SOUND_MODEL_STABLE_AUDIO_CLIP = "stable-audio-clip:sound"
+private const val SOUND_MODEL_ELEVEN_SFX = "elevenlabs.sound:sound"
+private const val MUSIC_MODEL_BUNDLED = "bundled.music:music"
+private const val SOUND_MODEL_BUNDLED = "bundled.sound:sound"
 
 private fun formatBytes(bytes: Long): String {
     if (bytes <= 0) return "size unknown"
