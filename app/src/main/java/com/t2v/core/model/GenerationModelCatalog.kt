@@ -303,7 +303,7 @@ object GenerationModelCatalog {
             "{{lang en-US}}",
             "{{speed 0.5..2.0}}",
             "{{pause 500ms}} / {{pause 0.7s}}",
-            "{{chapter "..."}}",
+            "{{chapter \"...\"}}",
         ),
         partial = listOf(
             "{{emotion ...}} / {{delivery ...}} - approximated via speed and pitch only",
