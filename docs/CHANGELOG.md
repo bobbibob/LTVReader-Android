@@ -2,6 +2,19 @@
 
 Все значимые изменения в T2V документируются здесь.
 
+## [Unreleased]
+
+### Fixed
+- `AudioMixerTest > writeSilence`: `AudioEncoder.readWav` переведён на `RandomAccessFile`
+  с ручным little-endian чтением; dataSize/2 даёт корректное число сэмплов (11025 для 500 мс @ 22050 Гц).
+- `LTVMarkupParserTest > pause ms/s`: `endsWith("ms")` теперь проверяется раньше `endsWith("s")`,
+  поэтому `{{pause 0.7s}}` парсится как 700 мс, а `{{pause 700ms}}` — как 700 мс.
+- `TextProcessorTest > clean`: `controlChars` включает `\u0000`, а `\n{3,}` схлопывается до `\n\n`.
+- `TextNormalizerTest > currencies`: `currencyRegexPrefix` матчит `$5` и заменяет на "five dollars".
+- `Num2WordsTest > english/spanish basic`: таблицы ONES_EN/ONES_ES и SCALES корректны.
+- ROADMAP и AGENTS.md обновлены: упавшие тесты отмечены как починенные.
+
+
 ## [0.1.0] - 2026-07-23
 
 ### Added

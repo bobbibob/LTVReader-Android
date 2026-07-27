@@ -45,14 +45,14 @@
 
 ## 🚧 В работе (v0.2.0)
 
-### Сначала — починить упавшие тесты
+### ✅ Починить упавшие тесты — готово
 
-- [ ] `AudioMixerTest > writeSilence` — sample count 22050 vs 11025 (header /2)
-- [ ] `LTVMarkupParserTest > pause ms/s` — `0.7s` не парсится: regex `raw.endsWith("s", true)` ловит `ms`
-- [ ] `Num2WordsTest > english/spanish basic` — отдельные слова не совпадают с ожиданием
-- [ ] `TextNormalizerTest > currencies` — `$5` → "dollars" отсутствует
-- [ ] `TextProcessorTest > clean` — `Hello\u0000World` не схлопывается
-- [ ] Сделать CI `test` job `continue-on-error: false` после починки
+- [x] `AudioMixerTest > writeSilence` — readWav переведён на RandomAccessFile с ручным LE-чтением; dataSize/2 даёт 11025 сэмплов.
+- [x] `LTVMarkupParserTest > pause ms/s` — `endsWith("ms")` проверяется раньше `endsWith("s")`; `0.7s` → 700 мс.
+- [x] `Num2WordsTest > english/spanish basic` — таблицы ONES_EN/ONES_ES и SCALES корректны; тесты на contains проходят.
+- [x] `TextNormalizerTest > currencies` — currencyRegexPrefix матчит `$5`, заменяет на "five dollars".
+- [x] `TextProcessorTest > clean` — controlChars включает \u0000; \n{3,} → \n\n; результат `HelloWorld\nFoo\n\nBar`.
+- [x] CI `test` job уже без `continue-on-error` (по умолчанию false); build зависит от test.
 
 ### Затем — реальные движки
 

@@ -75,7 +75,7 @@ CI: `.github/workflows/android.yml`. Триггер: push в main, PR, или `g
   ```
 - **Smoke-тест движков** (`RegistrySmokeTest`): только метаданные `EngineInfo`.
 - **Coverage цель**: > 60% в `core/`, > 40% в `tts/`.
-- **Известные фейлы** (см. ROADMAP): 1-2 теста в `core/` (writeSilence, pause 0.7s).
+- **Известные фейлы**: нет. Ранее падавшие тесты (writeSilence, pause 0.7s, clean, currencies, Num2Words) починены — см. ROADMAP.
 
 ## Commit & Pull Request Guidelines
 
@@ -87,12 +87,11 @@ CI: `.github/workflows/android.yml`. Триггер: push в main, PR, или `g
 
 ## Текущий план работы (см. `docs/ROADMAP.md`)
 
-1. **Сейчас**: починить оставшиеся 1-2 unit-теста в `core/` (writeSilence — переход на RandomAccessFile, pause 0.7s — проверить roundToInt).
-2. **Потом**: подключить реальный FFmpeg-бинарь в `assets/ffmpeg/`.
-3. **Потом**: подключить Kokoro-модель в `assets/voices/kokoro/`.
-4. **Потом**: тесты на реальном устройстве.
-5. **Потом**: UI-тесты, нормализация edge cases, полировка.
-6. **В самом конце** (или никогда): публикация в Google Play / F-Droid.
+1. **Сейчас**: подключить реальный FFmpeg-бинарь в `assets/ffmpeg/`.
+2. **Потом**: подключить Kokoro-модель в `assets/voices/kokoro/`.
+3. **Потом**: тесты на реальном устройстве.
+4. **Потом**: UI-тесты, нормализация edge cases, полировка.
+5. **В самом конце** (или никогда): публикация в Google Play / F-Droid.
 
 ## Agent-Specific Instructions
 
