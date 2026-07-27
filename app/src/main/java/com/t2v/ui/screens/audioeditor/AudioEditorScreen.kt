@@ -12,8 +12,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -64,23 +69,27 @@ fun AudioEditorScreen(
     val soundPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) {
         it?.let(vm::addSound)
     }
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose { vm.stopPreview() }
+    }
     LTVScaffold(nav, "Audio editor", onBack = { nav.popBackStack() }) { padding: PaddingValues ->
         Column(
             Modifier.fillMaxSize().padding(padding).padding(12.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            TrackEditor("Voice track", AudioTrackKind.Voice, state.project.voiceClips, vm)
+            TrackEditor("Voice track", AudioTrackKind.Voice, state.project.voiceClips, vm, state.previewingClipId)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Background music", style = MaterialTheme.typography.titleMedium)
                 OutlinedButton(onClick = { musicPicker.launch("audio/*") }) { Text("Add clip") }
                 OutlinedButton(onClick = vm::generateMusic) { Text("Generate") }
             }
-            TrackEditor("Music track", AudioTrackKind.Music, state.project.musicClips, vm)
+            TrackEditor("Music track", AudioTrackKind.Music, state.project.musicClips, vm, state.previewingClipId)
             GeneratorPanel(
                 title = "Generate music",
                 prompt = state.musicPrompt,
                 onPromptChange = vm::setMusicPrompt,
                 options = state.musicOptions,
+                selectedId = state.selectedMusicGeneratorId,
                 onPick = vm::pickMusicGenerator,
                 onRun = vm::generateMusic,
                 generating = state.generatingMusic,
@@ -91,16 +100,17 @@ fun AudioEditorScreen(
                 OutlinedButton(onClick = { soundPicker.launch("audio/*") }) { Text("Add sound") }
                 OutlinedButton(onClick = vm::generateSound) { Text("Generate") }
             }
-            TrackEditor("Sound track", AudioTrackKind.Sound, state.project.soundClips, vm)
+            TrackEditor("Sound track", AudioTrackKind.Sound, state.project.soundClips, vm, state.previewingClipId)
             GeneratorPanel(
                 title = "Generate sound effect",
                 prompt = state.soundPrompt,
                 onPromptChange = vm::setSoundPrompt,
                 options = state.soundOptions,
+                selectedId = state.selectedSoundGeneratorId,
                 onPick = vm::pickSoundGenerator,
                 onRun = vm::generateSound,
                 generating = state.generatingSound,
-                error = null,
+                error = state.error,
             )
             state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -138,13 +148,23 @@ private fun TrackEditor(
     kind: AudioTrackKind,
     clips: List<AudioEditClip>,
     vm: AudioEditorViewModel,
+    previewingClipId: String?,
 ) {
     Text(title, style = MaterialTheme.typography.titleMedium)
     if (clips.isEmpty()) Text("No clips")
     clips.forEachIndexed { index, clip ->
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(File(clip.sourcePath).name.ifBlank { "Clip ${index + 1}" })
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilledTonalIconButton(onClick = { vm.previewClip(clip) }) {
+                        Icon(
+                            if (previewingClipId == clip.id) Icons.Filled.Stop else Icons.Filled.PlayArrow,
+                            contentDescription = if (previewingClipId == clip.id) "Stop" else "Play",
+                        )
+                    }
+                    Text(File(clip.sourcePath).name.ifBlank { "Clip ${index + 1}" })
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = clip.timelineStartMs.toString(),
@@ -196,6 +216,7 @@ private fun TrackEditor(
 data class GeneratorOption(
     val id: String,
     val displayName: String,
+    val available: Boolean = true,
 )
 
 @Composable
@@ -204,6 +225,7 @@ private fun GeneratorPanel(
     prompt: String,
     onPromptChange: (String) -> Unit,
     options: List<GeneratorOption>,
+    selectedId: String?,
     onPick: (String) -> Unit,
     onRun: () -> Unit,
     generating: Boolean,
@@ -212,21 +234,37 @@ private fun GeneratorPanel(
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(title, style = MaterialTheme.typography.titleSmall)
+            if (options.isNotEmpty()) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    options.forEach { opt ->
+                        val isSelected = opt.id == selectedId
+                        OutlinedButton(
+                            onClick = { onPick(opt.id) },
+                            enabled = opt.available,
+                            colors = if (isSelected && opt.available)
+                                androidx.compose.material3.ButtonDefaults.filledTonalButtonColors()
+                            else androidx.compose.material3.ButtonDefaults.outlinedButtonColors(),
+                        ) {
+                            Text(
+                                if (opt.available) opt.displayName else "${opt.displayName} (unavailable)",
+                                style = if (isSelected) MaterialTheme.typography.labelMedium
+                                    else MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                    }
+                }
+            }
             OutlinedTextField(
                 value = prompt,
                 onValueChange = onPromptChange,
                 label = { Text("Prompt") },
+                placeholder = { Text("e.g. ambient pad, cinema calm, door close, whoosh") },
                 modifier = Modifier.fillMaxWidth(),
+                singleLine = false,
+                maxLines = 2,
             )
-            if (options.size > 1) {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    options.forEach { opt ->
-                        OutlinedButton(onClick = { onPick(opt.id) }) { Text(opt.displayName) }
-                    }
-                }
-            }
             Button(onClick = onRun, enabled = !generating && prompt.isNotBlank()) {
-                Text(if (generating) "Generating…" else "Run")
+                Text(if (generating) "Generating…" else "Generate")
             }
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
@@ -244,8 +282,11 @@ data class AudioEditorState(
     val soundPrompt: String = "",
     val musicOptions: List<GeneratorOption> = emptyList(),
     val soundOptions: List<GeneratorOption> = emptyList(),
+    val selectedMusicGeneratorId: String? = null,
+    val selectedSoundGeneratorId: String? = null,
     val generatingMusic: Boolean = false,
     val generatingSound: Boolean = false,
+    val previewingClipId: String? = null,
 )
 
 class AudioEditorViewModel(
@@ -264,24 +305,47 @@ class AudioEditorViewModel(
         }
     }
 
+    override fun onCleared() {
+        audioPlayer.stop()
+        super.onCleared()
+    }
+
     private fun refreshGeneratorOptions() {
-        val music = generators.forCategory(GeneratorCategory.Music).map { GeneratorOption(it.id, it.displayName) }
-        val sound = generators.forCategory(GeneratorCategory.Sound).map { GeneratorOption(it.id, it.displayName) }
-        _state.update { it.copy(musicOptions = music, soundOptions = sound) }
+        val music = generators.all().filter { it.category == GeneratorCategory.Music }
+            .map { GeneratorOption(it.id, it.displayName, it.isAvailable()) }
+        val sound = generators.all().filter { it.category == GeneratorCategory.Sound }
+            .map { GeneratorOption(it.id, it.displayName, it.isAvailable()) }
+        _state.update {
+            it.copy(
+                musicOptions = music,
+                soundOptions = sound,
+                selectedMusicGeneratorId = it.selectedMusicGeneratorId
+                    ?: music.firstOrNull { o -> o.available }?.id,
+                selectedSoundGeneratorId = it.selectedSoundGeneratorId
+                    ?: sound.firstOrNull { o -> o.available }?.id,
+                musicPrompt = it.musicPrompt.ifBlank { "ambient" },
+                soundPrompt = it.soundPrompt.ifBlank { "whoosh" },
+            )
+        }
     }
 
     fun setMusicPrompt(value: String) = _state.update { it.copy(musicPrompt = value) }
     fun setSoundPrompt(value: String) = _state.update { it.copy(soundPrompt = value) }
-    fun pickMusicGenerator(id: String) = _state.update { it.copy(musicPrompt = it.musicPrompt + " [${id}]") }
-    fun pickSoundGenerator(id: String) = _state.update { it.copy(soundPrompt = it.soundPrompt + " [${id}]") }
+    fun pickMusicGenerator(id: String) = _state.update { it.copy(selectedMusicGeneratorId = id) }
+    fun pickSoundGenerator(id: String) = _state.update { it.copy(selectedSoundGeneratorId = id) }
 
     fun generateMusic() = runGenerator(GeneratorCategory.Music, ::generateMusicImpl)
     fun generateSound() = runGenerator(GeneratorCategory.Sound, ::generateSoundImpl)
 
     private fun runGenerator(category: GeneratorCategory, impl: suspend (Generator, java.io.File) -> Unit) {
         viewModelScope.launch {
-            val gen = generators.forCategory(category).firstOrNull() ?: run {
-                _state.update { it.copy(error = "No generator available for ${category.name}") }
+            val selectedId = if (category == GeneratorCategory.Music)
+                _state.value.selectedMusicGeneratorId else _state.value.selectedSoundGeneratorId
+            val gen = selectedId?.let { generators.get(it) }
+                ?: generators.defaultFor(category)
+            if (gen == null || !gen.isAvailable()) {
+                val hint = if (selectedId != null) "Generator '$selectedId' is not ready. " else ""
+                _state.update { it.copy(error = "${hint}No available generator for ${category.name}") }
                 return@launch
             }
             val kindField = if (category == GeneratorCategory.Music) AudioTrackKind.Music else AudioTrackKind.Sound
@@ -326,6 +390,30 @@ class AudioEditorViewModel(
     private fun addClipToTrack(kind: AudioTrackKind, file: java.io.File) {
         mutate(kind) { it + AudioEditClip(sourcePath = file.absolutePath) }
         _state.update { it.copy(error = null) }
+    }
+
+    private val audioPlayer = com.t2v.util.AudioPlayer()
+
+    fun previewClip(clip: AudioEditClip) {
+        val file = java.io.File(clip.sourcePath)
+        if (!file.isFile) {
+            _state.update { it.copy(error = "Audio file not found: ${clip.sourcePath}") }
+            return
+        }
+        if (_state.value.previewingClipId == clip.id) {
+            audioPlayer.stop()
+            _state.update { it.copy(previewingClipId = null) }
+            return
+        }
+        audioPlayer.play(file) {
+            _state.update { it.copy(previewingClipId = null) }
+        }
+        _state.update { it.copy(previewingClipId = clip.id) }
+    }
+
+    fun stopPreview() {
+        audioPlayer.stop()
+        _state.update { it.copy(previewingClipId = null) }
     }
 
     fun addMusic(uri: Uri) = viewModelScope.launch {

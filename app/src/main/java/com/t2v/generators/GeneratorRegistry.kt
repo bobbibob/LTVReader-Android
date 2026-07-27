@@ -27,9 +27,7 @@ class GeneratorRegistry(
         add(BundledSoundGenerator(appContext))
         val elevenCfg = settingsProvider().engines["elevenlabs"]
         val apiKey = elevenCfg?.get("apiKey")?.takeIf { it.isNotBlank() }
-        if (apiKey != null) {
-            add(ElevenLabsSoundEffectsGenerator(apiKey = apiKey))
-        }
+        add(ElevenLabsSoundEffectsGenerator(apiKey = apiKey.orEmpty()))
         add(StableAudioMusicGenerator(appContext, liteRtRuntime, installer))
         add(StableAudioSoundGenerator(appContext, liteRtRuntime, installer))
     }
