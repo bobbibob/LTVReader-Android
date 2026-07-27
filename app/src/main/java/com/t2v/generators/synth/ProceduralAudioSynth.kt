@@ -334,10 +334,10 @@ object ProceduralAudioSynth {
         val wet = FloatArray(out.size)
         for (i in out.indices) {
             val delayedIdx = i - delaySamples
-            wet[i] = if (delayedIdx >= 0) out[delayedIdx] * 0.5 + wet[delayedIdx] * 0.3 else 0f
+            wet[i] = if (delayedIdx >= 0) out[delayedIdx] * 0.5f + wet[delayedIdx] * 0.3f else 0f
         }
         for (i in out.indices) {
-            out[i] = out[i] * (1 - mix) + wet[i] * mix
+            out[i] = (out[i] * (1 - mix) + wet[i] * mix).toFloat()
         }
     }
 
@@ -345,7 +345,7 @@ object ProceduralAudioSynth {
         val alpha = 0.5 + brightness * 0.49 // 0.5..0.99
         var prev = 0f
         for (i in out.indices) {
-            prev = alpha * prev + (1 - alpha) * out[i]
+            prev = (alpha * prev + (1 - alpha) * out[i]).toFloat()
             out[i] = prev
         }
     }
