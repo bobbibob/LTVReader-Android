@@ -1,7 +1,5 @@
 package com.t2v.generators
 
-import com.t2v.generators.impl.BundledMusicGenerator
-import com.t2v.generators.impl.BundledSoundGenerator
 import com.t2v.generators.impl.ElevenLabsSoundEffectsGenerator
 import com.t2v.generators.impl.StableAudioMusicGenerator
 import com.t2v.generators.impl.StableAudioSoundGenerator
@@ -18,11 +16,6 @@ import org.junit.Test
 class GeneratorRegistryTest {
 
     @Test
-    fun `bundled music and sound are available without configuration`() {
-        assertTrue(BundledMusicGenerator::class.simpleName!!.isNotBlank())
-        assertTrue(BundledSoundGenerator::class.simpleName!!.isNotBlank())
-    }
-
     @Test
     fun `elevenlabs sound is unavailable without an api key`() {
         val gen = ElevenLabsSoundEffectsGenerator(apiKey = "")

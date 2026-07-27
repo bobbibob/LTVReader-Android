@@ -179,25 +179,6 @@ fun ModelsScreen(
                         )
                     },
                 )
-                ModelDetailCard(
-                    title = "Встроенная заглушка (офлайн)",
-                    status = "По ключевому слову в промпте выбирается одна из встроенных заглушек",
-                    selected = state.selectedMusicModelId == MUSIC_MODEL_BUNDLED,
-                    enabled = true,
-                    tags = GenerationModelCatalog.tagDocsForGenerator("bundled.music"),
-                    onSelect = { vm.selectMusicModel(MUSIC_MODEL_BUNDLED) },
-                    onInfo = {
-                        infoTarget = InfoTarget(
-                            title = "Встроенная заглушка (офлайн)",
-                            tagline = GenerationModelCatalog.tagDocsForGenerator("bundled.music")?.tagline,
-                            tags = GenerationModelCatalog.tagDocsForGenerator("bundled.music"),
-                            runtime = "Встроенные ресурсы",
-                            repository = "",
-                            license = "Заглушка T2V",
-                            categoryLabel = infoCategoryLocalLabel,
-                        )
-                    },
-                )
             }
 
             if (selectedTab == ModelTab.Sound) {
@@ -236,25 +217,6 @@ fun ModelsScreen(
                             repository = "https://api.elevenlabs.io/v1/sound-generation",
                             license = "Условия ElevenLabs",
                             categoryLabel = infoCategoryCloudLabel,
-                        )
-                    },
-                )
-                ModelDetailCard(
-                    title = "Встроенная заглушка (офлайн)",
-                    status = "По ключевому слову в промпте выбирается одна из встроенных заглушек",
-                    selected = state.selectedSoundModelId == SOUND_MODEL_BUNDLED,
-                    enabled = true,
-                    tags = GenerationModelCatalog.tagDocsForGenerator("bundled.sound"),
-                    onSelect = { vm.selectSoundModel(SOUND_MODEL_BUNDLED) },
-                    onInfo = {
-                        infoTarget = InfoTarget(
-                            title = "Встроенная заглушка (офлайн)",
-                            tagline = GenerationModelCatalog.tagDocsForGenerator("bundled.sound")?.tagline,
-                            tags = GenerationModelCatalog.tagDocsForGenerator("bundled.sound"),
-                            runtime = "Встроенные ресурсы",
-                            repository = "",
-                            license = "Заглушка T2V",
-                            categoryLabel = infoCategoryLocalLabel,
                         )
                     },
                 )
@@ -1015,15 +977,13 @@ private const val VOICE_MODEL_KOKORO = "kokoro-82m"
 private const val GEN_STABLE_AUDIO_MUSIC = "litert.stable-audio-open-small.music"
 private const val GEN_STABLE_AUDIO_SOUND = "litert.stable-audio-clip.sound"
 private const val GEN_ELEVENLABS_SOUND = "elevenlabs.sound"
-private const val GEN_BUNDLED_MUSIC = "bundled.music"
-private const val GEN_BUNDLED_SOUND = "bundled.sound"
+// Bundled placeholder generators were removed in favour of the
+// LiteRT-based runtime (NSynth for sound, procedural for music).
 
 /** Suffix-bearing ids used by ModelsScreen state to distinguish tabs. */
 private const val MUSIC_MODEL_STABLE_AUDIO_OPEN_SMALL = "$GEN_STABLE_AUDIO_MUSIC:music"
 private const val SOUND_MODEL_STABLE_AUDIO_CLIP = "$GEN_STABLE_AUDIO_SOUND:sound"
 private const val SOUND_MODEL_ELEVEN_SFX = "$GEN_ELEVENLABS_SOUND:sound"
-private const val MUSIC_MODEL_BUNDLED = "$GEN_BUNDLED_MUSIC:music"
-private const val SOUND_MODEL_BUNDLED = "$GEN_BUNDLED_SOUND:sound"
 
 private fun formatBytes(bytes: Long): String {
     if (bytes <= 0) return "size unknown"

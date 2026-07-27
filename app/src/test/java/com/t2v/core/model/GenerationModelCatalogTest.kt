@@ -7,6 +7,13 @@ import org.junit.Test
 
 class GenerationModelCatalogTest {
     @Test
+    fun `nsynth stays in development until the device smoke-test runs`() {
+        val nsynth = GenerationModelCatalog.entries.single { it.id == "nsynth-wavenet" }
+        assertEquals(GenerationModelCatalog.Support.RuntimeInDevelopment, nsynth.support)
+        assertEquals(false, nsynth.canInstall)
+    }
+
+    @Test
     fun `catalog ids are unique and verified entries have a size`() {
         val entries = GenerationModelCatalog.entries
 
@@ -48,7 +55,7 @@ class GenerationModelCatalogTest {
         }
 
         // Generators without on-device model id.
-        for (gen in listOf("bundled.music", "bundled.sound", "elevenlabs.sound", "litert.stable-audio-open-small.music", "litert.stable-audio-clip.sound")) {
+        for (gen in listOf("elevenlabs.sound", "litert.stable-audio-open-small.music", "litert.stable-audio-clip.sound", "nsynth-wavenet")) {
             assertNotNull(
                 "Missing TagDocs for generator $gen",
                 GenerationModelCatalog.tagDocsForGenerator(gen),

@@ -73,6 +73,25 @@ class LiteRtModelInstaller(
         return target
     }
 
+    /**
+     * Records that an actual device smoke-test for [plan] ran successfully.
+     *
+     * Until this flag is set, [isSmokeTested] returns false and any
+     * Generator built on top of this installer will refuse to run. AGENTS.md
+     * forbids shipping a TFLite model inside the APK and forbids marking a
+     * model as Verified without a smoke-test, so the gate stays closed until
+     * a real ARM64 run has happened.
+     */
+    fun markSmokeTested(plan: Plan) {
+        File(plan.destinationRoot, ".smoke-tested").writeText(
+            System.currentTimeMillis().toString(),
+        )
+    }
+
+    /** True when [markSmokeTested] has been called for [plan]. */
+    fun isSmokeTested(plan: Plan = plan): Boolean =
+        File(plan.destinationRoot, ".smoke-tested").isFile
+
     private fun sha256Of(file: File): String {
         val digest = MessageDigest.getInstance("SHA-256")
         file.inputStream().use { input ->

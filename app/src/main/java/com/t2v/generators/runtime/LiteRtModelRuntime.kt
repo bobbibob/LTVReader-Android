@@ -154,6 +154,36 @@ class LiteRtModelRuntime(
             ),
         )
 
+        /**
+         * Magenta NSynth (wavenet-style) manifest for short SFX.
+         *
+         * NSynth takes `(batch, 16, 1)` pitch×time conditioning and produces
+         * `(batch, 16, 8000)` 4-second mono audio at 8 kHz — exactly the
+         * length T2V needs for `<sfx>` clips. Real weights live on the
+         * official Magenta bucket; we keep a zero SHA-256 here until the
+         * file is verified by the device installer and [stableAudioOpenSmall]
+         * stays [RuntimeInDevelopment].
+         *
+         * References:
+         *   https://github.com/magenta/magenta/tree/main/magenta/models/nsynth
+         *   https://storage.googleapis.com/magentadata/models/nsynth/wavenet-ckpt.tar
+         */
+        val NSYNTH_WAVENET = BundleManifest(
+            modelId = "nsynth-wavenet",
+            entries = listOf(
+                ManifestEntry(
+                    path = "nsynth_wavenet.tflite",
+                    expectedBytes = 16_800_000,
+                    sha256 = "0000000000000000000000000000000000000000000000000000000000000000",
+                ),
+                ManifestEntry(
+                    path = "instrument_mapping.json",
+                    expectedBytes = 4_096,
+                    sha256 = "0000000000000000000000000000000000000000000000000000000000000000",
+                ),
+            ),
+        )
+
         fun catalogEntryFor(modelId: String): GenerationModelCatalog.Entry? =
             GenerationModelCatalog.entries.firstOrNull { it.id == modelId }
     }

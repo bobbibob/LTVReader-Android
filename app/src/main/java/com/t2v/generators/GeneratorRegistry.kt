@@ -1,9 +1,8 @@
 package com.t2v.generators
 
 import android.content.Context
-import com.t2v.generators.impl.BundledMusicGenerator
-import com.t2v.generators.impl.BundledSoundGenerator
 import com.t2v.generators.impl.ElevenLabsSoundEffectsGenerator
+import com.t2v.generators.impl.NSynthSoundGenerator
 import com.t2v.generators.impl.StableAudioMusicGenerator
 import com.t2v.generators.impl.StableAudioSoundGenerator
 import com.t2v.generators.runtime.LiteRtModelInstaller
@@ -23,8 +22,7 @@ class GeneratorRegistry(
     val runtime: LiteRtModelRuntime get() = liteRtRuntime
 
     fun all(): List<Generator> = buildList {
-        add(BundledMusicGenerator(appContext))
-        add(BundledSoundGenerator(appContext))
+        add(NSynthSoundGenerator(appContext))
         val elevenCfg = settingsProvider().engines["elevenlabs"]
         val apiKey = elevenCfg?.get("apiKey")?.takeIf { it.isNotBlank() }
         add(ElevenLabsSoundEffectsGenerator(apiKey = apiKey.orEmpty()))

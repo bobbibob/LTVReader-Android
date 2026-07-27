@@ -80,6 +80,25 @@
   `{{...}}` и имена движков остаются латиницей; locale-specific варианты
   остаются в 10 других values-* папках.
 
+### Removed
+- `BundledMusicGenerator` / `BundledSoundGenerator` and the bundled
+  `assets/music` + `assets/sound` placeholder WAVs. The bundled cards in
+  ModelsScreen are gone. SFX now flows through either
+  `ProceduralAudioSynth` (offline, no model) or a future Magenta NSynth
+  on-device generator.
+
+### Added
+- `Magenta NSynth` (wavenet) registered in `GenerationModelCatalog` as a
+  `RuntimeInDevelopment` on-device SFX model with a 4 sec mono 8 kHz
+  output. The TFLite manifest lives in `LiteRtModelRuntime.NSYNTH_WAVENET`
+  with a placeholder SHA-256; `NSynthSoundGenerator` refuses to run until
+  `LiteRtModelInstaller.markSmokeTested()` is called after a real ARM64
+  smoke-test on a device. UI shows the entry as `Runtime not ready` in
+  ModelsScreen.
+- `LiteRtModelInstaller.markSmokeTested(plan)` records that a real
+  ARM64 inference ran end-to-end; the smoke gate is now a documented
+  AGENTS.md-friendly contract.
+
 ### Fixed
 - Catalog quotes inside TagDocs strings (CUSTOM_HTTP_TAGS, ZIPVOICE_TAGS,
   PocketTTS) escaped correctly so the Kotlin parser accepts them.

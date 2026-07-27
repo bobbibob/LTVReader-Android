@@ -406,6 +406,31 @@ gh run list --workflow android.yml --branch codex/audio-production --limit 3
 - Тесты: новый `LTVMarkupAudioTagsTest` (4 кейса), `TextProcessorTest`
   обновлён под `ProcessResult`.
 
+## Журнал активной задачи: NSynth как on-device SFX вместо bundled
+
+- `BundledMusicGenerator` / `BundledSoundGenerator` и 6 placeholder WAV в
+  `assets/music`/`assets/sound` удалены. ModelsScreen больше не показывает
+  «Bundled» карточки.
+- `Magenta NSynth` (wavenet) добавлен как `nsynth-wavenet` в
+  `GenerationModelCatalog` со статусом `RuntimeInDevelopment` —
+  `canInstall = false`, кнопка `Select` не активна.
+- `LiteRtModelRuntime.NSYNTH_WAVENET` объявляет манифест
+  (`nsynth_wavenet.tflite` + `instrument_mapping.json`) с placeholder
+  SHA-256 (AGENTS.md запрещает коммитить модели).
+- `LiteRtModelInstaller.markSmokeTested(plan)` пишет маркерный файл в
+  папку модели; `isSmokeTested()` читает его. `NSynthSoundGenerator`
+  вызывает `isAvailable() = isSmokeTested() && runtime.isInstalled(...)`,
+  поэтому пока владелец не провёл ARM64 smoke-test на устройстве,
+  генератор отказывается запускаться.
+- `AudioTagInserter` сначала пробует выбор пользователя, иначе первый
+  `isAvailable()` в категории — но NSynth пока `isAvailable() = false`,
+  поэтому при выборе тега `<sfx>` будет использован
+  `ProceduralAudioSynth.synthSound()` (offline-fallback).
+- Тесты обновлены: `BundledAssetGeneratorTest` удалён,
+  `GeneratorRegistryTest` больше не упоминает Bundled*,
+  `GenerationModelCatalogTest` пинит `nsynth-wavenet` в
+  `RuntimeInDevelopment` до прохождения smoke-теста.
+
 ## Журнал активной задачи: вернуть скачивание моделей и добавить новые
 
 - В `ModelsScreen` восстановлена карточка скачивания Kokoro, которую раньше

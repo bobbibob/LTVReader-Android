@@ -35,15 +35,16 @@ enum class GeneratorCategory { Music, Sound }
 /**
  * Contract for any generator that can produce audio for the editor timeline.
  *
- * Two initial implementations are wired in:
- *  - [com.t2v.generators.impl.BundledMusicGenerator] / BundledSoundGenerator
- *    return a short WAV copied from bundled assets, so the editor can
- *    exercise the music/sound tracks without a runtime or API key.
+ * Implementations currently wired in:
+ *  - [com.t2v.generators.impl.StableAudioMusicGenerator] and
+ *    [com.t2v.generators.impl.StableAudioSoundGenerator] use the bundled
+ *    [com.t2v.generators.synth.ProceduralAudioSynth] for offline music/SFX.
  *  - [com.t2v.generators.impl.ElevenLabsSoundEffectsGenerator] is a Cloud
  *    implementation that talks to ElevenLabs' public Sound Effects endpoint.
+ *  - [com.t2v.generators.impl.NSynthSoundGenerator] is reserved for Magenta
+ *    NSynth on-device SFX once the ARM64 smoke-test passes; right now it
+ *    refuses to run.
  *
- * On-device LiteRT-based generators for Stable Audio Open Small are deferred
- * until the runtime probe ships.
  */
 interface Generator {
     val id: String

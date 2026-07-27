@@ -105,7 +105,8 @@ class AudioTagInserter(
             GeneratorCategory.Sound -> selectedSoundId()
         }.takeIf { it.isNotBlank() }
         // Accept the bare id, the suffixed `id:music`/`id:sound` form, and the
-        // historic `bundled.music:music` style.
+        // Accept either the bare generator id or the suffixed
+        // `:music`/`:sound` form that older ModelsScreen entries used.
         val candidates = registry.all()
         val match = preferred?.let { pref ->
             candidates.firstOrNull { gen ->

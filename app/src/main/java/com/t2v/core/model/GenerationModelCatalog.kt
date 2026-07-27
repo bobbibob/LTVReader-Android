@@ -239,22 +239,6 @@ object GenerationModelCatalog {
         ),
     )
 
-    private val BUNDLED_TAGS = TagDocs(
-        tagline = "Офлайн-заглушка: копирует короткий WAV из ресурсов приложения по ключевому слову в промпте. Подходит для офлайн-смоук-тестов редактора.",
-        supported = listOf(
-            "По ключевому слову в промпте выбирается одна из заглушек (ambient, cinema, uplift для музыки; door, notification, whoosh для звуков)",
-        ),
-        ignored = listOf(
-            "Всё остальное - настоящей генерации музыки или звуков нет",
-        ),
-        examples = listOf(
-            "ambient-фон пэда",
-            "звук закрытия деревянной двери",
-        ),
-    )
-
-
-
     private val CUSTOM_HTTP_TAGS = TagDocs(
         tagline = "Пользовательский HTTP-эндпоинт. Какие теги дойдут до сервера, решает шаблон тела, который вы задаёте; T2V подставляет только плейсхолдеры {{text}}, {{voice}} и {{lang}}.",
         supported = listOf(
@@ -464,6 +448,25 @@ object GenerationModelCatalog {
             revision = null,
             notes = "Procedural SFX synthesis; no download; up to 5 seconds",
         ),
+        Entry(
+            id = "nsynth-wavenet",
+            title = "Magenta NSynth (on-device LiteRT)",
+            categories = setOf(Category.Sound),
+            capabilities = setOf(Capability.SoundGeneration),
+            requirements = Requirements(
+                minimumRamMb = 1_024,
+                runtime = Runtime.LiteRt,
+                runtimeBundled = false,
+        ),
+            tags = STABLE_AUDIO_CLIP_TAGS,
+            support = Support.RuntimeInDevelopment,
+            approximateDownloadBytes = 17_000_000L,
+            license = "Apache-2.0 (Magenta NSynth)",
+            repository = "https://github.com/magenta/magenta/tree/main/magenta/models/nsynth",
+            revision = null,
+            notes = "Short instrument-tone SFX (4 sec mono 8 kHz). Will be selectable once the " +
+                "ARM64 smoke-test on a real device confirms inference time and SHA-256.",
+        ),
     )
 
 
@@ -473,11 +476,10 @@ object GenerationModelCatalog {
      * generator" choice back to a TagDocs block.
      */
     private val GENERATOR_TAGS: Map<String, TagDocs> = mapOf(
-        "bundled.music" to BUNDLED_TAGS,
-        "bundled.sound" to BUNDLED_TAGS,
         "elevenlabs.sound" to ELEVEN_SFX_TAGS,
         "litert.stable-audio-open-small.music" to STABLE_AUDIO_TAGS,
         "litert.stable-audio-clip.sound" to STABLE_AUDIO_CLIP_TAGS,
+        "nsynth-wavenet" to STABLE_AUDIO_CLIP_TAGS,
     )
 
     /** Returns the TagDocs for a catalog model id, or null if not documented. */
@@ -501,6 +503,7 @@ object GenerationModelCatalog {
         "custom_http" to CUSTOM_HTTP_TAGS,
         "kokoro" to KOKORO_TAGS,
         "piper_ru" to PIPER_TAGS,
+        "nsynth" to STABLE_AUDIO_CLIP_TAGS,
     )
 
     /** Returns the TagDocs for a TTS engine id (cloud or custom). */
