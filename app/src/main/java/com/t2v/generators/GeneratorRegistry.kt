@@ -4,6 +4,10 @@ import android.content.Context
 import com.t2v.generators.impl.BundledMusicGenerator
 import com.t2v.generators.impl.BundledSoundGenerator
 import com.t2v.generators.impl.ElevenLabsSoundEffectsGenerator
+import com.t2v.generators.impl.StableAudioMusicGenerator
+import com.t2v.generators.impl.StableAudioSoundGenerator
+import com.t2v.generators.runtime.LiteRtModelInstaller
+import com.t2v.generators.runtime.LiteRtModelRuntime
 import com.t2v.tts.registry.EngineRegistry
 
 /**
@@ -14,6 +18,9 @@ class GeneratorRegistry(
     private val settingsProvider: () -> EngineRegistry.EngineSettings,
 ) {
     private val instances = mutableMapOf<String, Generator>()
+    private val liteRtRuntime: LiteRtModelRuntime by lazy { LiteRtModelRuntime(appContext) }
+    val installer: LiteRtModelInstaller by lazy { LiteRtModelInstaller(liteRtRuntime) }
+    val runtime: LiteRtModelRuntime get() = liteRtRuntime
 
     fun all(): List<Generator> = buildList {
         add(BundledMusicGenerator(appContext))
@@ -23,6 +30,8 @@ class GeneratorRegistry(
         if (apiKey != null) {
             add(ElevenLabsSoundEffectsGenerator(apiKey = apiKey))
         }
+        add(StableAudioMusicGenerator(appContext, liteRtRuntime, installer))
+        add(StableAudioSoundGenerator(appContext, liteRtRuntime, installer))
     }
 
     fun forCategory(category: GeneratorCategory): List<Generator> =
@@ -32,4 +41,7 @@ class GeneratorRegistry(
 
     fun defaultFor(category: GeneratorCategory): Generator? =
         forCategory(category).firstOrNull()
+
+    /** Probe LiteRT support on this device. */
+    fun probeLiteRt(): LiteRtModelRuntime.ProbeResult = liteRtRuntime.probe()
 }

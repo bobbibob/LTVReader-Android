@@ -9,6 +9,12 @@ package com.t2v.core.audio
  */
 object AudioEncoder {
 
+    /** Write raw mono 16-bit PCM as a WAV file. */
+    fun encodePcm16MonoWav(out: java.io.File, pcm: ShortArray, sampleRate: Int): Long {
+        val chunk = AudioChunk(samples = pcm, sampleRate = sampleRate, channels = 1)
+        return writeWav(out, chunk)
+    }
+
     /** Записать [chunk] в WAV-файл [out]. Возвращает количество байт данных. */
     fun writeWav(out: java.io.File, chunk: AudioChunk): Long {
         val dataSize = chunk.samples.size * 2
