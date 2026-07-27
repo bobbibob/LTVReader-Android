@@ -53,4 +53,20 @@
     <string name="info_category_local">На устройстве</string>
     <string name="info_category_cloud">Облако</string>
     <string name="info_open">Информация о движке</string>
+    <string name="models_server_connected">✓ Удалённый движок доступен</string>
+    <string name="models_server_disconnected">✗ Удалённый движок недоступен</string>
+    <string name="models_refresh">Обновить</string>
+    <string name="models_installed">Установлено</string>
+    <string name="models_available">Доступно</string>
+    <string name="models_download">Скачать</string>
+    <string name="models_select">Выбрать</string>
+    <string name="models_delete">Удалить</string>
+    <string name="models_active">✓ Активна</string>
+    <string name="models_unknown_engine">Неизвестный движок</string>
+    <string name="models_hf_token_required">Задайте HF_TOKEN в окружении для приватных репозиториев</string>
+    <string name="models_hf_search">Поиск моделей TTS на Hugging Face</string>
+    <string name="models_hf_repo">ID репозитория, например owner/model</string>
+    <string name="models_hf_search_action">Найти</string>
+    <string name="models_hf_open_repo">Открыть репозиторий</string>
+    <string name="models_cancel_download">Отменить загрузку</string>
 </resources>

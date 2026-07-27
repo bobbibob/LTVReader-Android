@@ -43,4 +43,20 @@
     <string name="info_category_local">डिवाइस पर</string>
     <string name="info_category_cloud">क्लाउड</string>
     <string name="info_open">इंजन की जानकारी</string>
+    <string name="models_server_connected">✓ इंजन होस्ट कनेक्टेड</string>
+    <string name="models_server_disconnected">✗ इंजन होस्ट अनुपलब्ध</string>
+    <string name="models_refresh">ताज़ा करें</string>
+    <string name="models_installed">इंस्टॉल किए गए</string>
+    <string name="models_available">उपलब्ध</string>
+    <string name="models_download">डाउनलोड</string>
+    <string name="models_select">चुनें</string>
+    <string name="models_delete">हटाएँ</string>
+    <string name="models_active">✓ सक्रिय</string>
+    <string name="models_unknown_engine">अज्ञात इंजन</string>
+    <string name="models_hf_token_required">निजी रिपॉज़िटरी के लिए HF_TOKEN सेट करें</string>
+    <string name="models_hf_search">Hugging Face TTS मॉडल खोजें</string>
+    <string name="models_hf_repo">रिपॉज़िटरी आईडी, उदाहरण owner/model</string>
+    <string name="models_hf_search_action">खोजें</string>
+    <string name="models_hf_open_repo">रिपॉज़िटरी खोलें</string>
+    <string name="models_cancel_download">डाउनलोड रद्द करें</string>
 </resources>

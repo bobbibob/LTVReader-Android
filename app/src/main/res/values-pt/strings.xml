@@ -43,4 +43,20 @@
     <string name="info_category_local">No dispositivo</string>
     <string name="info_category_cloud">Nuvem</string>
     <string name="info_open">Informação do motor</string>
+    <string name="models_server_connected">✓ Motor de voz acessível</string>
+    <string name="models_server_disconnected">✗ Motor de voz inacessível</string>
+    <string name="models_refresh">Atualizar</string>
+    <string name="models_installed">Instalados</string>
+    <string name="models_available">Disponíveis</string>
+    <string name="models_download">Baixar</string>
+    <string name="models_select">Selecionar</string>
+    <string name="models_delete">Excluir</string>
+    <string name="models_active">✓ Ativo</string>
+    <string name="models_unknown_engine">Motor desconhecido</string>
+    <string name="models_hf_token_required">Defina HF_TOKEN para repositórios privados</string>
+    <string name="models_hf_search">Pesquisar modelos TTS no Hugging Face</string>
+    <string name="models_hf_repo">ID do repositório, por exemplo owner/model</string>
+    <string name="models_hf_search_action">Pesquisar</string>
+    <string name="models_hf_open_repo">Abrir repositório</string>
+    <string name="models_cancel_download">Cancelar download</string>
 </resources>

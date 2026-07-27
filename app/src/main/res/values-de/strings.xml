@@ -43,4 +43,20 @@
     <string name="info_category_local">Auf dem Gerät</string>
     <string name="info_category_cloud">Cloud</string>
     <string name="info_open">Engine-Informationen</string>
+    <string name="models_server_connected">✓ Engine-Host erreichbar</string>
+    <string name="models_server_disconnected">✗ Engine-Host nicht erreichbar</string>
+    <string name="models_refresh">Aktualisieren</string>
+    <string name="models_installed">Installiert</string>
+    <string name="models_available">Verfügbar</string>
+    <string name="models_download">Herunterladen</string>
+    <string name="models_select">Auswählen</string>
+    <string name="models_delete">Löschen</string>
+    <string name="models_active">✓ Aktiv</string>
+    <string name="models_unknown_engine">Unbekannte Engine</string>
+    <string name="models_hf_token_required">Setzen Sie HF_TOKEN für private Repositories</string>
+    <string name="models_hf_search">Hugging Face TTS-Modelle suchen</string>
+    <string name="models_hf_repo">Repository-ID, z. B. owner/model</string>
+    <string name="models_hf_search_action">Suchen</string>
+    <string name="models_hf_open_repo">Repository öffnen</string>
+    <string name="models_cancel_download">Download abbrechen</string>
 </resources>

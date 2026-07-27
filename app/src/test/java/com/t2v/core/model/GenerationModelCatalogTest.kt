@@ -57,6 +57,23 @@ class GenerationModelCatalogTest {
     }
 
     @Test
+    fun `piper catalog entry exposes the verified voices`() {
+        val piper = GenerationModelCatalog.entries.single { it.id == "piper-vits" }
+        assertEquals(GenerationModelCatalog.Support.Verified, piper.support)
+        assertNotNull("Piper needs TagDocs", piper.tags)
+    }
+
+    @Test
+    fun `cloud-only models stay marked as in-development`() {
+        val openaiMusic = GenerationModelCatalog.entries.single { it.id == "openai-music" }
+        val elevenSound = GenerationModelCatalog.entries.single { it.id == "elevenlabs-sound-clip" }
+        assertEquals(GenerationModelCatalog.Support.RuntimeInDevelopment, openaiMusic.support)
+        assertEquals(GenerationModelCatalog.Support.RuntimeInDevelopment, elevenSound.support)
+        assertEquals(false, openaiMusic.canInstall)
+        assertEquals(false, elevenSound.canInstall)
+    }
+
+    @Test
     fun `stable audio shares LiteRT runtime and is verified for install`() {
         val music = GenerationModelCatalog.forCategory(
             GenerationModelCatalog.Category.Music,

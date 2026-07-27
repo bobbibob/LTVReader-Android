@@ -43,4 +43,20 @@
     <string name="info_category_local">端末上</string>
     <string name="info_category_cloud">クラウド</string>
     <string name="info_open">エンジン情報</string>
+    <string name="models_server_connected">✓ エンジンホスト接続済み</string>
+    <string name="models_server_disconnected">✗ エンジンホスト未接続</string>
+    <string name="models_refresh">更新</string>
+    <string name="models_installed">インストール済み</string>
+    <string name="models_available">利用可能</string>
+    <string name="models_download">ダウンロード</string>
+    <string name="models_select">選択</string>
+    <string name="models_delete">削除</string>
+    <string name="models_active">✓ 有効</string>
+    <string name="models_unknown_engine">不明なエンジン</string>
+    <string name="models_hf_token_required">プライベートリポジトリ用に HF_TOKEN を設定してください</string>
+    <string name="models_hf_search">Hugging Face の TTS モデルを検索</string>
+    <string name="models_hf_repo">リポジトリ ID（例: owner/model）</string>
+    <string name="models_hf_search_action">検索</string>
+    <string name="models_hf_open_repo">リポジトリを開く</string>
+    <string name="models_cancel_download">ダウンロードをキャンセル</string>
 </resources>

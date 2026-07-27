@@ -5,6 +5,28 @@
 ## [Unreleased]
 
 ### Added
+- Restored the Kokoro download card in ModelsScreen: progress bar, byte/percent
+  updates, cancel button, select-after-install. The previously hidden `if (false)`
+  branch is gone.
+- Expanded the Piper/VITS on-device catalog beyond Russian and the two English
+  voices (Amy/Cori): German (Thorsten, Kerstin), French (Siwis, Tom),
+  Spanish (Carlos es-ES, Ald es-MX), Italian (Riccardo), Chinese (Huayan) and
+  Japanese (Kai). Each voice is bundled through the existing SherpaOnnx
+  runtime and surfaced as a separate `PiperVoiceCard` grouped by language.
+- `GenerationModelCatalog` reserves two cloud-only slots (`openai-music`,
+  `elevenlabs-sound-clip`) marked `RuntimeInDevelopment` so they can be
+  referenced from Info dialogs without being selectable.
+- `PiperRussianCatalogTest` and `GenerationModelCatalogTest` grew to cover the
+  new languages and to lock the in-development status of cloud-only entries.
+
+### Changed
+- ModelsScreen now groups local voices by language via `PiperVoiceGroup` and
+  renders an Info dialog per voice with the same Piper TagDocs used elsewhere.
+- `PiperRussianTtsEngine.piperVoice()` accepts an optional
+  `approximateSizeBytes` override so smaller Piper models (x_low, low) report
+  a believable download size.
+
+### Notes
 - Music/sound generator runtime works end-to-end: generator selection with
   available/unavailable labels, audio preview (play/stop per clip), default
   prompts, WAV header metadata parsing.

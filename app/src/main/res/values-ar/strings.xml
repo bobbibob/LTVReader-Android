@@ -43,4 +43,20 @@
     <string name="info_category_local">على الجهاز</string>
     <string name="info_category_cloud">سحابي</string>
     <string name="info_open">معلومات المحرك</string>
+    <string name="models_server_connected">✓ المضيف متصل</string>
+    <string name="models_server_disconnected">✗ المضيف غير متاح</string>
+    <string name="models_refresh">تحديث</string>
+    <string name="models_installed">مثبتة</string>
+    <string name="models_available">متاحة</string>
+    <string name="models_download">تنزيل</string>
+    <string name="models_select">تحديد</string>
+    <string name="models_delete">حذف</string>
+    <string name="models_active">✓ نشط</string>
+    <string name="models_unknown_engine">محرك غير معروف</string>
+    <string name="models_hf_token_required">اضبط HF_TOKEN للمستودعات الخاصة</string>
+    <string name="models_hf_search">ابحث عن نماذج TTS على Hugging Face</string>
+    <string name="models_hf_repo">معرّف المستودع، مثلاً owner/model</string>
+    <string name="models_hf_search_action">بحث</string>
+    <string name="models_hf_open_repo">افتح المستودع</string>
+    <string name="models_cancel_download">إلغاء التنزيل</string>
 </resources>

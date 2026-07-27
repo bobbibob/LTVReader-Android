@@ -132,127 +132,12 @@ fun ModelsScreen(
             }
 
             if (selectedTab == ModelTab.Voice) {
-            Text("Доступные локальные голосовые модели", style = MaterialTheme.typography.titleMedium)
-            ModelDetailCard(
-                title = "Kokoro 82M (англоязычный TTS, работает на устройстве)",
-                status = "ONNX • Apache-2.0 • целиком работает на этом телефоне",
-                selected = state.selectedVoiceModelId == VOICE_MODEL_KOKORO,
-                enabled = state.kokoroInstalled,
-                tags = GenerationModelCatalog.tagDocsFor("kokoro-82m"),
-                onSelect = { vm.selectVoiceModel(VOICE_MODEL_KOKORO) },
-                onInfo = {
-                    infoTarget = InfoTarget(
-                        title = "Kokoro 82M (англоязычный TTS, работает на устройстве)",
-                        tagline = GenerationModelCatalog.tagDocsFor("kokoro-82m")?.tagline,
-                        tags = GenerationModelCatalog.tagDocsFor("kokoro-82m"),
-                        runtime = "SherpaOnnx (встроен)",
-                        repository = GenerationModelCatalog.repositoryFor("kokoro-82m"),
-                        license = GenerationModelCatalog.licenseFor("kokoro-82m"),
-                        categoryLabel = infoCategoryLocalLabel,
-                    )
-                },
-            )
-            if (false) {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier.padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Text("Kokoro 82M", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        "Английский • 11 голосов • ONNX • Apache-2.0 • целиком работает на телефоне",
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Text(
-                        state.kokoroModel?.let { formatBytes(it.totalSizeBytes) } ?: "примерно 369 МБ",
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    when {
-                        state.loadingCatalog -> CircularProgressIndicator()
-                        state.downloading -> {
-                            if (state.downloadTotalBytes > 0) {
-                                LinearProgressIndicator(
-                                    progress = { state.downloadProgress },
-                                    modifier = Modifier.fillMaxWidth(),
-                                )
-                            } else {
-                                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                            }
-                            Text(downloadProgressText(state.downloadedBytes, state.downloadTotalBytes))
-                            OutlinedButton(onClick = vm::cancelDownload) {
-                                Text(stringResource(R.string.models_cancel_download))
-                            }
-                        }
-                        state.kokoroInstalled -> ModelSelectionRow(
-                            selected = state.selectedVoiceModelId == VOICE_MODEL_KOKORO,
-                            onSelect = { vm.selectVoiceModel(VOICE_MODEL_KOKORO) },
-                        )
-                        else -> Button(
-                            enabled = state.kokoroModel?.variants?.isNotEmpty() == true,
-                            onClick = vm::downloadKokoro,
-                        ) {
-                            Text("Скачать Kokoro")
-                        }
-                    }
-                    state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                }
-            }
-
-            Text("Локальные Piper/VITS модели", style = MaterialTheme.typography.titleMedium)
-            Text(
-                "ONNX • полностью на телефоне • общий runtime устанавливать отдельно не нужно",
-                style = MaterialTheme.typography.bodySmall,
-            )
-            PiperRussianTtsEngine.RUSSIAN_VOICES.forEach { voice ->
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(
-                        modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Text(voice.displayName, style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            "${voice.language} • ${if (voice.gender == "female") "женский" else "мужской"} • " +
-                                "Piper medium • примерно ${formatBytes(voice.approximateSizeBytes)}",
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                        when {
-                            state.downloadingVoiceId == voice.id -> {
-                                if (state.downloadTotalBytes > 0) {
-                                    LinearProgressIndicator(
-                                        progress = { state.downloadProgress },
-                                        modifier = Modifier.fillMaxWidth(),
-                                    )
-                                } else {
-                                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                                }
-                                Text(downloadProgressText(state.downloadedBytes, state.downloadTotalBytes))
-                                OutlinedButton(onClick = vm::cancelDownload) {
-                                    Text(stringResource(R.string.models_cancel_download))
-                                }
-                            }
-                            voice.id in state.installedRussianVoices -> {
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    ModelSelectionRow(
-                                        selected = state.selectedVoiceModelId == "piper:${voice.id}",
-                                        onSelect = { vm.selectVoiceModel("piper:${voice.id}") },
-                                        modifier = Modifier.weight(1f),
-                                    )
-                                    OutlinedButton(onClick = { vm.deleteRussianVoice(voice.id) }) {
-                                        Icon(Icons.Default.Delete, contentDescription = "Удалить")
-                                    }
-                                }
-                            }
-                            else -> Button(
-                                enabled = state.downloadingVoiceId == null && !state.downloading,
-                                onClick = { vm.downloadRussianVoice(voice.id) },
-                            ) {
-                                Text("Скачать голос")
-                            }
-                        }
-                    }
-                }
-            }
-            }
+                VoiceModelSection(
+                    state = state,
+                    vm = vm,
+                    infoCategoryLocalLabel = infoCategoryLocalLabel,
+                    onInfo = { target -> infoTarget = target },
+                )
             }
 
             if (selectedTab == ModelTab.Music) {
@@ -497,6 +382,252 @@ fun ModelDetailCard(
                         else -> "Runtime not ready"
                     },
                 )
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun VoiceModelSection(
+    state: ModelsState,
+    vm: ModelsViewModel,
+    infoCategoryLocalLabel: String,
+    onInfo: (InfoTarget) -> Unit,
+) {
+    Text(
+        text = "Доступные локальные голосовые модели",
+        style = MaterialTheme.typography.titleMedium,
+    )
+    KokoroCard(
+        state = state,
+        vm = vm,
+        infoCategoryLocalLabel = infoCategoryLocalLabel,
+        onInfo = onInfo,
+    )
+
+    Text(
+        text = "Локальные Piper/VITS модели",
+        style = MaterialTheme.typography.titleMedium,
+    )
+    Text(
+        text = "ONNX • полностью на телефоне • общий runtime устанавливать отдельно не нужно",
+        style = MaterialTheme.typography.bodySmall,
+    )
+
+    val groupedLanguages = PiperRussianTtsEngine.RUSSIAN_VOICES
+        .groupBy { it.language }
+        .toSortedMap()
+    val languageLabels = mapOf(
+        "ru-RU" to "Русские голоса (SherpaOnnx + VITS medium)",
+        "en-US" to "Английский (en-US, SherpaOnnx + VITS medium)",
+        "en-GB" to "Английский (en-GB, SherpaOnnx + VITS medium)",
+        "de-DE" to "Немецкие голоса (SherpaOnnx + VITS medium)",
+        "fr-FR" to "Французские голоса (SherpaOnnx + VITS medium)",
+        "es-ES" to "Испанские голоса (es-ES, SherpaOnnx + VITS)",
+        "es-MX" to "Испанский (es-MX, SherpaOnnx + VITS medium)",
+        "it-IT" to "Итальянский (it-IT, SherpaOnnx + VITS)",
+        "zh-CN" to "Китайский (zh-CN, SherpaOnnx + VITS medium)",
+        "ja-JP" to "Японский (ja-JP, SherpaOnnx + VITS medium)",
+    )
+    groupedLanguages.forEach { (language, voices) ->
+        val header = languageLabels[language]
+            ?: "Язык $language (SherpaOnnx + VITS medium)"
+        PiperVoiceGroup(
+            header = header,
+            voices = voices,
+            state = state,
+            vm = vm,
+            infoCategoryLocalLabel = infoCategoryLocalLabel,
+            onInfo = onInfo,
+        )
+    }
+}
+
+@Composable
+private fun KokoroCard(
+    state: ModelsState,
+    vm: ModelsViewModel,
+    infoCategoryLocalLabel: String,
+    onInfo: (InfoTarget) -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Kokoro 82M", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Английский • 11 голосов • ONNX • Apache-2.0 • целиком работает на телефоне",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Text(
+                        text = state.kokoroModel?.let { formatBytes(it.totalSizeBytes) } ?: "примерно 369 МБ",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                IconButton(onClick = {
+                    onInfo(
+                        InfoTarget(
+                            title = "Kokoro 82M (англоязычный TTS, работает на устройстве)",
+                            tagline = GenerationModelCatalog.tagDocsFor("kokoro-82m")?.tagline,
+                            tags = GenerationModelCatalog.tagDocsFor("kokoro-82m"),
+                            runtime = "SherpaOnnx (встроен)",
+                            repository = GenerationModelCatalog.repositoryFor("kokoro-82m"),
+                            license = GenerationModelCatalog.licenseFor("kokoro-82m"),
+                            categoryLabel = infoCategoryLocalLabel,
+                        )
+                    )
+                }) {
+                    Icon(
+                        Icons.Default.Info,
+                        contentDescription = stringResource(R.string.info_open),
+                    )
+                }
+            }
+            when {
+                state.loadingCatalog -> CircularProgressIndicator()
+                state.downloading -> {
+                    if (state.downloadTotalBytes > 0) {
+                        LinearProgressIndicator(
+                            progress = { state.downloadProgress },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    } else {
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    }
+                    Text(downloadProgressText(state.downloadedBytes, state.downloadTotalBytes))
+                    OutlinedButton(onClick = vm::cancelDownload) {
+                        Text(stringResource(R.string.models_cancel_download))
+                    }
+                }
+                state.kokoroInstalled -> {
+                    ModelSelectionRow(
+                        selected = state.selectedVoiceModelId == VOICE_MODEL_KOKORO,
+                        onSelect = { vm.selectVoiceModel(VOICE_MODEL_KOKORO) },
+                    )
+                }
+                else -> Button(
+                    enabled = state.kokoroModel?.variants?.isNotEmpty() == true,
+                    onClick = vm::downloadKokoro,
+                ) {
+                    Text("Скачать Kokoro")
+                }
+            }
+            state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        }
+    }
+}
+
+@Composable
+private fun PiperVoiceGroup(
+    header: String,
+    voices: List<PiperRussianTtsEngine.RussianVoice>,
+    state: ModelsState,
+    vm: ModelsViewModel,
+    infoCategoryLocalLabel: String,
+    onInfo: (InfoTarget) -> Unit,
+) {
+    if (voices.isEmpty()) return
+    Text(
+        text = header,
+        style = MaterialTheme.typography.labelLarge,
+        modifier = Modifier.padding(top = 8.dp),
+    )
+    voices.forEach { voice ->
+        PiperVoiceCard(
+            voice = voice,
+            state = state,
+            vm = vm,
+            infoCategoryLocalLabel = infoCategoryLocalLabel,
+            onInfo = onInfo,
+        )
+    }
+}
+
+@Composable
+private fun PiperVoiceCard(
+    voice: PiperRussianTtsEngine.RussianVoice,
+    state: ModelsState,
+    vm: ModelsViewModel,
+    infoCategoryLocalLabel: String,
+    onInfo: (InfoTarget) -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(voice.displayName, style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        text = "${voice.language} • ${
+                            if (voice.gender == "female") "женский" else "мужской"
+                        } • Piper medium • примерно ${formatBytes(voice.approximateSizeBytes)}",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                IconButton(onClick = {
+                    onInfo(
+                        InfoTarget(
+                            title = "Piper/VITS • ${voice.displayName}",
+                            tagline = GenerationModelCatalog.tagDocsForEngine("piper_ru")?.tagline,
+                            tags = GenerationModelCatalog.tagDocsForEngine("piper_ru"),
+                            runtime = "SherpaOnnx (встроен)",
+                            repository = "https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models",
+                            license = "Model-specific (Piper/VITS)",
+                            categoryLabel = infoCategoryLocalLabel,
+                        )
+                    )
+                }) {
+                    Icon(
+                        Icons.Default.Info,
+                        contentDescription = stringResource(R.string.info_open),
+                    )
+                }
+            }
+            when {
+                state.downloadingVoiceId == voice.id -> {
+                    if (state.downloadTotalBytes > 0) {
+                        LinearProgressIndicator(
+                            progress = { state.downloadProgress },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    } else {
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    }
+                    Text(downloadProgressText(state.downloadedBytes, state.downloadTotalBytes))
+                    OutlinedButton(onClick = vm::cancelDownload) {
+                        Text(stringResource(R.string.models_cancel_download))
+                    }
+                }
+                voice.id in state.installedRussianVoices -> {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ModelSelectionRow(
+                            selected = state.selectedVoiceModelId == "piper:${voice.id}",
+                            onSelect = { vm.selectVoiceModel("piper:${voice.id}") },
+                            modifier = Modifier.weight(1f),
+                        )
+                        OutlinedButton(onClick = { vm.deleteRussianVoice(voice.id) }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Удалить")
+                        }
+                    }
+                }
+                else -> Button(
+                    enabled = state.downloadingVoiceId == null && !state.downloading,
+                    onClick = { vm.downloadRussianVoice(voice.id) },
+                ) {
+                    Text("Скачать голос")
+                }
             }
         }
     }

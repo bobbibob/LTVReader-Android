@@ -154,6 +154,72 @@ class PiperRussianTtsEngine(
                 language = "en-GB",
                 archiveName = "vits-piper-en_GB-cori-medium.tar.bz2",
             ),
+            piperVoice(
+                id = "de-de-thorsten",
+                displayName = "Thorsten (de-DE)",
+                gender = "male",
+                language = "de-DE",
+                archiveName = "vits-piper-de_DE-thorsten-medium.tar.bz2",
+            ),
+            piperVoice(
+                id = "de-de-kerstin",
+                displayName = "Kerstin (de-DE)",
+                gender = "female",
+                language = "de-DE",
+                archiveName = "vits-piper-de_DE-kerstin-low.tar.bz2",
+                approximateSizeBytes = 35_000_000L,
+            ),
+            piperVoice(
+                id = "fr-fr-siwis",
+                displayName = "Siwis (fr-FR)",
+                gender = "female",
+                language = "fr-FR",
+                archiveName = "vits-piper-fr_FR-siwis-medium.tar.bz2",
+            ),
+            piperVoice(
+                id = "fr-fr-tom",
+                displayName = "Tom (fr-FR)",
+                gender = "male",
+                language = "fr-FR",
+                archiveName = "vits-piper-fr_FR-tom-medium.tar.bz2",
+            ),
+            piperVoice(
+                id = "es-es-carlfm",
+                displayName = "Carlos (es-ES)",
+                gender = "male",
+                language = "es-ES",
+                archiveName = "vits-piper-es_ES-carlfm-x_low.tar.bz2",
+                approximateSizeBytes = 30_000_000L,
+            ),
+            piperVoice(
+                id = "es-mx-ald",
+                displayName = "Ald (es-MX)",
+                gender = "male",
+                language = "es-MX",
+                archiveName = "vits-piper-es_MX-ald-medium.tar.bz2",
+            ),
+            piperVoice(
+                id = "it-it-riccardo",
+                displayName = "Riccardo (it-IT)",
+                gender = "male",
+                language = "it-IT",
+                archiveName = "vits-piper-it_IT-riccardo-x_low.tar.bz2",
+                approximateSizeBytes = 30_000_000L,
+            ),
+            piperVoice(
+                id = "zh-cn-huayan",
+                displayName = "Huayan (zh-CN)",
+                gender = "female",
+                language = "zh-CN",
+                archiveName = "vits-piper-zh_CN-huayan-medium.tar.bz2",
+            ),
+            piperVoice(
+                id = "ja-jp-kai",
+                displayName = "Kai (ja-JP)",
+                gender = "male",
+                language = "ja-JP",
+                archiveName = "vits-piper-ja_JP-kai-medium.tar.bz2",
+            ),
         )
 
         val ENGINE_INFO = EngineInfo(
@@ -180,12 +246,14 @@ class PiperRussianTtsEngine(
             gender: String,
             language: String,
             archiveName: String,
+            approximateSizeBytes: Long = 65_000_000L,
         ) = RussianVoice(
             id = id,
             displayName = displayName,
             gender = gender,
             language = language,
             archiveUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/$archiveName",
+            approximateSizeBytes = approximateSizeBytes,
         )
     }
 }

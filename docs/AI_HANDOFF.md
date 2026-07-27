@@ -2,8 +2,9 @@
 
 Последнее обновление: 2026-07-27
 Рабочая ветка большого аудиомодуля: `codex/audio-production`
-Текущий коммит ветки на момент записи: `9ed86ab` (CI run 30270795662 green, APK на R5CN30LJS4W)
-Прошлый зелёный эталон до этого: `bb9b374` (CI run 30248614315, APK на R5CN30LJS4W)
+Текущий коммит ветки на момент записи: `e627dd2` (CI run 30273098517 green, APK на R5CN30LJS4W)
+Прошлый зелёный эталон до этого: `9ed86ab` (CI run 30270795662, APK на R5CN30LJS4W)
+Ещё раньше: `bb9b374` (CI run 30248614315, APK на R5CN30LJS4W)
 
 Этот файл — главный оперативный контекст для следующего ИИ-агента. Его нужно
 обновлять после каждого существенного изменения архитектуры, поведения,
@@ -370,6 +371,31 @@ gh run list --workflow android.yml --branch codex/audio-production --limit 3
 - CI-проверка: run `30270795662` для коммита `9ed86ab` зелёный (test + build),
   APK скачан, готов к `adb install -r` на `R5CN30LJS4W`. После правки русского
   текста будет ещё один коммит + CI.
+
+## Журнал активной задачи: вернуть скачивание моделей и добавить новые
+
+- В `ModelsScreen` восстановлена карточка скачивания Kokoro, которую раньше
+  скрывал `if (false)`. Прогресс в байтах/процентах, отмена, выбор после
+  установки — всё работает поверх существующего `downloadKokoro()` и
+  состояния `ModelsState.{kokoroInstalled,loadingCatalog,downloading,
+  downloadProgress,downloadedBytes,downloadTotalBytes}`.
+- Раздел Piper/VITS теперь группирует голоса по языку (`PiperVoiceGroup`) и
+  показывает уже скачанные Amy/Cori рядом с русскими, а также добавленные
+  немецкие, французские, испанские, итальянские, китайский и японский голоса
+  из каталога `k2-fsa/sherpa-onnx tts-models`.
+- Все новые пункты живут в `PiperRussianTtsEngine.RUSSIAN_VOICES`; их
+  отдаёт тот же `RussianVoiceInstaller` и тот же `PiperRussianTtsEngine`.
+  Никаких новых runtimes не требуется — все они совместимы со встроенным
+  SherpaOnnx.
+- В `GenerationModelCatalog` зарезервированы два облачных пункта —
+  `openai-music` и `elevenlabs-sound-clip` — со статусом
+  `RuntimeInDevelopment` и `canInstall = false`. Это нужно, чтобы Info-карточки
+  в будущем могли ссылаться на них, не показывая их как готовые кнопки.
+- `PiperRussianCatalogTest` переписан под три кейса: четыре русские голоса,
+  десять языков, единый источник `sherpa-onnx/releases`.
+- `GenerationModelCatalogTest` теперь фиксирует, что `openai-music` и
+  `elevenlabs-sound-clip` остаются `RuntimeInDevelopment` (защита от
+  регрессии, если кто-то случайно повысит их статус).
 
 ## Как обновлять этот файл
 
