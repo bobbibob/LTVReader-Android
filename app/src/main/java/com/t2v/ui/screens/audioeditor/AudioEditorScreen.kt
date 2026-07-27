@@ -39,6 +39,8 @@ import com.t2v.core.audio.FFmpegBridge
 import com.t2v.data.AudioClipEntity
 import com.t2v.data.AudioTrackEntity
 import com.t2v.data.ChapterExportEntity
+import com.t2v.generators.Generator
+import com.t2v.generators.GeneratorCategory
 import com.t2v.ui.components.LTVScaffold
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -71,13 +73,35 @@ fun AudioEditorScreen(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Background music", style = MaterialTheme.typography.titleMedium)
                 OutlinedButton(onClick = { musicPicker.launch("audio/*") }) { Text("Add clip") }
+                OutlinedButton(onClick = vm::generateMusic) { Text("Generate") }
             }
             TrackEditor("Music track", AudioTrackKind.Music, state.project.musicClips, vm)
+            GeneratorPanel(
+                title = "Generate music",
+                prompt = state.musicPrompt,
+                onPromptChange = vm::setMusicPrompt,
+                options = state.musicOptions,
+                onPick = vm::pickMusicGenerator,
+                onRun = vm::generateMusic,
+                generating = state.generatingMusic,
+                error = state.error,
+            )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Sound effects", style = MaterialTheme.typography.titleMedium)
                 OutlinedButton(onClick = { soundPicker.launch("audio/*") }) { Text("Add sound") }
+                OutlinedButton(onClick = vm::generateSound) { Text("Generate") }
             }
             TrackEditor("Sound track", AudioTrackKind.Sound, state.project.soundClips, vm)
+            GeneratorPanel(
+                title = "Generate sound effect",
+                prompt = state.soundPrompt,
+                onPromptChange = vm::setSoundPrompt,
+                options = state.soundOptions,
+                onPick = vm::pickSoundGenerator,
+                onRun = vm::generateSound,
+                generating = state.generatingSound,
+                error = null,
+            )
             state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(
@@ -169,6 +193,46 @@ private fun TrackEditor(
     }
 }
 
+data class GeneratorOption(
+    val id: String,
+    val displayName: String,
+)
+
+@Composable
+private fun GeneratorPanel(
+    title: String,
+    prompt: String,
+    onPromptChange: (String) -> Unit,
+    options: List<GeneratorOption>,
+    onPick: (String) -> Unit,
+    onRun: () -> Unit,
+    generating: Boolean,
+    error: String?,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(title, style = MaterialTheme.typography.titleSmall)
+            OutlinedTextField(
+                value = prompt,
+                onValueChange = onPromptChange,
+                label = { Text("Prompt") },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            if (options.size > 1) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    options.forEach { opt ->
+                        OutlinedButton(onClick = { onPick(opt.id) }) { Text(opt.displayName) }
+                    }
+                }
+            }
+            Button(onClick = onRun, enabled = !generating && prompt.isNotBlank()) {
+                Text(if (generating) "Generating…" else "Run")
+            }
+            error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        }
+    }
+}
+
 data class AudioEditorState(
     val project: AudioEditProject = AudioEditProject(),
     val rendering: Boolean = false,
@@ -176,6 +240,12 @@ data class AudioEditorState(
     val savedAt: Long? = null,
     val outputPath: String? = null,
     val error: String? = null,
+    val musicPrompt: String = "",
+    val soundPrompt: String = "",
+    val musicOptions: List<GeneratorOption> = emptyList(),
+    val soundOptions: List<GeneratorOption> = emptyList(),
+    val generatingMusic: Boolean = false,
+    val generatingSound: Boolean = false,
 )
 
 class AudioEditorViewModel(
@@ -183,13 +253,79 @@ class AudioEditorViewModel(
     private val audiobookId: Long,
 ) : ViewModel() {
     private val db = AppContainer.database(context)
+    private val generators = AppContainer.generatorRegistry(context)
     private val _state = MutableStateFlow(AudioEditorState())
     val state: StateFlow<AudioEditorState> = _state.asStateFlow()
 
     init {
         viewModelScope.launch {
+            refreshGeneratorOptions()
             loadTimeline()
         }
+    }
+
+    private fun refreshGeneratorOptions() {
+        val music = generators.forCategory(GeneratorCategory.Music).map { GeneratorOption(it.id, it.displayName) }
+        val sound = generators.forCategory(GeneratorCategory.Sound).map { GeneratorOption(it.id, it.displayName) }
+        _state.update { it.copy(musicOptions = music, soundOptions = sound) }
+    }
+
+    fun setMusicPrompt(value: String) = _state.update { it.copy(musicPrompt = value) }
+    fun setSoundPrompt(value: String) = _state.update { it.copy(soundPrompt = value) }
+    fun pickMusicGenerator(id: String) = _state.update { it.copy(musicPrompt = it.musicPrompt + " [${id}]") }
+    fun pickSoundGenerator(id: String) = _state.update { it.copy(soundPrompt = it.soundPrompt + " [${id}]") }
+
+    fun generateMusic() = runGenerator(GeneratorCategory.Music, ::generateMusicImpl)
+    fun generateSound() = runGenerator(GeneratorCategory.Sound, ::generateSoundImpl)
+
+    private fun runGenerator(category: GeneratorCategory, impl: suspend (Generator, java.io.File) -> Unit) {
+        viewModelScope.launch {
+            val gen = generators.forCategory(category).firstOrNull() ?: run {
+                _state.update { it.copy(error = "No generator available for ${category.name}") }
+                return@launch
+            }
+            val kindField = if (category == GeneratorCategory.Music) AudioTrackKind.Music else AudioTrackKind.Sound
+            val output = java.io.File(context.filesDir, "audiobooks/$audiobookId/generated-${kindField.name.lowercase()}-${System.currentTimeMillis()}.wav")
+            _state.update {
+                if (category == GeneratorCategory.Music) it.copy(generatingMusic = true)
+                else it.copy(generatingSound = true)
+            }
+            runCatching { impl(gen, output) }.onFailure { e ->
+                _state.update {
+                    (if (category == GeneratorCategory.Music) it.copy(generatingMusic = false)
+                    else it.copy(generatingSound = false)).copy(error = e.message)
+                }
+            }
+            _state.update {
+                if (category == GeneratorCategory.Music) it.copy(generatingMusic = false)
+                else it.copy(generatingSound = false)
+            }
+        }
+    }
+
+    private suspend fun generateMusicImpl(gen: Generator, output: java.io.File) {
+        val req = com.t2v.generators.GeneratorRequest(
+            prompt = _state.value.musicPrompt,
+            outputFile = output,
+            category = GeneratorCategory.Music,
+        )
+        gen.generate(req)
+        addClipToTrack(AudioTrackKind.Music, output)
+    }
+
+    private suspend fun generateSoundImpl(gen: Generator, output: java.io.File) {
+        val req = com.t2v.generators.GeneratorRequest(
+            prompt = _state.value.soundPrompt,
+            outputFile = output,
+            category = GeneratorCategory.Sound,
+        )
+        gen.generate(req)
+        addClipToTrack(AudioTrackKind.Sound, output)
+    }
+
+    private fun addClipToTrack(kind: AudioTrackKind, file: java.io.File) {
+        mutate(kind) { it + AudioEditClip(sourcePath = file.absolutePath) }
+        _state.update { it.copy(error = null) }
     }
 
     fun addMusic(uri: Uri) = viewModelScope.launch {

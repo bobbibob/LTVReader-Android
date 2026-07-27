@@ -32,7 +32,10 @@ logs/
 # Output
 output/
 *.mp3
+# Bundled placeholders for music/sound are checked in.
 *.wav
+!app/src/main/assets/music/*.wav
+!app/src/main/assets/sound/*.wav
 *.srt
 *.ass
 *.zip

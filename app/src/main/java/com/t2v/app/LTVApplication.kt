@@ -4,6 +4,7 @@ import android.app.Application
 import com.t2v.core.text.TextProcessor
 import com.t2v.data.AppDatabase
 import com.t2v.data.SettingsRepository
+import com.t2v.generators.GeneratorRegistry
 import com.t2v.tts.registry.EngineRegistry
 import com.t2v.worker.GenerationPipeline
 import kotlinx.coroutines.CoroutineScope
@@ -24,6 +25,13 @@ class LTVApplication : Application() {
     @Volatile private var engineSettings = EngineRegistry.EngineSettings()
     val engineRegistry: EngineRegistry by lazy {
         EngineRegistry(
+            appContext = this,
+            settingsProvider = { engineSettings },
+        )
+    }
+
+    val generatorRegistry: GeneratorRegistry by lazy {
+        GeneratorRegistry(
             appContext = this,
             settingsProvider = { engineSettings },
         )
