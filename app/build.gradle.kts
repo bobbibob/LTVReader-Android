@@ -142,8 +142,6 @@ dependencies {
     // Подключаем через Maven Central (Google AI Edge LiteRT).
     val tflite = "2.14.0"
     implementation("org.tensorflow:tensorflow-lite:$tflite")
-    implementation("org.tensorflow:tensorflow-lite-support:$tflite")
-    implementation("org.tensorflow:tensorflow-lite-gpu-delegate:$tflite")
 
     // NumPy не нужен: всё, что было на numpy, переписано на ручные массивы.
     // Документы: docx4j нет в Android, используем чистый ZIP-парсер для DOCX.
