@@ -63,260 +63,260 @@ object GenerationModelCatalog {
     }
 
     private val KOKORO_TAGS = TagDocs(
-        tagline = "English TTS that runs on the phone. Supports no native emotion tags; the editor maps expressive markup to speed, pitch and volume changes only.",
+        tagline = "Англоязычный TTS, который работает прямо на телефоне. Не поддерживает нативные теги эмоций: редактор лишь приблизительно передаёт разметку через скорость, высоту тона и громкость.",
         supported = listOf(
-            "{{voice \"...\"}} - switch between 11 bundled voices",
-            "{{lang en-US}} - English only",
-            "{{speed 0.5..2.0}} - real-time speed multiplier",
-            "{{pitch 0.5..2.0}} - pitch shift",
-            "{{volume 0..4}} - gain",
+            "{{voice \"...\"}} - переключение между 11 встроенными голосами",
+            "{{lang en-US}} - только английский",
+            "{{speed 0.5..2.0}} - множитель скорости в реальном времени",
+            "{{pitch 0.5..2.0}} - сдвиг высоты тона",
+            "{{volume 0..4}} - громкость",
             "{{pause 500ms}} / {{pause 0.7s}} / {{pause.short}} / {{pause.long}}",
-            "{{chapter \"...\"}} - named chapter markers in the project timeline",
+            "{{chapter \"...\"}} - именованные маркеры глав на шкале проекта",
         ),
         partial = listOf(
-            "{{emotion ...}} - silently approximated via speed/pitch; no audible emotional tone",
-            "{{delivery whisper|shout|soft|loud|slow|fast}} - approximated via volume + speed",
-            "{{emphasis reduced|moderate|strong}} - slight pitch bump",
+            "{{emotion ...}} - молча приближается через скорость и высоту тона; слышимой эмоциональной окраски нет",
+            "{{delivery whisper|shout|soft|loud|slow|fast}} - приближается через громкость и скорость",
+            "{{emphasis reduced|moderate|strong}} - лёгкое изменение высоты тона",
         ),
         ignored = listOf(
-            "{{breath}} {{laugh}} {{sigh}} and other vocal reactions - stripped from text",
-            "{{reset ...}} - accepted but ignored",
+            "{{breath}} {{laugh}} {{sigh}} и остальные вокальные реакции - удаляются из текста",
+            "{{reset ...}} - принимается, но игнорируется",
         ),
         examples = listOf(
-            "{{voice \"af_sarah\"}} Hello there.",
-            "{{emotion sad}}{{speed 0.9}}I have to tell you something.",
-            "{{pause 700ms}}{{delivery whisper}}only us know about this.",
+            "{{voice \"af_sarah\"}} Привет.",
+            "{{emotion sad}}{{speed 0.9}}Мне нужно тебе кое-что сказать.",
+            "{{pause 700ms}}{{delivery whisper}}об этом знаем только мы.",
         ),
     )
 
     private val PIPER_TAGS = TagDocs(
-        tagline = "Multilingual offline TTS. Expressive markup is mapped to speed and volume only - there are no native emotion/delivery controls.",
+        tagline = "Многоязычный офлайн TTS. Эмоциональная разметка отображается только в скорость и громкость - нативного управления эмоциями/подачей нет.",
         supported = listOf(
-            "{{voice \"...\"}} - pick by prefix from the installed speaker set",
-            "{{lang ru-RU|en-US|en-GB|...}} - choose the language to match the speaker",
+            "{{voice \"...\"}} - выбор по префиксу из установленных голосов",
+            "{{lang ru-RU|en-US|en-GB|...}} - выберите язык под выбранного диктора",
             "{{speed 0.5..2.0}} - real-time speed multiplier",
             "{{volume 0..4}} - gain",
             "{{pause 500ms}} / {{pause 0.7s}} / {{pause.short}} / {{pause.long}}",
             "{{chapter \"...\"}}",
         ),
         partial = listOf(
-            "{{pitch 0.5..2.0}} - applied if the runtime supports it; otherwise no-op",
-            "{{emotion ...}} / {{delivery ...}} - mapped to speed/pitch deltas",
+            "{{pitch 0.5..2.0}} - применяется, если рантайм поддерживает; иначе игнорируется",
+            "{{emotion ...}} / {{delivery ...}} - отображаются в дельты скорости и высоты тона",
         ),
         ignored = listOf(
-            "Vocal reactions ({{breath}}, {{laugh}}, ...) are stripped from the spoken text",
+            "Вокальные реакции ({{breath}}, {{laugh}}, ...) удаляются из произносимого текста",
         ),
         examples = listOf(
-            "{{voice \"ru_RU-irina-medium\"}}{{lang ru-RU}}Privet, mir.",
-            "{{speed 0.85}} medlenno i spokoino.",
+            "{{voice \"ru_RU-irina-medium\"}}{{lang ru-RU}}Привет, мир.",
+            "{{speed 0.85}} медленно и спокойно.",
         ),
     )
 
     private val OPENAI_TAGS = TagDocs(
-        tagline = "OpenAI TTS. Emotion, delivery, emphasis and vocal reactions are written to the `instructions` parameter; the model improvises the performance.",
+        tagline = "OpenAI TTS. Эмоции, подача, акценты и вокальные реакции передаются в параметр `instructions`; модель сама импровизирует исполнение.",
         supported = listOf(
-            "{{emotion happy|sad|angry|afraid|excited|calm|...}} - native prompt",
-            "{{delivery whisper|shout|soft|loud|slow|fast|narrator|conversational|...}} - native prompt",
-            "{{emphasis reduced|moderate|strong}} - native prompt",
-            "{{breath}} {{sigh}} {{laugh}} {{gasp}} - prompt-dependent, performed when model agrees",
-            "{{speed 0.25..4.0}} - native speed multiplier",
+            "{{emotion happy|sad|angry|afraid|excited|calm|...}} - нативный промпт",
+            "{{delivery whisper|shout|soft|loud|slow|fast|narrator|conversational|...}} - нативный промпт",
+            "{{emphasis reduced|moderate|strong}} - нативный промпт",
+            "{{breath}} {{sigh}} {{laugh}} {{gasp}} - зависит от модели; воспроизводится, если модель согласна",
+            "{{speed 0.25..4.0}} - нативный множитель скорости",
             "{{pause 500ms}} / {{pause 0.7s}} / {{pause.short}} / {{pause.long}}",
-            "{{voice \"alloy|echo|fable|onyx|nova|shimmer\"}} - built-in voices",
+            "{{voice \"alloy|echo|fable|onyx|nova|shimmer\"}} - встроенные голоса",
         ),
         ignored = listOf(
-            "Reaction names that confuse the model are stripped from the transcript",
+            "Названия реакций, которые путают модель, удаляются из текста",
         ),
         examples = listOf(
-            "{{emotion excited}}{{delivery fast}}This just happened!",
-            "{{breath}}Before we begin, a word from our sponsor.",
+            "{{emotion excited}}{{delivery fast}}Это только что произошло!",
+            "{{breath}}Прежде чем мы начнём - слово нашего спонсора.",
         ),
-        promptHelp = "Sent verbatim as `instructions`; tune it to taste, but keep it short.",
+        promptHelp = "Передаётся дословно как `instructions`; настраивайте по вкусу, но держите коротким.",
     )
 
     private val ELEVEN_TAGS = TagDocs(
-        tagline = "ElevenLabs v3 understands square-bracket audio tags in the text. Other engines ignore them.",
+        tagline = "ElevenLabs v3 понимает аудиотеги в квадратных скобках прямо в тексте. Другие движки их игнорируют.",
         supported = listOf(
-            "{{emotion sad|happy|angry|excited|...}} - emitted as [sad], [happy], ...",
-            "{{delivery whisper|shout}} - emitted as [whispers], [shouts]",
+            "{{emotion sad|happy|angry|excited|...}} - превращается в [sad], [happy], ...",
+            "{{delivery whisper|shout}} - превращается в [whispers], [shouts]",
             "{{breath}} {{sigh}} {{laugh}} {{chuckle}} {{giggle}} {{cry}} {{gasp}}",
             "{{speed 0.5..2.0}} - voice_settings",
             "{{pause 500ms}} / {{pause 0.7s}}",
-            "{{voice \"<voice-id>\"}} - clone or stock voice id",
+            "{{voice \"<voice-id>\"}} - id клона или стокового голоса",
         ),
         ignored = listOf(
-            "Tags other models understand ({{emphasis}}, {{reset}}, ...) are not translated; v3 reads raw markup if present",
+            "Теги, понятные другим моделям ({{emphasis}}, {{reset}}, ...), не транслируются; v3 читает сырую разметку, если она встречается",
         ),
         examples = listOf(
-            "{{emotion sad}}[long pause] [breath] I never got to say goodbye.",
-            "{{delivery whisper}}[whispers] [gasp] are we alone?",
+            "{{emotion sad}}[long pause] [breath] Я так и не попрощался.",
+            "{{delivery whisper}}[whispers] [gasp] мы одни?",
         ),
-        promptHelp = "Only square-bracket tags land inside the text; everything else is treated as the speech script.",
+        promptHelp = "В текст попадают только теги в квадратных скобках; всё остальное считается речью.",
     )
 
     private val GEMINI_TAGS = TagDocs(
-        tagline = "Gemini TTS receives the expressive markup as a natural-language direction prompt. The model interprets it freely.",
+        tagline = "Gemini TTS получает выразительную разметку как промпт-указание на естественном языке. Модель интерпретирует его свободно.",
         supported = listOf(
-            "{{emotion ...}} - prefix direction",
-            "{{delivery ...}} {{emphasis ...}} - prefix direction",
-            "{{breath}} {{sigh}} {{laugh}} - prompt-dependent",
-            "{{speed 0.5..2.0}} - close to native; clamped server-side",
+            "{{emotion ...}} - направление-префикс",
+            "{{delivery ...}} {{emphasis ...}} - направление-префикс",
+            "{{breath}} {{sigh}} {{laugh}} - зависит от модели",
+            "{{speed 0.5..2.0}} - близко к нативному; ограничивается сервером",
             "{{pause 500ms}} / {{pause 0.7s}} / {{pause.short}} / {{pause.long}}",
-            "{{voice \"<voice-name>\"}} - Kore/Aoede/Leda/etc.",
+            "{{voice \"<voice-name>\"}} - Kore/Aoede/Leda и т.д.",
         ),
         ignored = listOf(
-            "Reaction tags are kept in the direction prompt but not necessarily performed by the model",
+            "Теги реакций остаются в промпте-указании, но модель не обязана их воспроизводить",
         ),
         examples = listOf(
-            "{{emotion serious}}Read this announcement clearly and with gravitas.",
+            "{{emotion serious}}Прочитай это объявление внятно и с расстановкой.",
         ),
     )
 
     private val AZURE_TAGS = TagDocs(
-        tagline = "Azure neural voices accept SSML. Only allowlisted express-as styles are passed; unknown values are dropped to keep the SSML valid.",
+        tagline = "Нейронные голоса Azure принимают SSML. Передаются только разрешённые стили express-as; неизвестные значения отбрасываются, чтобы SSML оставался валидным.",
         supported = listOf(
-            "{{lang en-US|ru-RU|de-DE|...}} - maps to xml:lang",
-            "{{speed 0.5..2.0}} / {{volume 0..4}} / {{pitch 0.5..2.0}} - SSML prosody",
+            "{{lang en-US|ru-RU|de-DE|...}} - подставляется в xml:lang",
+            "{{speed 0.5..2.0}} / {{volume 0..4}} / {{pitch 0.5..2.0}} - просодия SSML",
             "{{pause 500ms}} / {{pause 0.7s}}",
-            "{{voice \"<voice-name>\"}} - swap voice (e.g. en-US-JennyNeural)",
-            "{{emotion happy|sad|angry|afraid|excited|calm|friendly|hopeful|terrified|serious|empathetic}} - mapped to mstts:express-as",
-            "{{delivery whisper|shout}} - mapped to mstts:express-as whispering/shouting",
+            "{{voice \"<voice-name>\"}} - сменить голос (например, en-US-JennyNeural)",
+            "{{emotion happy|sad|angry|afraid|excited|calm|friendly|hopeful|terrified|serious|empathetic}} - маппится в mstts:express-as",
+            "{{delivery whisper|shout}} - маппится в mstts:express-as whispering/shouting",
         ),
         ignored = listOf(
-            "{{delivery conversational|narrator|news|...}} - dropped from SSML",
-            "Vocal reactions ({{breath}}, {{laugh}}, ...) - dropped",
+            "{{delivery conversational|narrator|news|...}} - отбрасывается из SSML",
+            "Вокальные реакции ({{breath}}, {{laugh}}, ...) - отбрасываются",
         ),
         examples = listOf(
-            "{{emotion cheerful}}Hello and welcome!",
-            "{{delivery whisper}}[stage whisper] Stay close.",
+            "{{emotion cheerful}}Привет и добро пожаловать!",
+            "{{delivery whisper}}[stage whisper] Держись рядом.",
         ),
-        promptHelp = "Voice must be a neural voice that supports the chosen style; otherwise the request fails.",
+        promptHelp = "Голос должен быть нейронным и поддерживать выбранный стиль; иначе запрос упадёт.",
     )
 
     private val STABLE_AUDIO_TAGS = TagDocs(
-        tagline = "Text-to-music up to 11 seconds. The literal LTV tags do not apply - you describe the loop in plain English and the model composes it.",
+        tagline = "Генерация музыки до 11 секунд. Литеральные LTV-теги здесь не работают - описывайте петлю обычным русским текстом, и модель сама сочинит её.",
         supported = listOf(
-            "Free-text prompt: genre, mood, instrumentation, BPM, length",
-            "{{duration 1..11}} - hard cap at 11 seconds",
+            "Свободный промпт: жанр, настроение, инструменты, BPM, длительность",
+            "{{duration 1..11}} - жёсткий предел 11 секунд",
         ),
         ignored = listOf(
-            "{{emotion}} / {{delivery}} / vocal cues - music has no speech layer",
-            "{{voice}} / {{lang}} - not applicable",
+            "{{emotion}} / {{delivery}} / вокальные подсказки - у музыки нет речевого слоя",
+            "{{voice}} / {{lang}} - неприменимо",
         ),
         examples = listOf(
-            "warm ambient pad, 80 BPM, no percussion, 10 seconds",
-            "tense cinematic strings with slow crescendo",
+            "тёплый эмбиент-пэд, 80 BPM, без перкуссии, 10 секунд",
+            "напряжённые кинематографические струнные с медленным крещендо",
         ),
-        promptHelp = "Be specific: instruments, tempo, mood, references. Vague prompts get generic results.",
+        promptHelp = "Будьте конкретны: инструменты, темп, настроение, референсы. Размытые промпты дают generic-результат.",
     )
 
     private val STABLE_AUDIO_CLIP_TAGS = TagDocs(
-        tagline = "Short sound effects up to 5 seconds. Plain English description only.",
+        tagline = "Короткие звуковые эффекты до 5 секунд. Только свободное описание на русском.",
         supported = listOf(
-            "Free-text prompt: material, action, environment",
-            "{{duration 1..5}} - hard cap at 5 seconds",
+            "Свободный промпт: материал, действие, окружение",
+            "{{duration 1..5}} - жёсткий предел 5 секунд",
         ),
         ignored = listOf(
-            "Speech tags are not relevant; describe the SFX itself",
+            "Речевые теги неактуальны; опишите сам звуковой эффект",
         ),
         examples = listOf(
-            "wooden door closing in a quiet hallway",
-            "soft notification chime, two tones",
+            "деревянная дверь закрывается в тихом коридоре",
+            "мягкий звук уведомления, два тона",
         ),
     )
 
     private val ELEVEN_SFX_TAGS = TagDocs(
-        tagline = "ElevenLabs Sound Effects API. Plain-English prompt, duration 1-22 seconds.",
+        tagline = "ElevenLabs Sound Effects API. Свободный промпт, длительность 1-22 секунды.",
         supported = listOf(
-            "Free-text prompt",
-            "{{duration 1..22}} - seconds",
+            "Свободный промпт",
+            "{{duration 1..22}} - секунды",
         ),
         ignored = listOf(
-            "All speech-related tags - this API produces SFX, not voice",
+            "Все речевые теги - этот API создаёт звуковые эффекты, не голос",
         ),
         examples = listOf(
-            "heavy wooden door closing, slow creak",
-            "wind whoosh transition, 2 seconds",
+            "тяжёлая деревянная дверь закрывается, медленный скрип",
+            "свистящий переход ветра, 2 секунды",
         ),
     )
 
     private val BUNDLED_TAGS = TagDocs(
-        tagline = "Offline placeholder that copies a short bundled WAV based on a keyword in the prompt. Useful for offline smoke-tests of the editor.",
+        tagline = "Офлайн-заглушка: копирует короткий WAV из ресурсов приложения по ключевому слову в промпте. Подходит для офлайн-смоук-тестов редактора.",
         supported = listOf(
-            "Keyword match in the prompt picks one of the placeholders (ambient, cinema, uplift for music; door, notification, whoosh for sound)",
+            "По ключевому слову в промпте выбирается одна из заглушек (ambient, cinema, uplift для музыки; door, notification, whoosh для звуков)",
         ),
         ignored = listOf(
-            "Everything else - no real music/SFX generation",
+            "Всё остальное - настоящей генерации музыки или звуков нет",
         ),
         examples = listOf(
-            "ambient background pad",
-            "wooden door close sfx",
+            "ambient-фон пэда",
+            "звук закрытия деревянной двери",
         ),
     )
 
 
 
     private val CUSTOM_HTTP_TAGS = TagDocs(
-        tagline = "User-defined HTTP endpoint. The body template you configure decides what tags reach the server - T2V only substitutes {{text}}, {{voice}} and {{lang}} placeholders.",
+        tagline = "Пользовательский HTTP-эндпоинт. Какие теги дойдут до сервера, решает шаблон тела, который вы задаёте; T2V подставляет только плейсхолдеры {{text}}, {{voice}} и {{lang}}.",
         supported = listOf(
-            "{{voice \"...\"}} - interpolated into the body template as {{voice}}",
-            "{{lang en-US|ru-RU|...}} - interpolated as {{lang}}",
-            "{{speed 0.5..2.0}} - applied as a local PCM time-stretch; server is not contacted twice",
-            "{{pause 500ms}} / {{pause 0.7s}} / {{pause.short}} / {{pause.long}} - inserted as PCM silence",
+            "{{voice \"...\"}} - подставляется в шаблон как {{voice}}",
+            "{{lang en-US|ru-RU|...}} - подставляется как {{lang}}",
+            "{{speed 0.5..2.0}} - применяется локально как растяжение PCM; сервер не дёргается повторно",
+            "{{pause 500ms}} / {{pause 0.7s}} / {{pause.short}} / {{pause.long}} - вставляется как тишина в PCM",
         ),
         partial = listOf(
-            "{{emotion ...}} / {{delivery ...}} / {{emphasis ...}} - passed through only if your body template forwards them; otherwise the server sees raw text",
+            "{{emotion ...}} / {{delivery ...}} / {{emphasis ...}} - проходят дальше, только если шаблон тела их пропускает; иначе сервер видит сырой текст",
         ),
         ignored = listOf(
-            "Vocal reactions ({{breath}}, {{laugh}}, ...) and {{reset}} - sent as raw words to the endpoint; configure your body template to strip them if needed",
-            "{{chapter \"...\"}} / {{music ...}} / {{sfx ...}} - handled locally, never reach the server",
+            "Вокальные реакции ({{breath}}, {{laugh}}, ...) и {{reset}} - уходят на эндпоинт как обычные слова; если нужно их убрать, настройте шаблон тела",
+            "{{chapter \"...\"}} / {{music ...}} / {{sfx ...}} - обрабатываются локально и до сервера не доходят",
         ),
         examples = listOf(
-            "{{voice \"narrator\"}}{{lang en-US}}Once upon a time...",
-            "{{speed 0.9}}{{pause 500ms}}take a breath.",
+            "{{voice \"narrator\"}}{{lang en-US}}Жили-были...",
+            "{{speed 0.9}}{{pause 500ms}}переведи дыхание.",
         ),
-        promptHelp = "Test your template with the 'Custom HTTP TTS' engine in the Models screen. The server must return raw audio bytes or a JSON object containing an 'audio' (base64) or 'url' field.",
+        promptHelp = "Проверьте шаблон через движок 'Custom HTTP TTS' на экране Models. Сервер должен вернуть сырые аудиобайты или JSON с полем 'audio' (base64) или 'url'.",
     )
 
     private val POCKET_TAGS = TagDocs(
-        tagline = "PocketTTS is not yet verified for Android. Treat its tag mapping as a placeholder pending a device smoke-test.",
+        tagline = "PocketTTS пока не проверен на Android. Считайте маппинг тегов заглушкой до смоук-теста на устройстве.",
         supported = listOf(
-            "{{voice \"...\"}} - speaker id from the catalog",
+            "{{voice \"...\"}} - id диктора из каталога",
             "{{lang en-US}}",
             "{{speed 0.5..2.0}}",
             "{{pause 500ms}} / {{pause 0.7s}}",
         ),
         partial = listOf(
-            "{{emotion ...}} / {{delivery ...}} - mapped to speed/pitch deltas only",
+            "{{emotion ...}} / {{delivery ...}} - отображаются только в дельты скорости и высоты тона",
         ),
         ignored = listOf(
-            "Vocal reactions - stripped before synthesis",
+            "Вокальные реакции - удаляются до синтеза",
         ),
         examples = listOf(
-            "{{voice \"default\"}}Hello there.",
+            "{{voice \"default\"}}Привет.",
         ),
     )
 
     private val ZIPVOICE_TAGS = TagDocs(
-        tagline = "ZipVoice Distill is a zero-shot voice-cloning model. The expressive markup mapping matches Piper until the Android runtime ships a real phoneme pipeline.",
+        tagline = "ZipVoice Distill - zero-shot модель клонирования голоса. Маппинг выразительной разметки совпадает с Piper, пока Android-рантайм не получит настоящую фонемную обработку.",
         supported = listOf(
-            "{{voice \"<reference-id>\"}} - reference speaker id",
+            "{{voice \"<reference-id>\"}} - id референсного диктора",
             "{{lang en-US}}",
             "{{speed 0.5..2.0}}",
             "{{pause 500ms}} / {{pause 0.7s}}",
             "{{chapter \"...\"}}",
         ),
         partial = listOf(
-            "{{emotion ...}} / {{delivery ...}} - approximated via speed and pitch only",
-            "{{volume 0..4}} / {{pitch 0.5..2.0}} - forwarded only if the runtime accepts them",
+            "{{emotion ...}} / {{delivery ...}} - приближается только через скорость и высоту тона",
+            "{{volume 0..4}} / {{pitch 0.5..2.0}} - пробрасываются, только если рантайм их принимает",
         ),
         ignored = listOf(
-            "Vocal reactions ({{breath}}, {{laugh}}, ...) - stripped from text",
-            "{{emphasis ...}} / {{reset ...}} - accepted but ignored",
+            "Вокальные реакции ({{breath}}, {{laugh}}, ...) - удаляются из текста",
+            "{{emphasis ...}} / {{reset ...}} - принимаются, но игнорируются",
         ),
         examples = listOf(
-            "{{voice \"speaker-01\"}}Reference audio plus transcript required.",
+            "{{voice \"speaker-01\"}}Нужен референсный WAV и его транскрипт.",
         ),
-        promptHelp = "Upload the reference WAV and transcript in the Models screen before selecting this engine.",
+        promptHelp = "Загрузите референсный WAV и его транскрипт на экране Models, прежде чем выбирать этот движок.",
     )
 
         val entries: List<Entry> = listOf(

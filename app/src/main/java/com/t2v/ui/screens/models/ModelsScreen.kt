@@ -110,13 +110,13 @@ fun ModelsScreen(
                     modifier = Modifier.padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    Text("On-device models folder", style = MaterialTheme.typography.labelLarge)
+                    Text("Папка моделей на устройстве", style = MaterialTheme.typography.labelLarge)
                     Text(
-                        state.modelsTreeUri.ifBlank { "Internal app storage" },
+                        state.modelsTreeUri.ifBlank { "Внутреннее хранилище приложения" },
                         style = MaterialTheme.typography.bodySmall,
                     )
                     OutlinedButton(onClick = { folderPicker.launch(null) }) {
-                        Text("Change folder")
+                        Text("Сменить папку")
                     }
                 }
             }
@@ -132,20 +132,20 @@ fun ModelsScreen(
             }
 
             if (selectedTab == ModelTab.Voice) {
-            Text("Available on-device voice models", style = MaterialTheme.typography.titleMedium)
+            Text("Доступные локальные голосовые модели", style = MaterialTheme.typography.titleMedium)
             ModelDetailCard(
-                title = "Kokoro 82M (English TTS, on-device)",
-                status = "ONNX • Apache-2.0 • runs entirely on this phone",
+                title = "Kokoro 82M (англоязычный TTS, работает на устройстве)",
+                status = "ONNX • Apache-2.0 • целиком работает на этом телефоне",
                 selected = state.selectedVoiceModelId == VOICE_MODEL_KOKORO,
                 enabled = state.kokoroInstalled,
                 tags = GenerationModelCatalog.tagDocsFor("kokoro-82m"),
                 onSelect = { vm.selectVoiceModel(VOICE_MODEL_KOKORO) },
                 onInfo = {
                     infoTarget = InfoTarget(
-                        title = "Kokoro 82M (English TTS, on-device)",
+                        title = "Kokoro 82M (англоязычный TTS, работает на устройстве)",
                         tagline = GenerationModelCatalog.tagDocsFor("kokoro-82m")?.tagline,
                         tags = GenerationModelCatalog.tagDocsFor("kokoro-82m"),
-                        runtime = "SherpaOnnx (bundled)",
+                        runtime = "SherpaOnnx (встроен)",
                         repository = GenerationModelCatalog.repositoryFor("kokoro-82m"),
                         license = GenerationModelCatalog.licenseFor("kokoro-82m"),
                         categoryLabel = infoCategoryLocalLabel,
@@ -160,11 +160,11 @@ fun ModelsScreen(
                 ) {
                     Text("Kokoro 82M", style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "English • 11 voices • ONNX • Apache-2.0 • runs entirely on this phone",
+                        "Английский • 11 голосов • ONNX • Apache-2.0 • целиком работает на телефоне",
                         style = MaterialTheme.typography.bodySmall,
                     )
                     Text(
-                        state.kokoroModel?.let { formatBytes(it.totalSizeBytes) } ?: "approximately 369 MB",
+                        state.kokoroModel?.let { formatBytes(it.totalSizeBytes) } ?: "примерно 369 МБ",
                         style = MaterialTheme.typography.bodySmall,
                     )
                     when {
@@ -191,7 +191,7 @@ fun ModelsScreen(
                             enabled = state.kokoroModel?.variants?.isNotEmpty() == true,
                             onClick = vm::downloadKokoro,
                         ) {
-                            Text("Download Kokoro")
+                            Text("Скачать Kokoro")
                         }
                     }
                     state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
@@ -257,58 +257,58 @@ fun ModelsScreen(
 
             if (selectedTab == ModelTab.Music) {
                 ModelDetailCard(
-                    title = "On-device synth (music)",
-                    status = "Procedural synthesis • up to 11 seconds • no download needed",
+                    title = "Локальный синтезатор (музыка)",
+                    status = "Процедурный синтез • до 11 секунд • ничего скачивать не нужно",
                     selected = state.selectedMusicModelId == MUSIC_MODEL_STABLE_AUDIO_OPEN_SMALL,
                     enabled = state.liteRtMusicReady,
                     tags = GenerationModelCatalog.tagDocsFor("stable-audio-open-small"),
                     onSelect = { vm.selectMusicModel(MUSIC_MODEL_STABLE_AUDIO_OPEN_SMALL) },
                     onInfo = {
                         infoTarget = InfoTarget(
-                            title = "On-device synth (music)",
+                            title = "Локальный синтезатор (музыка)",
                             tagline = GenerationModelCatalog.tagDocsFor("stable-audio-open-small")?.tagline,
                             tags = GenerationModelCatalog.tagDocsFor("stable-audio-open-small"),
-                            runtime = "LiteRT (procedural, no model)",
+                            runtime = "LiteRT (процедурный, без модели)",
                             repository = "",
-                            license = "T2V procedural synth",
+                            license = "Процедурный синтез T2V",
                             categoryLabel = infoCategoryLocalLabel,
                         )
                     },
                 )
                 ModelDetailCard(
-                    title = "ElevenLabs Sound Effects (cloud)",
-                    status = "ElevenLabs API key required • 1-22 seconds",
+                    title = "ElevenLabs Sound Effects (облако)",
+                    status = "Нужен API-ключ ElevenLabs • длительность 1-22 секунды",
                     selected = state.selectedMusicModelId == SOUND_MODEL_ELEVEN_SFX,
                     enabled = state.elevenLabsKeyConfigured,
                     tags = GenerationModelCatalog.tagDocsForGenerator("elevenlabs.sound"),
                     onSelect = { vm.selectMusicModel(SOUND_MODEL_ELEVEN_SFX) },
                     onInfo = {
                         infoTarget = InfoTarget(
-                            title = "ElevenLabs Sound Effects (cloud)",
+                            title = "ElevenLabs Sound Effects (облако)",
                             tagline = GenerationModelCatalog.tagDocsForGenerator("elevenlabs.sound")?.tagline,
                             tags = GenerationModelCatalog.tagDocsForGenerator("elevenlabs.sound"),
                             runtime = "ElevenLabs Sound Effects API",
                             repository = "https://api.elevenlabs.io/v1/sound-generation",
-                            license = "ElevenLabs Terms",
+                            license = "Условия ElevenLabs",
                             categoryLabel = infoCategoryCloudLabel,
                         )
                     },
                 )
                 ModelDetailCard(
-                    title = "Bundled placeholder (offline)",
-                    status = "Keyword match in prompt picks one of the placeholders",
+                    title = "Встроенная заглушка (офлайн)",
+                    status = "По ключевому слову в промпте выбирается одна из встроенных заглушек",
                     selected = state.selectedMusicModelId == MUSIC_MODEL_BUNDLED,
                     enabled = true,
                     tags = GenerationModelCatalog.tagDocsForGenerator("bundled.music"),
                     onSelect = { vm.selectMusicModel(MUSIC_MODEL_BUNDLED) },
                     onInfo = {
                         infoTarget = InfoTarget(
-                            title = "Bundled placeholder (offline)",
+                            title = "Встроенная заглушка (офлайн)",
                             tagline = GenerationModelCatalog.tagDocsForGenerator("bundled.music")?.tagline,
                             tags = GenerationModelCatalog.tagDocsForGenerator("bundled.music"),
-                            runtime = "Bundled assets",
+                            runtime = "Встроенные ресурсы",
                             repository = "",
-                            license = "T2V placeholder",
+                            license = "Заглушка T2V",
                             categoryLabel = infoCategoryLocalLabel,
                         )
                     },
@@ -317,58 +317,58 @@ fun ModelsScreen(
 
             if (selectedTab == ModelTab.Sound) {
                 ModelDetailCard(
-                    title = "On-device synth (sound)",
-                    status = "Procedural synthesis • up to 5 seconds • no download needed",
+                    title = "Локальный синтезатор (звуки)",
+                    status = "Процедурный синтез • до 5 секунд • ничего скачивать не нужно",
                     selected = state.selectedSoundModelId == SOUND_MODEL_STABLE_AUDIO_CLIP,
                     enabled = state.liteRtSoundReady,
                     tags = GenerationModelCatalog.tagDocsFor("stable-audio-clip"),
                     onSelect = { vm.selectSoundModel(SOUND_MODEL_STABLE_AUDIO_CLIP) },
                     onInfo = {
                         infoTarget = InfoTarget(
-                            title = "On-device synth (sound)",
+                            title = "Локальный синтезатор (звуки)",
                             tagline = GenerationModelCatalog.tagDocsFor("stable-audio-clip")?.tagline,
                             tags = GenerationModelCatalog.tagDocsFor("stable-audio-clip"),
-                            runtime = "LiteRT (procedural, no model)",
+                            runtime = "LiteRT (процедурный, без модели)",
                             repository = "",
-                            license = "T2V procedural synth",
+                            license = "Процедурный синтез T2V",
                             categoryLabel = infoCategoryLocalLabel,
                         )
                     },
                 )
                 ModelDetailCard(
-                    title = "ElevenLabs Sound Effects (cloud)",
-                    status = "ElevenLabs API key required • 1-22 seconds",
+                    title = "ElevenLabs Sound Effects (облако)",
+                    status = "Нужен API-ключ ElevenLabs • длительность 1-22 секунды",
                     selected = state.selectedSoundModelId == SOUND_MODEL_ELEVEN_SFX,
                     enabled = state.elevenLabsKeyConfigured,
                     tags = GenerationModelCatalog.tagDocsForGenerator("elevenlabs.sound"),
                     onSelect = { vm.selectSoundModel(SOUND_MODEL_ELEVEN_SFX) },
                     onInfo = {
                         infoTarget = InfoTarget(
-                            title = "ElevenLabs Sound Effects (cloud)",
+                            title = "ElevenLabs Sound Effects (облако)",
                             tagline = GenerationModelCatalog.tagDocsForGenerator("elevenlabs.sound")?.tagline,
                             tags = GenerationModelCatalog.tagDocsForGenerator("elevenlabs.sound"),
                             runtime = "ElevenLabs Sound Effects API",
                             repository = "https://api.elevenlabs.io/v1/sound-generation",
-                            license = "ElevenLabs Terms",
+                            license = "Условия ElevenLabs",
                             categoryLabel = infoCategoryCloudLabel,
                         )
                     },
                 )
                 ModelDetailCard(
-                    title = "Bundled placeholder (offline)",
-                    status = "Keyword match in prompt picks one of the placeholders",
+                    title = "Встроенная заглушка (офлайн)",
+                    status = "По ключевому слову в промпте выбирается одна из встроенных заглушек",
                     selected = state.selectedSoundModelId == SOUND_MODEL_BUNDLED,
                     enabled = true,
                     tags = GenerationModelCatalog.tagDocsForGenerator("bundled.sound"),
                     onSelect = { vm.selectSoundModel(SOUND_MODEL_BUNDLED) },
                     onInfo = {
                         infoTarget = InfoTarget(
-                            title = "Bundled placeholder (offline)",
+                            title = "Встроенная заглушка (офлайн)",
                             tagline = GenerationModelCatalog.tagDocsForGenerator("bundled.sound")?.tagline,
                             tags = GenerationModelCatalog.tagDocsForGenerator("bundled.sound"),
-                            runtime = "Bundled assets",
+                            runtime = "Встроенные ресурсы",
                             repository = "",
-                            license = "T2V placeholder",
+                            license = "Заглушка T2V",
                             categoryLabel = infoCategoryLocalLabel,
                         )
                     },
@@ -380,10 +380,10 @@ fun ModelsScreen(
                     modifier = Modifier.padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    Text("Only Android-compatible models", style = MaterialTheme.typography.titleMedium)
+                    Text("Только Android-совместимые модели", style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "T2V lists a model here only after its exact files, runtime and revision " +
-                            "have passed synthesis tests on a real Android device. Server models are not supported.",
+                        "T2V показывает модель только после того, как её точные файлы, рантайм и ревизия " +
+                            "прошли смоук-тест синтеза на реальном Android-устройстве. Серверные модели не поддерживаются.",
                         style = MaterialTheme.typography.bodySmall,
                     )
                     Text(
@@ -574,7 +574,7 @@ private fun InstalledModelCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(model.id, style = MaterialTheme.typography.titleSmall)
                 Text(
-                    "${model.filesCount} files • ${formatBytes(model.totalSizeBytes)}",
+                    "${model.filesCount} файлов • ${formatBytes(model.totalSizeBytes)}",
                     style = MaterialTheme.typography.bodySmall,
                 )
             }

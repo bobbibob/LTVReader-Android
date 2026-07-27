@@ -10,6 +10,30 @@
   prompts, WAV header metadata parsing.
 - BundledAssetGeneratorTest (6 JVM tests) verifies all 6 bundled WAV assets,
   header parsing, and keyword matching.
+- Info dialog on every model/generator card in ModelsScreen, populated from
+  `GenerationModelCatalog.TagDocs`: tagline, runtime, repository, license,
+  supported/partial/ignored tags, examples and prompt help. Localized in 11
+  languages via `info_*` strings. TagDocs now cover kokoro, piper_ru, pocket-tts,
+  zipvoice, openai, elevenlabs, gemini, azure, custom_http, bundled,
+  ElevenLabs SFX and LiteRT Stable Audio (music/clip).
+
+### Changed
+- All TagDocs strings and ModelsScreen user-facing copy are now Russian by
+  default (UI приложения рассчитан на русскоязычного владельца). LTV-разметка
+  `{{...}}` и имена движков остаются латиницей; locale-specific варианты
+  остаются в 10 других values-* папках.
+
+### Fixed
+- Catalog quotes inside TagDocs strings (CUSTOM_HTTP_TAGS, ZIPVOICE_TAGS,
+  PocketTTS) escaped correctly so the Kotlin parser accepts them.
+- Resolved Composable context for the Info dialog labels by hoisting the
+  LocalContext-relative strings to the screen scope.
+
+### Notes
+- Никакой локальной сборки: код проверяется только через GitHub Actions
+  (`gh workflow run android.yml --ref codex/audio-production`). Подробности и
+  правила верификации - в docs/AI_HANDOFF.md (раздел «Обязательные требования
+  владельца»).
 
 ### Fixed
 - `AudioMixerTest > writeSilence`: `AudioEncoder.readWav` переведён на `RandomAccessFile`
