@@ -60,6 +60,9 @@ interface AudioTimelineDao {
 
     @Query("DELETE FROM audio_tracks WHERE audiobookId = :audiobookId")
     suspend fun deleteTimeline(audiobookId: Long)
+
+    @Query("SELECT * FROM audio_tracks WHERE audiobookId = :audiobookId AND type = :type LIMIT 1")
+    suspend fun trackByType(audiobookId: Long, type: String): AudioTrackEntity?
 }
 
 @Dao

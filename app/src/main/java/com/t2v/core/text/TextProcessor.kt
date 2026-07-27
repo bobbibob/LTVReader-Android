@@ -213,9 +213,17 @@ class TextProcessor(
 
     // --- Утилиты -----------------------------------------------------------
 
-    /** Полный пайплайн: очистка → секции → чанки. */
-    fun process(raw: String): Pair<List<TextSection>, List<TextChunk>> {
-        if ("{{" in raw) {
+    /**
+     * Полный пайплайн: очистка → секции → чанки + список аудио-тегов.
+     *
+     * Третий элемент возвращаемого [ProcessResult] — это список
+     * [com.t2v.core.markup.AudioTag] в исходном порядке. Pipeline использует
+     * его, чтобы после синтеза речи вставить клипы музыки/звука ровно между
+     * соседними voice-чанками (конец одного = конец предыдущего span, начало
+     * следующего = конец тега).
+     */
+    fun process(raw: String): ProcessResult {
+        if ("{{" in raw || "<music>" in raw || "<sfx>" in raw) {
             val parser = LTVMarkupParser(
                 paragraphPauseMinMs = paragraphPauseMinMs,
                 paragraphPauseMaxMs = paragraphPauseMaxMs,
@@ -223,6 +231,7 @@ class TextProcessor(
             )
             val allSections = mutableListOf<TextSection>()
             val allChunks = mutableListOf<TextChunk>()
+            val audioTags = mutableListOf<com.t2v.core.markup.AudioTag>()
             parser.parseSpans(raw).forEach { span ->
                 val (sections, chunks) = processPlain(span.text)
                 allSections += sections
@@ -234,10 +243,12 @@ class TextProcessor(
                         markupState = span.state,
                     )
                 }
+                span.trailingAudioTag?.let { audioTags += it }
             }
-            return allSections to allChunks
+            return ProcessResult(allSections, allChunks, audioTags)
         }
-        return processPlain(raw)
+        val (sections, chunks) = processPlain(raw)
+        return ProcessResult(sections, chunks, emptyList())
     }
 
     private fun processPlain(raw: String): Pair<List<TextSection>, List<TextChunk>> {
@@ -252,3 +263,10 @@ class TextProcessor(
         return sections to chunks
     }
 }
+
+/** Полный результат пайплайна: секции, чанки, и аудио-теги в порядке появления. */
+data class ProcessResult(
+    val sections: List<TextSection>,
+    val chunks: List<TextChunk>,
+    val audioTags: List<com.t2v.core.markup.AudioTag>,
+)

@@ -69,4 +69,6 @@
     <string name="models_hf_search_action">Найти</string>
     <string name="models_hf_open_repo">Открыть репозиторий</string>
     <string name="models_cancel_download">Отменить загрузку</string>
+    <string name="markup_music">Музыка</string>
+    <string name="markup_sfx">Звук</string>
 </resources>

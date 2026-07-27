@@ -59,4 +59,6 @@
     <string name="models_hf_search_action">搜索</string>
     <string name="models_hf_open_repo">打开仓库</string>
     <string name="models_cancel_download">取消下载</string>
+    <string name="markup_music">音乐</string>
+    <string name="markup_sfx">音效</string>
 </resources>

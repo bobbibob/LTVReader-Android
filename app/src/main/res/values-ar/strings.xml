@@ -59,4 +59,6 @@
     <string name="models_hf_search_action">بحث</string>
     <string name="models_hf_open_repo">افتح المستودع</string>
     <string name="models_cancel_download">إلغاء التنزيل</string>
+    <string name="markup_music">موسيقى</string>
+    <string name="markup_sfx">تأثير صوتي</string>
 </resources>

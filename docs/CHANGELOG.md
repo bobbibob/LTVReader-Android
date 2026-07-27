@@ -5,6 +5,32 @@
 ## [Unreleased]
 
 ### Added
+- XML-style audio tags for in-text music and SFX insertion:
+  `<music>prompt</music>` and `<sfx>prompt</sfx>`.
+  - `LTVMarkupParser.extractAudioTags()` returns the ordered list with
+    positions; `parseSpans()` now breaks voice chunks at every audio tag
+    boundary so the pipeline can place the clip exactly where the tag
+    appeared in the source text.
+  - `MarkupState` is unchanged; voice text never contains the prompt.
+- `core/audio/AudioTagInserter` runs after TTS synthesis. For each tag it
+  picks the selected music/sound generator from settings, generates a WAV
+  into the audiobook folder, computes the timeline position from existing
+  segment durations, and persists an `AudioClipEntity` on the right track.
+  Default gain comes from `AudioEditProject` defaults so the editor slider
+  controls the clip just like any other music/SFX.
+- `MarkupHighlighter` now colours `<music>`/`<sfx>` tags with the accent
+  palette. `MarkupToolbar` adds two new chips: Music and SFX.
+- 11 locales gained `markup_music` and `markup_sfx` strings.
+- `LTVMarkupAudioTagsTest` covers parser behaviour; existing
+  `TextProcessorTest` was updated to consume the new `ProcessResult`.
+
+### Fixed
+- `AudioTimelineDao` now exposes `trackByType()` so the inserter can
+  reuse a single track id per audiobook per category.
+
+## [Unreleased]
+
+### Added
 - Restored the Kokoro download card in ModelsScreen: progress bar, byte/percent
   updates, cancel button, select-after-install. The previously hidden `if (false)`
   branch is gone.

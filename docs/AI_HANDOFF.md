@@ -372,6 +372,30 @@ gh run list --workflow android.yml --branch codex/audio-production --limit 3
   APK скачан, готов к `adb install -r` на `R5CN30LJS4W`. После правки русского
   текста будет ещё один коммит + CI.
 
+## Журнал активной задачи: XML-теги <music>/<sfx> с привязкой к TTS
+
+- `LTVMarkupParser` распознаёт два новых тега: `<music>промпт</music>` и
+  `<sfx>промпт</sfx>`. Содержимое тега — это промпт; атрибутов нет.
+  Громкость и скорость не задаются — они берутся из настроек выбранной
+  модели и редактируются в AudioEditorScreen как у любого другого клипа.
+- `parseSpans()` теперь рвёт голосовой поток в каждом теге: всё до
+  открывающего `<` становится концом предыдущего voice-чанка, всё после
+  закрывающего `>` — началом нового. Это значит, что границы речи и
+  позиция клипа совпадают до символа.
+- `parseSpans()` помечает каждый разрыв тегом через
+  `MarkupSpan.trailingAudioTag`; `TextProcessor.process()` теперь возвращает
+  `ProcessResult` (sections, chunks, audioTags).
+- `GenerationPipeline` после синтеза речи вызывает `AudioTagInserter`,
+  который для каждого тега генерирует WAV через `GeneratorRegistry` и
+  сохраняет `AudioClipEntity` в Room на нужной дорожке.
+  `timelineStartMs` = сумма `pauseBeforeMs + durationMs` уже сохранённых
+  сегментов.
+- `MarkupHighlighter` красит теги accent-цветом; `MarkupToolbar` получил
+  две новые кнопки «Музыка» и «Звук».
+- Новые строки `markup_music` и `markup_sfx` добавлены во все 11 локалей.
+- Тесты: новый `LTVMarkupAudioTagsTest` (4 кейса), `TextProcessorTest`
+  обновлён под `ProcessResult`.
+
 ## Журнал активной задачи: вернуть скачивание моделей и добавить новые
 
 - В `ModelsScreen` восстановлена карточка скачивания Kokoro, которую раньше

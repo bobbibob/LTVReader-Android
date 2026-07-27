@@ -104,6 +104,22 @@ fun MarkupToolbar(
             snippet = """{{chapter "Title"}}""",
             onInsert = onInsert,
         )
+        MarkupChip(
+            label = stringResource(R.string.markup_music),
+            icon = androidx.compose.material.icons.Icons.Filled.LibraryMusic,
+            color = LTVColors.Accent,
+            bg = LTVColors.ChapterBg,
+            snippet = "<music>ambient pad, 5 sec</music>",
+            onInsert = onInsert,
+        )
+        MarkupChip(
+            label = stringResource(R.string.markup_sfx),
+            icon = androidx.compose.material.icons.Icons.Filled.GraphicEq,
+            color = LTVColors.Accent,
+            bg = LTVColors.ChapterBg,
+            snippet = "<sfx>door close</sfx>",
+            onInsert = onInsert,
+        )
     }
 }
 

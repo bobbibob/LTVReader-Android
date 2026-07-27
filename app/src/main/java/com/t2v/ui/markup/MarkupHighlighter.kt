@@ -23,7 +23,11 @@ import com.t2v.ui.theme.LTVColors
  */
 object MarkupHighlighter {
 
-    private val pattern = Regex("""\{\{[\s\S]+?\}\}""")
+    private val pattern = Regex(
+        """\{\{[\s\S]+?\}\}|<music>[\s\S]+?</music>|<sfx>[\s\S]+?</sfx>""",
+    )
+    private val musicOnlyPattern = Regex("""<music>[\s\S]+?</music>""")
+    private val sfxOnlyPattern = Regex("""<sfx>[\s\S]+?</sfx>""")
 
     fun highlight(source: String): AnnotatedString = buildAnnotatedString {
         var cursor = 0
@@ -40,7 +44,11 @@ object MarkupHighlighter {
     }
 
     private fun styleFor(command: String): Quad<Color, Color, Boolean, Boolean> {
-        val name = command.substringAfter("{{").substringBefore(' ', "").lowercase()
+        val name = when {
+            musicOnlyPattern.matches(command) -> "music_tag"
+            sfxOnlyPattern.matches(command) -> "sfx_tag"
+            else -> command.substringAfter("{{").substringBefore(' ', "").lowercase()
+        }
         return when (name) {
             "voice" -> Quad(LTVColors.VoiceColor, LTVColors.VoiceBg, false, true)
             "lang", "language" -> Quad(LTVColors.LangColor, LTVColors.LangBg, false, true)
@@ -52,7 +60,7 @@ object MarkupHighlighter {
             "breath", "sigh", "laugh", "chuckle", "giggle", "cry", "sob", "gasp",
             "yawn", "cough", "clear_throat", "sniff", "pant", "hmm", "reset" ->
                 Quad(LTVColors.ChapterColor, LTVColors.ChapterBg, true, false)
-            "sfx", "music" -> Quad(LTVColors.Accent, LTVColors.ChapterBg, true, true)
+            "sfx", "music", "sfx_tag", "music_tag" -> Quad(LTVColors.Accent, LTVColors.ChapterBg, true, true)
             "cmd", "set" -> Quad(Color.DarkGray, Color(0xFFEEEEEE), true, false)
             else -> Quad(Color.Gray, Color.Transparent, true, false)
         }

@@ -59,15 +59,15 @@ class TextProcessorTest {
 
     @Test
     fun `process pipeline returns sections and chunks`() {
-        val (sections, chunks) = tp.process("Hello world. This is a test.")
-        assertEquals(1, sections.size)
-        assertTrue(chunks.isNotEmpty())
+        val result = tp.process("Hello world. This is a test.")
+        assertEquals(1, result.sections.size)
+        assertTrue(result.chunks.isNotEmpty())
     }
 
     @Test
     fun `no sections for empty text`() {
-        val (sections, chunks) = tp.process("")
-        assertEquals(0, sections.size)
-        assertEquals(0, chunks.size)
+        val result = tp.process("")
+        assertEquals(0, result.sections.size)
+        assertEquals(0, result.chunks.size)
     }
 }

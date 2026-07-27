@@ -2,6 +2,7 @@ package com.t2v.worker
 
 import android.content.Context
 import com.t2v.core.audio.AudioEncoder
+import com.t2v.core.audio.AudioTagInserter
 import com.t2v.core.text.TextProcessor
 import com.t2v.data.AppDatabase
 import com.t2v.data.SegmentEntity
@@ -59,6 +60,11 @@ class GenerationPipeline(
     @Volatile private var cancelled = false
     private val database = AppDatabase.get(context)
     @Volatile private var activeEngine: TtsEngine? = null
+    private var audioTagInserter: AudioTagInserter? = null
+
+    fun setAudioTagInserter(inserter: AudioTagInserter) {
+        this.audioTagInserter = inserter
+    }
 
     suspend fun cancel() {
         cancelled = true
@@ -76,7 +82,7 @@ class GenerationPipeline(
         cancelled = false
         runCatching {
             outputDir.mkdirs()
-            val (sections, chunks) = textProcessor.process(rawText)
+            val (sections, chunks, audioTags) = textProcessor.process(rawText)
             val segmentWavs = mutableListOf<File>()
             val total = chunks.size
             _progress.value = Progress(total = total, done = 0, phase = Progress.Phase.Processing)
@@ -94,6 +100,11 @@ class GenerationPipeline(
                     ),
                 )
             }
+
+            // Insert any <music>/<sfx> tags produced by the markup stage. Each
+            // tag splits the voice stream so we can place the clip exactly where
+            // the tag opened in the source text.
+            val insertedClips = audioTagInserter?.insert(audioTags, audiobookId) ?: 0
 
             for ((idx, chunk) in chunks.withIndex()) {
                 if (cancelled) {

@@ -53,6 +53,20 @@ class LTVApplication : Application() {
     }
 
     val pipeline: GenerationPipeline by lazy {
-        GenerationPipeline(this, engineRegistry, textProcessor)
+        GenerationPipeline(this, engineRegistry, textProcessor).also { pipeline ->
+            pipeline.setAudioTagInserter(
+                com.t2v.core.audio.AudioTagInserter(
+                    appContext = this,
+                    generatorRegistry = { generatorRegistry },
+                    trackVolumeDb = {
+                        mapOf(
+                            com.t2v.core.audio.AudioTrackKind.Voice to 0.0,
+                            com.t2v.core.audio.AudioTrackKind.Music to -24.0,
+                            com.t2v.core.audio.AudioTrackKind.Sound to -8.0,
+                        )
+                    },
+                ),
+            )
+        }
     }
 }

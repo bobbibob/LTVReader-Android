@@ -162,4 +162,6 @@
     <string name="info_category_local">On-device</string>
     <string name="info_category_cloud">Cloud</string>
     <string name="info_open">Engine information</string>
+    <string name="markup_music">Music</string>
+    <string name="markup_sfx">SFX</string>
 </resources>

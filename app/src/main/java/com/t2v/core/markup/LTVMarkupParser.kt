@@ -30,6 +30,16 @@ class LTVMarkupParser(
 
     // {{...}} с произвольным содержимым (lazy: внутри могут быть кавычки с "}}").
     private val commandPattern = Regex("""\{\{([\s\S]+?)\}\}""")
+    /**
+     * XML-like audio tags inserted between voice chunks:
+     *   <music>prompt</music>
+     *   <sfx>prompt</sfx>
+     * Prompts may contain any character (including `{{...}}` and nested text),
+     * except for the literal sequence `</music>` or `</sfx>` which closes the
+     * tag. We deliberately do not allow nesting.
+     */
+    private val musicTagPattern = Regex("""<music>([\s\S]+?)</music>""")
+    private val sfxTagPattern = Regex("""<sfx>([\s\S]+?)</sfx>""")
 
     fun parse(input: String): ParsedMarkup {
         val commands = mutableListOf<MarkupCommand>()
@@ -59,31 +69,65 @@ class LTVMarkupParser(
         return ParsedMarkup(plainText = textForChunks, commands = commands, finalState = state)
     }
 
-    /** Splits source into spoken spans with the state active at each tag position. */
+    /**
+     * Splits source into spoken spans. Voice text is broken at three kinds of
+     * boundaries:
+     *   1. LTV command boundaries `{{...}}` (existing behaviour);
+     *   2. The opening `<` of an `<music>`/`<sfx>` tag — voice before the tag
+     *      becomes the end of the previous span; the tag itself is reported
+     *      via [MarkupSpan.trailingAudioTag] so the pipeline can place the
+     *      generated clip exactly at the byte where the tag opened.
+     *
+     * The prompt inside the XML tag is **not** part of any voice span.
+     */
     fun parseSpans(input: String): List<MarkupSpan> {
         val spans = mutableListOf<MarkupSpan>()
+        val audioTags = extractAudioTags(input)
+        val audioIter = audioTags.iterator()
+        var nextAudio: AudioTag? = if (audioIter.hasNext()) audioIter.next() else null
         var cursor = 0
         var state = MarkupState()
         var pauseBeforeMs = 0
 
-        fun emit(text: String) {
-            if (text.isBlank()) return
-            spans += MarkupSpan(text, state, pauseBeforeMs)
+        fun emit(text: String, trailing: AudioTag? = null) {
+            if (text.isBlank() && trailing == null) return
+            spans += MarkupSpan(text, state, pauseBeforeMs, trailing)
             pauseBeforeMs = 0
+            if (trailing != null) nextAudio = if (audioIter.hasNext()) audioIter.next() else null
             state = state.copy(vocalCues = emptyList())
         }
 
-        for (match in commandPattern.findAll(input)) {
-            emit(input.substring(cursor, match.range.first))
-            val command = parseCommand(match.groupValues[1].trim(), match.range.first)
-            if (command is MarkupCommand.Pause) {
-                pauseBeforeMs += command.durationMs.coerceAtLeast(0)
-            } else if (command != null) {
-                state = applyCommand(state, command)
+        while (cursor < input.length) {
+            val audioStart = nextAudio?.startOffset ?: input.length
+            // Find the next command boundary at or after `cursor`.
+            val sliceAfterCursor = input.substring(cursor)
+            val cmdMatchInSlice = commandPattern.find(sliceAfterCursor)
+            val cmdStart = if (cmdMatchInSlice != null) cursor + cmdMatchInSlice.range.first else input.length
+
+            when {
+                audioStart < cmdStart -> {
+                    if (audioStart > cursor) emit(input.substring(cursor, audioStart))
+                    val tag = nextAudio ?: break
+                    cursor = tag.endOffset
+                    emit("", trailing = tag)
+                }
+                cmdStart < audioStart -> {
+                    if (cmdMatchInSlice == null) break
+                    emit(input.substring(cursor, cmdStart))
+                    val command = parseCommand(cmdMatchInSlice.groupValues[1].trim(), cmdStart)
+                    if (command is MarkupCommand.Pause) {
+                        pauseBeforeMs += command.durationMs.coerceAtLeast(0)
+                    } else if (command != null) {
+                        state = applyCommand(state, command)
+                    }
+                    cursor = cmdStart + (cmdMatchInSlice.range.last - cmdMatchInSlice.range.first) + 1
+                }
+                else -> {
+                    emit(input.substring(cursor))
+                    cursor = input.length
+                }
             }
-            cursor = match.range.last + 1
         }
-        emit(input.substring(cursor))
         return spans
     }
 
@@ -252,9 +296,53 @@ class LTVMarkupParser(
         is MarkupCommand.Unknown -> state
     }
 
+    /**
+     * Находит все XML-теги `<music>` / `<sfx>` в исходнике. Возвращает список
+     * с абсолютной позицией в тексте (offset) и промптом. Позиция — это
+     * индекс открывающего `<` в исходной строке.
+     *
+     * Эти теги НЕ участвуют в parseSpans() — они не меняют голос. Но
+     * [com.t2v.core.text.TextProcessor.process] использует их, чтобы разорвать
+     * речевой поток в нужном месте: всё до тега становится концом чанка,
+     * всё после открывающего тега — началом нового чанка. Это позволяет
+     * синхронизировать музыку/звук с точной точкой голоса.
+     */
+    fun extractAudioTags(input: String): List<AudioTag> {
+        val tags = mutableListOf<AudioTag>()
+        for (match in musicTagPattern.findAll(input)) {
+            tags += AudioTag(
+                category = AudioTag.Category.Music,
+                prompt = match.groupValues[1].trim(),
+                startOffset = match.range.first,
+                endOffset = match.range.last + 1,
+            )
+        }
+        for (match in sfxTagPattern.findAll(input)) {
+            tags += AudioTag(
+                category = AudioTag.Category.Sound,
+                prompt = match.groupValues[1].trim(),
+                startOffset = match.range.first,
+                endOffset = match.range.last + 1,
+            )
+        }
+        return tags.sortedBy { it.startOffset }
+    }
+
     companion object {
         const val PLACEHOLDER = "\u0001"   // невидимый символ-заместитель команды
     }
+}
+
+/** Описание одного XML-тега музыки/звука внутри текста. */
+data class AudioTag(
+    val category: Category,
+    val prompt: String,
+    /** Индекс открывающего `<` в исходном тексте. */
+    val startOffset: Int,
+    /** Индекс сразу за закрывающим `>` (для удаления из текста). */
+    val endOffset: Int,
+) {
+    enum class Category { Music, Sound }
 }
 
 /** Все распознанные команды LTV-разметки. */
@@ -294,4 +382,6 @@ data class MarkupSpan(
     val text: String,
     val state: MarkupState,
     val pauseBeforeMs: Int = 0,
+    /** Audio tag that ends this voice span (if any). */
+    val trailingAudioTag: AudioTag? = null,
 )

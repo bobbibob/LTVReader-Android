@@ -59,4 +59,6 @@
     <string name="models_hf_search_action">Pesquisar</string>
     <string name="models_hf_open_repo">Abrir repositório</string>
     <string name="models_cancel_download">Cancelar download</string>
+    <string name="markup_music">Música</string>
+    <string name="markup_sfx">Efeito</string>
 </resources>
