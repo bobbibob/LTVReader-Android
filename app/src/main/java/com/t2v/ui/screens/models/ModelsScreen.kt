@@ -80,6 +80,8 @@ fun ModelsScreen(
         )
     }
     val context = LocalContext.current
+    val infoCategoryLocalLabel = stringResource(R.string.info_category_local)
+    val infoCategoryCloudLabel = stringResource(R.string.info_category_cloud)
     val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
             context.contentResolver.takePersistableUriPermission(
@@ -146,7 +148,7 @@ fun ModelsScreen(
                         runtime = "SherpaOnnx (bundled)",
                         repository = GenerationModelCatalog.repositoryFor("kokoro-82m"),
                         license = GenerationModelCatalog.licenseFor("kokoro-82m"),
-                        categoryLabel = stringResource(R.string.info_category_local),
+                        categoryLabel = infoCategoryLocalLabel,
                     )
                 },
             )
@@ -269,7 +271,7 @@ fun ModelsScreen(
                             runtime = "LiteRT (procedural, no model)",
                             repository = "",
                             license = "T2V procedural synth",
-                            categoryLabel = stringResource(R.string.info_category_local),
+                            categoryLabel = infoCategoryLocalLabel,
                         )
                     },
                 )
@@ -288,7 +290,7 @@ fun ModelsScreen(
                             runtime = "ElevenLabs Sound Effects API",
                             repository = "https://api.elevenlabs.io/v1/sound-generation",
                             license = "ElevenLabs Terms",
-                            categoryLabel = stringResource(R.string.info_category_cloud),
+                            categoryLabel = infoCategoryCloudLabel,
                         )
                     },
                 )
@@ -307,7 +309,7 @@ fun ModelsScreen(
                             runtime = "Bundled assets",
                             repository = "",
                             license = "T2V placeholder",
-                            categoryLabel = stringResource(R.string.info_category_local),
+                            categoryLabel = infoCategoryLocalLabel,
                         )
                     },
                 )
@@ -329,7 +331,7 @@ fun ModelsScreen(
                             runtime = "LiteRT (procedural, no model)",
                             repository = "",
                             license = "T2V procedural synth",
-                            categoryLabel = stringResource(R.string.info_category_local),
+                            categoryLabel = infoCategoryLocalLabel,
                         )
                     },
                 )
@@ -348,7 +350,7 @@ fun ModelsScreen(
                             runtime = "ElevenLabs Sound Effects API",
                             repository = "https://api.elevenlabs.io/v1/sound-generation",
                             license = "ElevenLabs Terms",
-                            categoryLabel = stringResource(R.string.info_category_cloud),
+                            categoryLabel = infoCategoryCloudLabel,
                         )
                     },
                 )
@@ -367,7 +369,7 @@ fun ModelsScreen(
                             runtime = "Bundled assets",
                             repository = "",
                             license = "T2V placeholder",
-                            categoryLabel = stringResource(R.string.info_category_local),
+                            categoryLabel = infoCategoryLocalLabel,
                         )
                     },
                 )
