@@ -13,7 +13,8 @@ class GenerationModelCatalogTest {
         assertEquals(entries.size, entries.map { it.id }.distinct().size)
         assertTrue(
             entries.filter { it.canInstall }.all {
-                it.approximateDownloadBytes != null && it.approximateDownloadBytes > 0
+                val size = it.approximateDownloadBytes
+                size != null && size > 0
             },
         )
     }
