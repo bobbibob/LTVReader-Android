@@ -16,7 +16,7 @@ import java.io.File
  * are deliberately simple: the goal is to keep the music/sound tracks of the
  * multitrack editor exercisable on any device without downloading a model.
  */
-internal abstract class BundledAssetGenerator(
+abstract class BundledAssetGenerator(
     protected val appContext: Context,
     override val category: GeneratorCategory,
 ) : Generator {
