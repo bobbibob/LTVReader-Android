@@ -19,18 +19,19 @@ import java.security.MessageDigest
 class LiteRtModelInstaller(
     private val runtime: LiteRtModelRuntime,
 ) {
+    /** Mirror of [LiteRtModelRuntime.rootDirectory] so tests can swap it via the runtime. */
     private val effectiveRoot: File get() = runtime.rootDirectory
 
-    data class Plan(
+    inner class Plan(
         val modelId: String,
         val catalog: GenerationModelCatalog.Entry,
         val manifest: LiteRtModelRuntime.BundleManifest,
         val destinationRoot: File,
     ) {
         val isInstalled: Boolean
-            get() = runtime.isInstalled(manifest)
+            get() = this@LiteRtModelInstaller.runtime.isInstalled(manifest)
 
-        fun verify(): Map<String, String> = runtime.verifyChecksums(manifest)
+        fun verify(): Map<String, String> = this@LiteRtModelInstaller.runtime.verifyChecksums(manifest)
     }
 
     fun plan(
