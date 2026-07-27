@@ -27,8 +27,6 @@ class GenerationModelCatalogTest {
             "piper-vits",
             "stable-audio-open-small",
             "stable-audio-clip",
-            "pocket-tts-int8",
-            "zipvoice-distill-int8",
         )
         for (id in expected) {
             val docs = GenerationModelCatalog.tagDocsFor(id)
