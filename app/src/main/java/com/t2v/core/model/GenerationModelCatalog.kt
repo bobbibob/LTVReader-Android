@@ -34,7 +34,6 @@ object GenerationModelCatalog {
         val runtime: Runtime,
         val runtimeBundled: Boolean,
     )
-
     /** Per-model user-facing description of which LTV tags work and how to invoke them. */
     data class TagDocs(
         val tagline: String,
@@ -57,22 +56,11 @@ object GenerationModelCatalog {
         val repository: String,
         val revision: String?,
         val notes: String,
-        val tags: TagDocs = TagDocs("", emptyList()),
+        val tags: TagDocs? = null,
     ) {
         val canInstall: Boolean
             get() = support == Support.Verified
     }
-
-
-    /** Per-model user-facing description of which LTV tags work and how to invoke them. */
-    data class TagDocs(
-        val tagline: String,
-        val supported: List<String>,
-        val partial: List<String> = emptyList(),
-        val ignored: List<String> = emptyList(),
-        val examples: List<String> = emptyList(),
-        val promptHelp: String? = null,
-    )
 
     private val KOKORO_TAGS = TagDocs(
         tagline = "English TTS that runs on the phone. Supports no native emotion tags; the editor maps expressive markup to speed, pitch and volume changes only.",

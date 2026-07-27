@@ -471,6 +471,7 @@ data class ModelsState(
     val liteRtMusicReady: Boolean = false,
     val liteRtSoundReady: Boolean = false,
     val elevenLabsKeyConfigured: Boolean = false,
+    val selectedVoiceModelId: String = "",
     val selectedMusicModelId: String = "",
     val selectedSoundModelId: String = "",
     val modelsTreeUri: String = "",
@@ -511,18 +512,14 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
                         selectedSoundModelId = value.selectedSoundModelId,
                         liteRtMusicReady = com.t2v.generators.GeneratorRegistry(
                             context,
-                            com.t2v.tts.registry.EngineRegistry.EngineSettings(value.engines),
-                        ).let { reg ->
-                            reg.forCategory(com.t2v.generators.GeneratorCategory.Music)
-                                .any { it.id == "litert.stable-audio-open-small.music" }
-                        },
+                        ) { com.t2v.tts.registry.EngineRegistry.EngineSettings(value.engines) }
+                            .forCategory(com.t2v.generators.GeneratorCategory.Music)
+                            .any { it.id == "litert.stable-audio-open-small.music" },
                         liteRtSoundReady = com.t2v.generators.GeneratorRegistry(
                             context,
-                            com.t2v.tts.registry.EngineRegistry.EngineSettings(value.engines),
-                        ).let { reg ->
-                            reg.forCategory(com.t2v.generators.GeneratorCategory.Sound)
-                                .any { it.id == "litert.stable-audio-clip.sound" }
-                        },
+                        ) { com.t2v.tts.registry.EngineRegistry.EngineSettings(value.engines) }
+                            .forCategory(com.t2v.generators.GeneratorCategory.Sound)
+                            .any { it.id == "litert.stable-audio-clip.sound" },
                         elevenLabsKeyConfigured = value.engines["elevenlabs"]?.get("apiKey").orEmpty().isNotBlank(),
                         modelsTreeUri = value.modelsTreeUri,
                         installed = repository().installed(),
