@@ -108,7 +108,7 @@ class LTVMarkupParserTest {
             chunkSize = 200,
             minChunkSize = 1,
             random = kotlin.random.Random(7),
-        ).process("""{{emotion happy}}{{delivery soft}}{{laugh}}Привет!""").second
+        ).process("""{{emotion happy}}{{delivery soft}}{{laugh}}Привет!""").chunks
 
         assertEquals(1, chunks.size)
         assertEquals("Привет!", chunks.single().text)
