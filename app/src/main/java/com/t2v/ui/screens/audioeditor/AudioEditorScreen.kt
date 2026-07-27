@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -80,7 +81,6 @@ fun AudioEditorScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             // ── Timeline ──────────────────────────────────────────────
-            val scrollState = rememberScrollState()
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -90,7 +90,8 @@ fun AudioEditorScreen(
                 Text("Zoom", style = MaterialTheme.typography.labelSmall)
                 OutlinedButton(onClick = { vm.setZoom(state.pixelsPerSecond * 1.4f) }) { Text("+") }
             }
-            androidx.compose.foundation.horizontalScroll(scrollState, state.pixelsPerSecond > 0f) {
+            val scrollState = rememberScrollState()
+            Box(modifier = Modifier.fillMaxWidth().horizontalScroll(scrollState)) {
                 TimelineView(
                     voiceClips = state.project.voiceClips,
                     musicClips = state.project.musicClips,

@@ -61,7 +61,7 @@ fun TimelineView(
     val totalDurationMs = listOf(voiceClips, musicClips, soundClips).flatten()
         .maxOfOrNull { it.timelineStartMs + clipDurationMs(it) } ?: 0L
     val totalDurationSec = (totalDurationMs / 1000.0).coerceAtLeast(5.0)
-    val timelineWidthPx = with(density) { (totalDurationSec * pixelsPerSecond).toDp() }
+    val timelineWidthPx = with(density) { (totalDurationSec * pixelsPerSecond).toFloat().toDp() }
     val rulerHeight = 28.dp
     val laneHeight = 56.dp
     val laneGap = 4.dp
