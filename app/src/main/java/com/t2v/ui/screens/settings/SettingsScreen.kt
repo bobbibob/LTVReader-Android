@@ -35,14 +35,19 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.t2v.R
 import com.t2v.app.AppContainer
+import com.t2v.data.AudiobookEntity
+import com.t2v.data.ProjectEntity
 import com.t2v.data.Settings
 import com.t2v.data.SettingsRepository
+import com.t2v.tts.VoiceConfig
 import com.t2v.ui.components.LTVScaffold
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 
 @Composable
 fun SettingsScreen(
@@ -226,8 +231,8 @@ class SettingsViewModel(private val context: android.content.Context) : ViewMode
         _state.update { it.copy(debugRunning = true, debugMessage = "Starting...") }
         try {
             val db = AppContainer.database(context)
-            val project = db.projects().observeAll().first().firstOrNull()
-                ?: throw IllegalStateException("No projects in DB - create one first")
+            val project: ProjectEntity = db.projects().observeAll().first().firstOrNull()
+                ?: error("No projects in DB - create one first")
             val newText = project.rawText.trimEnd() +
                 " <music>ambient pad</music> <sfx>door creak</sfx>"
             db.projects().update(project.copy(rawText = newText, updatedAt = System.currentTimeMillis()))
@@ -254,7 +259,7 @@ class SettingsViewModel(private val context: android.content.Context) : ViewMode
             val orderIndex = db.audiobooks().nextOrderIndex(project.id)
             val startedAt = System.currentTimeMillis()
             val audiobookId = db.audiobooks().upsert(
-                com.t2v.data.AudiobookEntity(
+                AudiobookEntity(
                     projectId = project.id,
                     status = "running",
                     startedAt = startedAt,
@@ -274,7 +279,7 @@ class SettingsViewModel(private val context: android.content.Context) : ViewMode
             val finalStatus = if (result.isSuccess) "completed" else "failed"
             val segments = db.segments().listForAudiobook(audiobookId)
             db.audiobooks().update(
-                com.t2v.data.AudiobookEntity(
+                AudiobookEntity(
                     id = audiobookId,
                     projectId = project.id,
                     status = finalStatus,
