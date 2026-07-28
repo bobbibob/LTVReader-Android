@@ -109,6 +109,26 @@ fun SettingsScreen(
                 label = { Text("Azure region (e.g. eastus)") },
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            HorizontalDivider()
+
+            SectionTitle(stringResource(R.string.settings_debug))
+            Text(
+                stringResource(R.string.settings_debug_selftest_help),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            OutlinedButton(
+                onClick = { vm.debugRunMarkupSelfTest() },
+                enabled = !state.debugRunning,
+            ) {
+                Text(stringResource(R.string.settings_debug_selftest))
+            }
+            if (state.debugMessage.isNotBlank()) {
+                Text(
+                    state.debugMessage,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
     }
 }
@@ -157,7 +177,10 @@ data class SettingsUiState(val settings: Settings = Settings(
     selectedModelId = "", selectedVoiceModelId = "", selectedMusicModelId = "",
     selectedSoundModelId = "", selectedMusicGenerator = "", selectedSoundGenerator = "", ttsMode = "",
     modelsTreeUri = "", onboardingCompleted = false, engines = emptyMap(),
-))
+),
+    val debugMessage: String = "",
+    val debugRunning: Boolean = false,
+)
 
 class SettingsViewModel(private val context: android.content.Context) : ViewModel() {
     private val repo = AppContainer.settings(context)
@@ -182,6 +205,100 @@ class SettingsViewModel(private val context: android.content.Context) : ViewMode
                 else it[SettingsRepository.Keys.AZURE_KEY] = v
                 "huggingface" -> it[SettingsRepository.Keys.HUGGING_FACE_TOKEN] = v
             }
+        }
+    }
+
+    /**
+     * Smoke-test the `<music>`/`<sfx>` markup pipeline end-to-end.
+     *
+     * Looks for the most recent project in the DB, appends two tags to its
+     * `rawText`, creates a fresh `AudiobookEntity` and calls
+     * `GenerationPipeline.generate()` on the device. When generation finishes,
+     * `audio_tracks` / `audio_clips` should contain one MUSIC and one SOUND
+     * clip, with `timelineStartMs` glued to the end of the preceding voice
+     * segment.
+     *
+     * Errors are surfaced through `_state.debugMessage` instead of crashes so
+     * the user can see them in the UI.
+     */
+    fun debugRunMarkupSelfTest() = viewModelScope.launch {
+        if (_state.value.debugRunning) return@launch
+        _state.update { it.copy(debugRunning = true, debugMessage = "Starting...") }
+        try {
+            val db = AppContainer.database(context)
+            val project = db.projects().observeAll().first().firstOrNull()
+                ?: throw IllegalStateException("No projects in DB - create one first")
+            val newText = project.rawText.trimEnd() +
+                " <music>ambient pad</music> <sfx>door creak</sfx>"
+            db.projects().update(project.copy(rawText = newText, updatedAt = System.currentTimeMillis()))
+
+            val settings = repo.flow.first()
+            val engineId = settings.ttsEngine.ifBlank { project.ttsEngine }
+                .ifBlank { AppContainer.registry(context).allEngineInfos().firstOrNull()?.id ?: "" }
+            if (engineId.isBlank()) {
+                throw IllegalStateException("No TTS engine available - download Kokoro or add an API key")
+            }
+            val voices = if (project.voiceConfigJson.isNotBlank()) {
+                runCatching {
+                    kotlinx.serialization.json.Json.decodeFromString(
+                        VoiceConfig.serializer(), project.voiceConfigJson,
+                    )
+                }.getOrDefault(VoiceConfig.EMPTY)
+            } else VoiceConfig.EMPTY
+            val voice = voices.copy(
+                speed = settings.speed,
+                voice = settings.voiceId.ifEmpty { voices.voice },
+                lang = settings.language.ifEmpty { voices.lang },
+            )
+
+            val orderIndex = db.audiobooks().nextOrderIndex(project.id)
+            val startedAt = System.currentTimeMillis()
+            val audiobookId = db.audiobooks().upsert(
+                com.t2v.data.AudiobookEntity(
+                    projectId = project.id,
+                    status = "running",
+                    startedAt = startedAt,
+                    title = "Self-test <music>/<sfx>",
+                    orderIndex = orderIndex,
+                ),
+            )
+            val outputDir = java.io.File(context.filesDir, "audiobooks/$audiobookId")
+            val result = AppContainer.pipeline(context).generate(
+                projectId = project.id,
+                audiobookId = audiobookId,
+                rawText = newText,
+                voice = voice,
+                engineId = engineId,
+                outputDir = outputDir,
+            )
+            val finalStatus = if (result.isSuccess) "completed" else "failed"
+            val segments = db.segments().listForAudiobook(audiobookId)
+            db.audiobooks().update(
+                com.t2v.data.AudiobookEntity(
+                    id = audiobookId,
+                    projectId = project.id,
+                    status = finalStatus,
+                    startedAt = startedAt,
+                    completedAt = System.currentTimeMillis(),
+                    outputPath = result.getOrNull()?.absolutePath,
+                    durationMs = segments.sumOf { it.durationMs },
+                    segmentsTotal = segments.size,
+                    segmentsDone = segments.count { it.status == "completed" },
+                    errorMessage = result.exceptionOrNull()?.message,
+                    title = "Self-test <music>/<sfx>",
+                    orderIndex = orderIndex,
+                ),
+            )
+            val clipsCount = db.audioTimeline().clips("$audiobookId-music").size +
+                db.audioTimeline().clips("$audiobookId-sound").size
+            val msg = buildString {
+                append("audiobookId=$audiobookId status=$finalStatus segments=${segments.size}")
+                append(" music+sound clips=$clipsCount")
+                if (result.isFailure) append(" err=${result.exceptionOrNull()?.message}")
+            }
+            _state.update { it.copy(debugMessage = msg, debugRunning = false) }
+        } catch (t: Throwable) {
+            _state.update { it.copy(debugMessage = "FAILED: ${t.message}", debugRunning = false) }
         }
     }
 }

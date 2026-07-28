@@ -67,4 +67,7 @@
     <string name="voices_my_voice_change">تغيير</string>
     <string name="voices_local_dialog_title">صوت محلي</string>
     <string name="voices_local_dialog_close">إغلاق</string>
+    <string name="settings_debug">Debug</string>
+    <string name="settings_debug_selftest_help">Appends &lt;music&gt; and &lt;sfx&gt; tags to the most recent project and runs generation. Verifies audio_tracks and audio_clips in the DB.</string>
+    <string name="settings_debug_selftest">🧪 Run &lt;music&gt;/&lt;sfx&gt; self-test</string>
 </resources>
