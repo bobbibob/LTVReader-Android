@@ -2,9 +2,7 @@
 
 ## Что мы делаем
 
-- API-ключи хранятся в `EncryptedSharedPreferences` (Tink).
-  См. `data/SettingsRepository.kt` — будет переведено на encryption
-  в v0.2.0.
+- API-ключи хранятся в `DataStore` (потенциально — в `EncryptedSharedPreferences` через Tink).
 - Трафик к публичным API — только HTTPS.
 - HTTPS используется для встроенных облачных API и Hugging Face.
 - HTTP может использоваться только явно настроенным Custom HTTP API.
@@ -13,9 +11,23 @@
 
 ### Защита API-ключей
 
-API-ключи хранятся в `SharedPreferences`. **Не включайте их в git**.
+API-ключи хранятся в DataStore. **Не включайте их в git**.
 
 `.gitignore` уже исключает `local.properties` и keystore.
+
+### Hugging Face token
+
+Опциональный токен хранится в `SettingsRepository.engines["huggingface"]["token"]`.
+Используется для скачивания приватных моделей и для снятия rate limit.
+**Не включайте его в git.**
+
+## Локальные модели
+
+- Скачиваются с Hugging Face напрямую (или через прокси с токеном).
+- Сохраняются в `files/models/<sha256-prefix>/` (Kokoro) или
+  `files/models/litert/<modelId>/` (LiteRT).
+- Это app-private storage; другие приложения не имеют доступа.
+- При удалении приложения — модели стираются.
 
 ## Reporting vulnerabilities
 

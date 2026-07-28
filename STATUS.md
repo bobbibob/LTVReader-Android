@@ -1,81 +1,107 @@
 # Текущий статус
 
-**Сборка:** ✅ APK 40 МБ собирается (run #29977084836)
-**Тесты:** ❌ 5 из ~30 unit-тестов падают
+**Дата обновления:** 2026-07-28
+**Ветка:** `codex/models-download` (последний зелёный CI 30338815715, head `984e208a`)
+**Стабильная база:** `codex/audio-production` (последний зелёный CI 30328757706, head `8fc42a0`)
+**APK:** ~44 МБ, скачивается через `gh run download` + curl workaround
+**Тесты:** зелёные (`30338815715` — `test` + `build` оба success)
+**Устройство для проверки:** `R5CN30LJS4W` (Samsung, ADB, разблокировано)
 
 ## Что лежит на полке
 
 ```
-✅ Готово:
-- Структура Android-проекта (Gradle, AGP 8.5)
-- Core: text, markup, audio, subtitle, normalization
-- TTS: Kokoro (on-device), OpenAI, ElevenLabs, Gemini, Azure, Custom, Remote
-- Data: Room, DataStore
-- UI: 7 Compose-экранов, 11 локалей
-- Документация: 24 файла
-- Python server-host
-- AGENTS.md, GitHub Actions CI
-- APK собирается (~40 МБ)
+✅ Сделано (verified end-to-end на устройстве):
+- Локальный Kokoro 82M через sherpa-onnx (audiobook #2 = completed, 154 сек)
+- <music>/<sfx> XML-теги в тексте → AudioClipEntity в Room (audiobook #2)
+- 3-track editor (VOICE / MUSIC / SOUND) с FFmpeg + LAME для MP3
+- 15 языков Piper/VITS (Русский, English, German, French, Spanish,
+  Italian, Chinese, Japanese, Hindi, Bengali, Arabic, Korean)
+- 11 локализаций strings.xml
+- Self-test кнопка в Settings (🧪 Run <music>/<sfx> self-test)
+- DownloadableModelCard — единая UI-карточка скачивания
+- GenerationModelCatalog — единый типизированный каталог
+- TagDocs Info dialog на каждой model/generator/engine карточке
+- Тесты: writeSilence, pause ms/s, clean, currencies, Num2Words — все зелёные
+- Документация: 24 файла в docs/
 
-❌ Не готово:
-- 5 unit-тестов падают
-- FFmpeg — только плейсхолдер, реального бинарника нет
-- Kokoro — только каркас, модели не подключены
-- G2P для Kokoro — ASCII-fallback
-- Faster Whisper — отключён
-- Реальное тестирование на устройстве
-- Публикация — отложена
+❌ Не готово / отложено (без подписки):
+- Реальная AI-генерация музыки (MusicGen через ONNX) — следующий в очереди
+- sherpa-onnx TTS с клонированием голоса
+- Авто-открытие AudioEditor после генерации с тегами
+- Фикс Kokoro зависания на >3к символов
+- Фикс AudioTagInserter.positionFor (timelineStartMs=0)
+- Починка ElevenLabs clone UI
+- Визуальный waveform-timeline (drag/trim/split)
+- Voice gallery sync через GitHub
+
+🚫 Не будет (по решению владельца):
+- Подписка / монетизация (отложена до полной доделки приложения)
+- Google Play Billing, Firebase Auth, AAB-релиз
+- Модели в APK / Asset Packs (пользователь скачивает сам)
+- Серверные TTS-движки / engine-host
+- Faster Whisper на устройстве
+- Встроенный Python / MCP / HTTP-сервер
+- iOS-версия
 ```
 
 ## Что делаем прямо сейчас
 
-Фаза 1: **починить 5 упавших тестов**. Это самая приоритетная задача,
-потому что без зелёных тестов мы не знаем, не сломали ли мы что-то ещё.
+**Цель:** доделать приложение до v0.3.0 (полная функциональность) **до** того,
+как принимать решения по подписке/публикации.
 
-| # | Тест | Файл | Что не так |
+**Текущая сессия (2026-07-28):**
+
+| # | Задача | Статус | Комментарий |
 |---|---|---|---|
-| 1 | `clean removes control chars` | `core/text/TextProcessorTest.kt` | `Hello\u0000World` не схлопывается |
-| 2 | `pause supports ms s` | `core/markup/LTVMarkupParserTest.kt` | `0.7s` парсится как `0` (regex ловит `ms` раньше) |
-| 3 | `writeSilence produces correct duration` | `core/audio/AudioMixerTest.kt` | Расчёт `22050 * 0.5` = 11025, а ожидаем другое |
-| 4 | `english/spanish basic numbers` | `core/normalization/Num2WordsTest.kt` | Слова не совпадают с ожиданием |
-| 5 | `currencies are expanded` | `core/normalization/TextNormalizerTest.kt` | `$5` не превращается в "dollars" |
+| 3 | Вернуть скачивание моделей | ✅ Сделано | `DownloadableModelCard` в `codex/models-download` |
+| 1 | MusicGen через ONNX | 📋 Следующий | Кандидаты: `wide-video/musicgen-small-v1.0.0` (int8 ~422 МБ) |
+| 2 | sherpa-onnx клонирование | 📋 Очередь | sherpa-onnx runtime подключён, нужна модель + UI |
+| — | Авто-открытие AudioEditor | 📋 Очередь | `GenerationPipeline.Progress.audioTagClips` уже считается |
+| — | Фикс Kokoro зависания | 📋 Очередь | Возможно таймаут на `engine.synthesize()` |
+| — | Фикс `AudioTagInserter.positionFor` | 📋 Очередь | Перенести `insert()` после цикла voice-сегментов |
 
-После починки — `tools/check_completeness.sh` + `./gradlew :app:testDebugUnitTest`
-должны быть полностью зелёные. Тогда закоммитим и поедем дальше.
+## Следующие шаги (после MusicGen)
 
-## Следующие шаги (после тестов)
+### Фаза — доделка приложения
+- Visual waveform timeline
+- ElevenLabs clone fix
+- Voice gallery sync
+- Tablet-адаптация
+- Material You dynamic colors
 
-### Фаза 2 — реальный FFmpeg
-- Скачать FFmpeg для Android (через `niccokunzmann/ffmpeg-kit` или
-  собрать из исходников под NDK).
-- Положить в `app/src/main/assets/ffmpeg/<abi>/ffmpeg`.
-- Проверить, что `Runtime.exec` его запускает на устройстве.
-- Прогнать E2E: текст → TTS → mix → MP3.
+### Потом — подписка и публикация
+- Google Play Billing Library v7+ + server-side verification
+- Firebase Auth / Google Sign-In
+- AAB build + signing + R8
+- Privacy Policy URL (GitHub Pages)
+- Data Safety form в Play Console
+- Paywall screen
 
-### Фаза 3 — Kokoro на устройстве
-- Скачать `kokoro-v0_19.onnx` (~150 МБ) + `voices.bin` с HuggingFace.
-- Положить в `app/src/main/assets/voices/kokoro/`.
-- Проверить, что onnxruntime-android грузит модель.
-- Проверить, что inference даёт валидный PCM.
-- (Опционально) G2P через eSpeak-ng.
+## Полезные однострочники
 
-### Фаза 4 — полировка
-- UI-тесты (Compose UI Test).
-- Расширить покрытие тестов до > 60% в `core/`.
-- Тесты с mock-сервером для engine-host.
-- Документация по типичным проблемам (troubleshooting FAQ).
+```bash
+# Снимок БД
+adb -s R5CN30LJS4W exec-out run-as com.t2v.debug sh -c \
+  "cat databases/t2v.db databases/t2v.db-wal databases/t2v.db-shm" > /tmp/t2v.db
+sqlite3 /tmp/t2v.db "PRAGMA wal_checkpoint(FULL);"
 
-### Потом (если/когда захотим)
-- Timeline-микшер (мульти-трек, SFX-события).
-- Voice gallery sync.
-- Material You.
-- Background WorkManager.
-- Tablet-адаптация.
+# Скачать APK последнего зелёного CI (workaround для прерванного download)
+gh run list --workflow android.yml --branch codex/models-download --limit 1 \
+  --json databaseId,conclusion | jq -r '.[] | select(.conclusion=="success") | .databaseId'
+# (затем: gh api ... artifacts, curl -L -C - -o ...)
 
-## Чего точно не будет
+# Проверить Kokoro файлы
+adb -s R5CN30LJS4W shell 'run-as com.t2v.debug ls files/models/'
 
+# Установить APK
+adb -s R5CN30LJS4W install -r /path/to/app-debug.apk
+```
+
+## Чего точно не будет (на ближайшее время)
+
+- ❌ Подписка / монетизация
 - ❌ Локальные Chatterbox / Qwen3 / OmniVoice (только через remote host)
 - ❌ Встроенный Python / MCP-сервер
 - ❌ Faster Whisper на устройстве
 - ❌ Публикация в Google Play (сейчас — APK через GitHub)
-
+- ❌ Модели в APK (пользователь скачивает сам, на выбор)

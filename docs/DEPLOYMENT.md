@@ -1,5 +1,9 @@
 # Деплоймент
 
+> ⚠️ **Публикация отложена.** Владелец сказал: «сначала доделаем полностью
+> приложение, потом решим с подпиской» (2026-07-28). Эта страница —
+> план на будущее (v0.4.0+), не актуальная задача.
+
 ## Google Play
 
 ### Подготовка
@@ -34,47 +38,47 @@
 3. Заполнить release notes, version code, target API.
 4. Submit for review.
 
+### Privacy Policy
+
+- Нужен публичный URL с privacy policy (например, GitHub Pages).
+- Описывает какие данные собираются, куда отправляются, контакты.
+- Без неё Google Play не примет приложение.
+
+### Data Safety Form
+
+Google Play Console требует заполнить:
+- Какие personal data собираются (audio recordings, voice clones, ...)
+- Для чего (app functionality, personalization)
+- Передаются ли third parties (no)
+- Можно ли удалить данные (да, через Settings)
+
 ## F-Droid
 
 F-Droid принимает обычные APK, подписанные F-Droid-ключом. См.
 [f-droid.org](https://f-droid.org) для требований.
 
-## Прямой APK
+## Текущий статус (2026-07-28)
+
+| Что | Статус |
+|---|---|
+| APK debug build | ✅ Собирается через CI |
+| AAB release build | ❌ Не настроен (нужен signing) |
+| Keystore | ❌ Не создан |
+| Privacy Policy | ❌ Не написан |
+| Data Safety Form | ❌ Не заполнен |
+| Google Play Console | ❌ Не создан |
+| Подписка (Play Billing) | ❌ Не подключена (отложено до v0.4.0+) |
+
+## Прямое распространение (сейчас)
+
+Вместо публикации в магазины — APK через GitHub Actions:
 
 ```bash
-./gradlew :app:assembleRelease
-# → app/build/outputs/apk/release/app-release.apk
+# Скачать APK последнего зелёного CI
+gh run list --workflow android.yml --branch codex/models-download --limit 1 \
+  --json databaseId,conclusion | jq -r '.[] | select(.conclusion=="success") | .databaseId'
+# (затем: gh api ... artifacts, curl -L -C - -o ...)
 ```
 
-## CI/CD (GitHub Actions пример)
-
-`.github/workflows/android.yml`:
-```yaml
-name: Android CI
-on: [push, pull_request]
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-      - uses: android-actions/setup-android@v3
-      - run: ./gradlew :app:assembleDebug :app:testDebugUnitTest
-      - uses: actions/upload-artifact@v4
-        with:
-          name: apk
-          path: app/build/outputs/apk/debug/app-debug.apk
-```
-
-## Размер APK
-
-- **Debug**: ~70 MB (с Kokoro-моделью внутри)
-- **Release без Kokoro**: ~10 MB
-- **Release с Kokoro**: ~160 MB (модель скачивается отдельно)
-
-Рекомендация: Kokoro-модель **не включать** в APK, а скачивать при
-первом запуске (это делается в `KokoroTtsEngine.preload()`).
-
+Пользователь сам устанавливает через `adb install -r` или
+sideload на устройстве.

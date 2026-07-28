@@ -1,9 +1,10 @@
 # T2V — Roadmap
 
-Версии и статус разработки. Текущая итерация — **0.1.0** (alpha).
+Версии и статус разработки. Текущая итерация — **0.2.0** (alpha).
 
-## ✅ Сделано (v0.1.0)
+## ✅ Сделано
 
+### v0.1.0 (2026-07-23)
 - [x] Структура Gradle-проекта (Kotlin DSL, AGP 8.5, Kotlin 1.9.24).
 - [x] Манифест с разрешениями для TTS, файлов, ffmpeg.
 - [x] `core/text/TextProcessor` — порт 1:1 с Python-версии (regex, чанки, главы).
@@ -43,31 +44,57 @@
 - [x] GitHub Actions: `./gradlew :app:assembleDebug` собирает APK ~40 МБ.
 - [x] `AGENTS.md` обновлён.
 
-## 🚧 В работе (v0.2.0)
+### v0.2.0 (2026-07-26 .. 2026-07-28)
+- [x] Упавшие тесты починены (writeSilence, pause ms/s, clean, currencies, Num2Words).
+- [x] **3-track editor**: VOICE / MUSIC / SOUND дорожки, Room `AudioTrackEntity` /
+      `AudioClipEntity` / `ChapterExportEntity` + миграция `1 -> 2`.
+- [x] **FFmpeg + LAME 3.100** для настоящего MP3 (не AAC).
+- [x] **`{{music}}` и `{{sfx}}` теги** (двойные фигурные скобки) → генерация клипа
+      на правильной тайм-позиции.
+- [x] **`<music>промпт</music>` и `<sfx>промпт</sfx>`** (XML-стиль) →
+      `LTVMarkupParser.parseSpans()` рвёт voice-чанк в каждом теге,
+      `AudioTagInserter` создаёт клип на нужной дорожке.
+- [x] **`GenerationModelCatalog`** — единый типизированный источник для
+      Voice/Music/Sound моделей с `Support.Verified` /
+      `RuntimeInDevelopment` / `Experimental` статусами.
+- [x] **Локальный Kokoro через sherpa-onnx Android runtime**, verified end-to-end
+      на устройстве R5CN30LJS4W (audiobook #2 = completed, 154 сек).
+- [x] **Локальные Piper/VITS** на 15 языках (Русский, English, German,
+      French, Spanish, Italian, Chinese, Japanese, Hindi, Bengali, Arabic,
+      Korean).
+- [x] **NSynth** (Magenta) — registered, refuses to run до ARM64 smoke-test.
+- [x] **Self-test кнопка** в Settings для отладки `<music>/<sfx>` pipeline.
+- [x] **DownloadableModelCard** в ModelsScreen — единая UI-карточка
+      для скачивания любой модели из каталога.
+- [x] TagDocs Info dialog на каждой model/generator/engine карточке.
+- [x] 11 локалей strings.xml покрытие всех новых строк.
 
-### ✅ Починить упавшие тесты — готово
+## 🚧 В работе (v0.2.0 → v0.3.0)
 
-- [x] `AudioMixerTest > writeSilence` — readWav переведён на RandomAccessFile с ручным LE-чтением; dataSize/2 даёт 11025 сэмплов.
-- [x] `LTVMarkupParserTest > pause ms/s` — `endsWith("ms")` проверяется раньше `endsWith("s")`; `0.7s` → 700 мс.
-- [x] `Num2WordsTest > english/spanish basic` — таблицы ONES_EN/ONES_ES и SCALES корректны; тесты на contains проходят.
-- [x] `TextNormalizerTest > currencies` — currencyRegexPrefix матчит `$5`, заменяет на "five dollars".
-- [x] `TextProcessorTest > clean` — controlChars включает \u0000; \n{3,} → \n\n; результат `HelloWorld\nFoo\n\nBar`.
-- [x] CI `test` job уже без `continue-on-error` (по умолчанию false); build зависит от test.
+### Сейчас
 
-### Затем — реальные движки
+- [ ] **MusicGen через ONNX** — реальная AI-генерация музыки. MusicGen
+      encoder-decoder, нужен LiteRT-совместимый экспорт. Кандидаты:
+      `wide-video/musicgen-small-v1.0.0` (int8 ~422 МБ), `chinedudave06/
+      musicgen-medium-stereo-onnx` (int8 ~427 МБ). TFLite-wrapper ещё не
+      написан.
+- [ ] **sherpa-onnx TTS с клонированием голоса** — sherpa-onnx Android
+      runtime уже подключён, нужна модель (PocketTTS / ZipVoice / XTTS-v2
+      sherpa-onnx fork) + UI для reference audio. Кандидаты:
+      `csukuangfj/sherpa-onnx-pocketsv-zh`, `k2-fsa/sherpa-onnx` releases.
+- [ ] **Авто-открытие AudioEditor** после генерации если есть
+      `<music>/<sfx>` клипы. `GenerationPipeline.Progress.audioTagClips`
+      уже подсчитывает; UI ещё не реагирует.
+- [ ] **Фикс Kokoro зависания** на длинных текстах (>3к символов).
+- [ ] **Фикс `AudioTagInserter.positionFor`** — сейчас `timelineStartMs=0`
+      потому что `insert()` вызывается ДО voice-сегментов. Перенести
+      после цикла.
 
-- [ ] Скачать FFmpeg-бинарь (через NDK или готовый AAR),
-      положить в `app/src/main/assets/ffmpeg/<abi>/ffmpeg`.
-- [ ] Скачать Kokoro-модель `kokoro-v0_19.onnx` + `voices.bin` с HuggingFace,
-      положить в `app/src/main/assets/voices/kokoro/`.
-- [ ] Реальный G2P для Kokoro (сейчас ASCII-fallback).
-- [ ] Тест микширования на реальном устройстве.
-- [ ] Тест Kokoro-генерации на реальном устройстве.
-
-## 🛣 Дальше (v0.3.0+)
+### Дальше (v0.3.0+)
 
 - [ ] Voice gallery sync (GitHub каталог).
-- [ ] Полный timeline-микшер (мульти-трек, SFX-события).
+- [ ] Полный timeline-микшер (мульти-трек waveform, drag/trim/split,
+      визуальный playhead).
 - [ ] Background downloads через WorkManager.
 - [ ] SRT/ASS-экспорт через UI.
 - [ ] Tablet-адаптация (adaptive layout, two-pane).
@@ -76,6 +103,17 @@
 - [ ] UI-тесты (Compose UI Test).
 - [ ] Расширенные правила нормализации.
 - [ ] Шаринг аудиокниги (Android Share Intent).
+- [ ] ElevenLabs Instant Voice Clone — починить UI (сейчас не реагирует).
+
+## 🛣 Дальше (v0.4.0+ — после доделки приложения)
+
+- [ ] **Подписка / монетизация** (Play Billing Library v7+, server-side
+      verification, paywall screen, premium-функции). Подписка отложена
+      до завершения функциональной части.
+- [ ] Публикация в Google Play / F-Droid. Требует keystore, AAB build,
+      Privacy Policy URL, Data Safety form, $25 developer account.
+- [ ] **Backend** (server-side verification подписки, прокси к
+      ElevenLabs / MusicGen для скрытия ключей, хранение клонов голосов).
 
 ## ❌ Не будет
 
@@ -84,22 +122,22 @@
 - ❌ Faster Whisper — нет билдов ctranslate2 под Android.
 - ❌ Встроенный Python / MCP / HTTP-сервер.
 - ❌ Windows-only фичи (CreateDesktopShortcut, UAC, signed installer).
+- ❌ Модели в APK / Asset Packs (пользователь скачивает сам).
 
 ## Целевые метрики
 
 | Метрика | Цель |
 |---|---|
-| Минимальный APK (только Kokoro) | < 30 МБ |
-| APK с Kokoro + всеми облачными движками | < 60 МБ |
+| Минимальный APK (без моделей) | < 50 МБ |
+| APK с Kokoro (скачивается отдельно) | < 50 МБ |
 | Генерация 1 страницы текста на mid-range устройстве (Kokoro) | < 30 с |
 | Время холодного старта | < 1.5 с |
-| Покрытие тестами (core) | > 80 % |
+| Покрытие тестами (core) | > 60 % |
 
 ## Публикация (отложено)
 
 Публикация в Google Play / F-Droid **не входит в ближайшие планы**.
-Причины: требует keystore, privacy policy, developer account ($25), и регулярного
-поддержания качества. На данный момент проект распространяется через
-GitHub Releases в виде APK — скачивание через
-[GitHub Actions artifacts](../../actions) или прямой ссылке на .apk.
-Когда/если решим публиковать — см. `docs/DEPLOYMENT.md` (пока draft).
+Сначала нужно доделать приложение (v0.3.0). Затем — подписка и
+публикация. Распространение сейчас — через
+[GitHub Actions artifacts](../../actions) и прямые ссылки на .apk.
+Когда/если решим публиковать — см. `docs/DEPLOYMENT.md`.

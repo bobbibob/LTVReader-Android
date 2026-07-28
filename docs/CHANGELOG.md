@@ -2,7 +2,51 @@
 
 Все значимые изменения в T2V документируются здесь.
 
-## [Unreleased]
+## [Unreleased] - 2026-07-28
+
+### Added
+- **Self-test кнопка в Settings** (`🧪 Run <music>/<sfx> self-test`).
+  Дописывает `<music>ambient pad</music> <sfx>door creak</sfx>` в последний
+  проект и запускает `GenerationPipeline.generate()`. По завершении
+  показывает `audiobookId`, статус, `segmentsDone/Total` и количество
+  music+sound клипов. Локализована в 11 локалях.
+- **`DownloadableModelCard`** в `ModelsScreen` — переиспользуемая карточка
+  для скачивания любой модели из `GenerationModelCatalog` через единый flow
+  (Download / progress bar / cancel / Select).
+- **`ModelsViewModel.downloadModelFromCatalog(catalogId)`** — единая точка
+  входа для скачивания из каталога. Сейчас реально скачивает только
+  `kokoro-82m`; для остальных записей пишет «Загрузка пока не подключена».
+- **`ModelsState`**: новые поля `downloadingCatalogId`, `catalogDownloadProgress`,
+  `catalogDownloadedBytes`, `catalogDownloadTotalBytes`, `isInstalled(catalogId, repository)`.
+- **`HuggingFaceRepository.VERIFIED_ANDROID_MODELS`** теперь формируется
+  динамически из `GenerationModelCatalog.entries` (все записи с `repository`
+  в формате `author/name` и не начинающиеся с `http`). Kokoro гарантированно
+  присутствует как fallback.
+- **Строки** `settings_debug`, `settings_debug_selftest_help`,
+  `settings_debug_selftest`, `models_download_button` во всех 11 локалях.
+
+### Fixed
+- `VoicesScreen.kt` revert'нут в `8fc42a0` baseline после серии поломок
+  (CD65FC0, BFDF022, 4CB57E1, 3C8B8C2). Локальный Piper picker диалог
+  не добавлялся до стабилизации.
+
+### Known issues (отложено)
+- **Kokoro inference зависает** на длинных текстах (>3 000 символов).
+  Audiobook #3 застрял в `running` после повторного self-test.
+- **`timelineStartMs=0`** для всех `<music>/<sfx>` клипов. Причина:
+  `AudioTagInserter.insert()` вызывается ДО voice-сегментов в
+  `GenerationPipeline.kt:109`, когда `durationMs=0` для всех segments.
+  Должен вызываться после цикла.
+- **ElevenLabs clone UI** не реагирует на нажатие «Создать клон».
+
+### Notes
+- Подписка / монетизация **отложены** (см. `docs/AI_HANDOFF.md`).
+- Никаких изменений в `aapt2`, signing, R8, AAB. APK как и раньше
+  собирается через `:app:assembleDebug`.
+- Все 4 коммита текущей сессии на ветке `codex/models-download`
+  (647dcf8, ccdd817e, 0f86301, 984e208) — последний CI 30338815715 зелёный.
+
+## [Unreleased - 2026-07-27] - audio tags & NSynth scaffolding
 
 ### Added
 - XML-style audio tags for in-text music and SFX insertion:
@@ -23,6 +67,11 @@
 - 11 locales gained `markup_music` and `markup_sfx` strings.
 - `LTVMarkupAudioTagsTest` covers parser behaviour; existing
   `TextProcessorTest` was updated to consume the new `ProcessResult`.
+- `Magenta NSynth` (wavenet) registered in `GenerationModelCatalog` as a
+  `RuntimeInDevelopment` on-device SFX model with a 4 sec mono 8 kHz
+  output. `NSynthSoundGenerator` refuses to run until
+  `LiteRtModelInstaller.markSmokeTested()` is called after a real ARM64
+  smoke-test on a device.
 
 ### Fixed
 - `AudioTimelineDao` now exposes `trackByType()` so the inserter can
@@ -36,91 +85,37 @@
 - `GenerationPipeline.Progress.audioTagClips` carries the count of clips
   generated from markup tags so the UI can decide between routes without
   re-querying Room.
-
-## [Unreleased]
-
-### Added
-- Restored the Kokoro download card in ModelsScreen: progress bar, byte/percent
-  updates, cancel button, select-after-install. The previously hidden `if (false)`
-  branch is gone.
-- Expanded the Piper/VITS on-device catalog beyond Russian and the two English
-  voices (Amy/Cori): German (Thorsten, Kerstin), French (Siwis, Tom),
-  Spanish (Carlos es-ES, Ald es-MX), Italian (Riccardo), Chinese (Huayan) and
-  Japanese (Kai). Each voice is bundled through the existing SherpaOnnx
-  runtime and surfaced as a separate `PiperVoiceCard` grouped by language.
-- `GenerationModelCatalog` reserves two cloud-only slots (`openai-music`,
-  `elevenlabs-sound-clip`) marked `RuntimeInDevelopment` so they can be
-  referenced from Info dialogs without being selectable.
-- `PiperRussianCatalogTest` and `GenerationModelCatalogTest` grew to cover the
-  new languages and to lock the in-development status of cloud-only entries.
-
-### Changed
-- ModelsScreen now groups local voices by language via `PiperVoiceGroup` and
-  renders an Info dialog per voice with the same Piper TagDocs used elsewhere.
-- `PiperRussianTtsEngine.piperVoice()` accepts an optional
-  `approximateSizeBytes` override so smaller Piper models (x_low, low) report
-  a believable download size.
-
-### Notes
-- Music/sound generator runtime works end-to-end: generator selection with
-  available/unavailable labels, audio preview (play/stop per clip), default
-  prompts, WAV header metadata parsing.
-- BundledAssetGeneratorTest (6 JVM tests) verifies all 6 bundled WAV assets,
-  header parsing, and keyword matching.
-- Info dialog on every model/generator card in ModelsScreen, populated from
-  `GenerationModelCatalog.TagDocs`: tagline, runtime, repository, license,
-  supported/partial/ignored tags, examples and prompt help. Localized in 11
-  languages via `info_*` strings. TagDocs now cover kokoro, piper_ru, pocket-tts,
-  zipvoice, openai, elevenlabs, gemini, azure, custom_http, bundled,
-  ElevenLabs SFX and LiteRT Stable Audio (music/clip).
-
-### Changed
-- All TagDocs strings and ModelsScreen user-facing copy are now Russian by
-  default (UI приложения рассчитан на русскоязычного владельца). LTV-разметка
-  `{{...}}` и имена движков остаются латиницей; locale-specific варианты
-  остаются в 10 других values-* папках.
-
-### Removed
 - `BundledMusicGenerator` / `BundledSoundGenerator` and the bundled
   `assets/music` + `assets/sound` placeholder WAVs. The bundled cards in
   ModelsScreen are gone. SFX now flows through either
   `ProceduralAudioSynth` (offline, no model) or a future Magenta NSynth
   on-device generator.
 
+## [Unreleased - 2026-07-26] - 3-track editor & FFmpeg+LAME
+
 ### Added
-- `Magenta NSynth` (wavenet) registered in `GenerationModelCatalog` as a
-  `RuntimeInDevelopment` on-device SFX model with a 4 sec mono 8 kHz
-  output. The TFLite manifest lives in `LiteRtModelRuntime.NSYNTH_WAVENET`
-  with a placeholder SHA-256; `NSynthSoundGenerator` refuses to run until
-  `LiteRtModelInstaller.markSmokeTested()` is called after a real ARM64
-  smoke-test on a device. UI shows the entry as `Runtime not ready` in
-  ModelsScreen.
-- `LiteRtModelInstaller.markSmokeTested(plan)` records that a real
-  ARM64 inference ran end-to-end; the smoke gate is now a documented
-  AGENTS.md-friendly contract.
-
-### Fixed
-- Catalog quotes inside TagDocs strings (CUSTOM_HTTP_TAGS, ZIPVOICE_TAGS,
-  PocketTTS) escaped correctly so the Kotlin parser accepts them.
-- Resolved Composable context for the Info dialog labels by hoisting the
-  LocalContext-relative strings to the screen scope.
-
-### Notes
-- Никакой локальной сборки: код проверяется только через GitHub Actions
-  (`gh workflow run android.yml --ref codex/audio-production`). Подробности и
-  правила верификации - в docs/AI_HANDOFF.md (раздел «Обязательные требования
-  владельца»).
-
-### Fixed
-- `AudioMixerTest > writeSilence`: `AudioEncoder.readWav` переведён на `RandomAccessFile`
-  с ручным little-endian чтением; dataSize/2 даёт корректное число сэмплов (11025 для 500 мс @ 22050 Гц).
-- `LTVMarkupParserTest > pause ms/s`: `endsWith("ms")` теперь проверяется раньше `endsWith("s")`,
-  поэтому `{{pause 0.7s}}` парсится как 700 мс, а `{{pause 700ms}}` — как 700 мс.
-- `TextProcessorTest > clean`: `controlChars` включает `\u0000`, а `\n{3,}` схлопывается до `\n\n`.
-- `TextNormalizerTest > currencies`: `currencyRegexPrefix` матчит `$5` и заменяет на "five dollars".
-- `Num2WordsTest > english/spanish basic`: таблицы ONES_EN/ONES_ES и SCALES корректны.
-- ROADMAP и AGENTS.md обновлены: упавшие тесты отмечены как починенные.
-
+- Three-track editor: VOICE / MUSIC / SOUND with `AudioTrackEntity`,
+  `AudioClipEntity`, `ChapterExportEntity` Room entities.
+- Room migration `1 -> 2` preserves existing projects.
+- For each clip: source file, timeline position, source trim bounds,
+  speed, gain, fade in/out, loop, lock, markup-tag link.
+- `FFmpegBridge` timeline-render and three-track production mix.
+- For real MP3: `libmp3lame` (LAME 3.100) statically linked in Android
+  FFmpeg, built from source with SHA-256 verification in CI.
+- ModelsScreen tabs: Голос / Музыка / Звуки.
+- `core/model/GenerationModelCatalog.kt` — единый типизированный источник
+  для Voice/Music/Sound моделей с `Support.Verified` /
+  `RuntimeInDevelopment` / `Experimental` статусами.
+- `Magenta NSynth` placeholder, `Stable Audio Open Small` (music),
+  `Stable Audio 3 Small` (sound), `PocketTTS` (cloning),
+  `ZipVoice Distill` (cloning) — все как `RuntimeInDevelopment` /
+  `Experimental` до device smoke-test.
+- Local Piper voices: Amy (en-US), Cori (en-GB), plus German (Thorsten,
+  Kerstin), French (Siwis, Tom), Spanish (Carlos, Ald), Italian
+  (Riccardo), Chinese (Huayan), Japanese (Kai). All through built-in
+  SherpaOnnx runtime.
+- TagDocs Info dialog on every model/generator card. Localized in 11
+  languages via `info_*` strings.
 
 ## [0.1.0] - 2026-07-23
 
@@ -157,3 +152,5 @@
 - Непроверенные локальные Chatterbox/Qwen3/OmniVoice.
 - Импорт DOCX через Apache POI (используется ручной ZIP-парсер).
 - Background WorkManager (каркас GenerationService есть).
+- Подписка / монетизация (отложено).
+- Модели в APK (пользователь скачивает сам).

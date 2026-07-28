@@ -1,7 +1,7 @@
 # Глоссарий
 
 ## TTS (Text-to-Speech)
-Преобразование текста в речь. Иногда называют «синтез речи».
+Преобразование текста в речь. Иногда называется «синтез речи».
 
 ## ASR (Automatic Speech Recognition)
 Распознавание речи. Используется в Faster Whisper для верификации.
@@ -23,100 +23,97 @@ onnxruntime как fallback.
 ## ORT (ONNX Runtime)
 Microsoft-овский движок инференса ONNX-моделей.
 
+## sherpa-onnx
+K2-FSA-овский движок инференса ONNX-моделей, специально для
+Android (лёгкий, без ORT-зависимостей). T2V использует его для
+Kokoro и Piper/VITS.
+
+## LiteRT / TFLite
+Google-овский формат моделей и движок инференса для мобильных.
+T2V планирует использовать для будущих Magenta NSynth и Stable
+Audio моделей (когда пройдёт ARM64 smoke-test).
+
+## NSynth
+Magenta-овская модель для генерации коротких тональных аудио-клипов
+(4 сек mono 8 kHz). В T2V зарегистрирована, но `isAvailable()=false`
+пока не пройден device smoke-test.
+
 ## WAV
 Несжатый аудиоформат. Используется как промежуточный в T2V.
 
 ## MP3
-Сжатый аудиоформат. Финальный формат экспорта.
+Сжатый аудиоформат. Финальный формат экспорта (через FFmpeg + LAME).
 
 ## PCM (Pulse-Code Modulation)
 Способ хранения аудио в виде последовательности значений амплитуды.
 16-bit PCM = 2 байта на сэмпл.
 
 ## Sample rate
-Частота дискретизации. 24 kHz = 24 000 сэмплов в секунду. Kokoro использует 24 kHz.
+Частота дисретизации. 24 kHz = 24 000 сэмплов в секунду. Kokoro
+использует 24 kHz; в T2V по умолчанию 22050 Hz mono.
 
 ## Bitrate
 Битрейт MP3. 192 kbps — стандарт для подкастов.
 
-## Ducking
-Автоматическое приглушение фоновой музыки, когда говорит голос.
-Реализовано через ffmpeg `sidechaincompress`.
+## LAME 3.100
+MP3-кодек, собирается в CI из исходников с проверкой SHA-256,
+линкуется в Android FFmpeg для настоящего MP3-экспорта.
 
-## Sidechain compression
-Техника ducking'а: компрессор на music-канале управляется уровнем voice-канала.
+## `<music>` / `<sfx>` теги
+XML-стиль разметки в T2V. Содержимое тега — это промпт для генератора
+музыки или звукового эффекта. `LTVMarkupParser.parseSpans()` рвёт
+voice-чанк в каждом теге; `AudioTagInserter` генерирует WAV и кладёт
+`AudioClipEntity` в Room на нужной дорожке.
 
-## FGS (Foreground Service)
-Android-сервис с уведомлением. Защищает задачу от убийства системой.
+## `AudioTagInserter`
+Компонент в `core/audio/`, который после TTS-синтеза берёт список
+`AudioTag` (из `TextProcessor.process()`) и для каждого генерирует
+WAV через `GeneratorRegistry`, потом пишет в Room.
 
-## Room
-Android-библиотека для работы с SQLite.
+## `GeneratorRegistry`
+Аналог `EngineRegistry` для music/sound. Содержит все `Generator`
+(NSynth, Stable Audio, ElevenLabs SFX, ProceduralAudioSynth).
+Используется `AudioTagInserter` через `GeneratorRegistry.forCategory(Music/Sound)`.
 
-## DataStore
-Замена SharedPreferences. Поддерживает Flow, async, типизацию.
+## `HuggingFaceRepository`
+Клиент Hugging Face, скачивает файлы моделей в `files/models/<sha256>/`
+(для Kokoro) или `files/models/litert/<modelId>/` (для LiteRT).
+Динамически строит `VERIFIED_ANDROID_MODELS` из `GenerationModelCatalog`.
 
-## Compose
-Декларативный UI-фреймворк от Google. Заменил XML-разметку + View.
+## `GenerationModelCatalog`
+Единый типизированный источник для Voice/Music/Sound моделей с
+`Support.Verified` / `RuntimeInDevelopment` / `Experimental` статусами.
+Содержит id, title, repository, revision, размер, лицензию,
+runtime, ABI, минимальную RAM, и TagDocs.
 
-## Material 3
-Третья версия Material Design. Используется в Compose.
+## `GenerationPipeline`
+Пайплайн в `worker/`, выполняет TTS для всех чанков, запускает
+`AudioTagInserter` для тегов, склеивает WAV, микширует, кодирует в MP3.
+Прогресс: `Phase.Processing / Synthesizing / Encoding / Completed`.
+`audioTagClips: Int` — количество вставленных music/sound клипов.
 
-## ADB (Android Debug Bridge)
-Утилита для отладки Android-устройств.
+## `DownloadableModelCard`
+Composable в `ui/screens/models/ModelsScreen.kt` — единая карточка
+для скачивания любой модели из `GenerationModelCatalog` через
+единый flow (Download / progress / cancel / Select).
 
-## APK / AAB
-APK = Android Package. AAB = Android App Bundle (для Google Play).
+## `markSmokeTested()`
+Метод в `LiteRtModelInstaller` — пишет sidecar файл, означающий что
+модель прошла реальный ARM64 inference на устройстве. До этого
+`NSynthSoundGenerator.isAvailable() = false` и refuses to run.
 
-## Gradle
-Система сборки Android-проектов.
+## Voice cloning
+Создание копии голоса по референсному аудио-сэмплу (5-30 сек). В T2V
+планируется через sherpa-onnx TTS с reference audio (PocketTTS /
+ZipVoice). Сейчас UI ElevenLabs Clone не работает (отложено).
 
-## KSP (Kotlin Symbol Processing)
-Аналог annotation processor для Kotlin. Используется Room.
+## `3-track editor`
+UI в `ui/screens/editor/AudioEditorScreen.kt` с тремя дорожками
+VOICE / MUSIC / SOUND. Каждая дорожка — `AudioTrackEntity` в Room,
+каждый клип — `AudioClipEntity`.
 
-## Hilt
-DI-фреймворк от Google. Не используется в T2V (DI вручную через AppContainer).
-
-## WorkManager
-API для отложенных/периодических фоновых задач.
-
-## Coroutine
-Kotlin-аналог горутин. Легковесные потоки.
-
-## StateFlow
-Типобезопасный Flow с одним текущим значением. Используется для UI-стейта.
-
-## Sealed class
-Kotlin-конструкция для иерархий типов. Используется для MarkupCommand, EngineInfo.EngineKind.
-
-## LTV (Local Text-to-Voice)
-Внутреннее название разметки T2V. Синтаксис `{{...}}`.
-
-## Engine host
-Python-бэкенд, запускаемый на ПК. Позволяет Android использовать
-движки, которые не работают на устройстве (Chatterbox, Qwen3, OmniVoice, Piper).
-
-## Custom HTTP
-TTS-движок, который обращается к произвольному HTTP-эндпоинту.
-Шаблон тела и формат ответа настраиваются.
-
-## Engine registry
-Реестр всех доступных TTS-движков. Создаёт экземпляры по id.
-
-## Project
-Импортированный документ, который пользователь редактирует. Хранится в Room.
-
-## Audiobook
-Результат генерации проекта. Содержит сегменты и финальный MP3.
-
-## Segment
-Один чанк текста + сгенерированный WAV. Хранится в Room.
-
-## Markup state
-Набор параметров (voice, lang, speed, volume), прикреплённый к чанку.
-
-## Chunk
-Безопасный фрагмент текста ≤ chunkSize символов. Генерируется TextProcessor.
-
-## Section
-Часть текста с заголовком (глава, урок, модуль). Определяется по regex.
-
+## Timeline position
+`timelineStartMs` в `AudioClipEntity` — позиция клипа на общей шкале
+времени аудиокниги. Сейчас `AudioTagInserter` ставит 0 для music/sound
+клипов (баг). Должен вычисляться как сумма `pauseBeforeMs + durationMs`
+уже сгенерированных voice-сегментов.

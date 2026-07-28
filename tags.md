@@ -157,3 +157,22 @@ to a TTS model as words to pronounce.
 
 T2V never promises a reaction when the selected model lacks that capability.
 The editor should show the effective support level before generation.
+
+## XML-style audio tags (2026-07-28)
+
+In addition to `{{music "name" -2dB}}` and `{{sfx "name" 200ms}}` (which
+are recognized but do not yet trigger generation), T2V supports
+XML-style tags that explicitly insert audio clips into the timeline:
+
+```text
+<music>тёплый эмбиент-пэд, 80 BPM, 10 секунд</music>
+<sfx>старая деревянная дверь, скрип петель, 1.5 секунды</sfx>
+```
+
+These are parsed by `LTVMarkupParser.extractAudioTags()` and
+`parseSpans()` (which breaks voice chunks at each tag). The `AudioTagInserter`
+generates a WAV via `GeneratorRegistry` and persists `AudioClipEntity`
+on the right track. See `docs/LTV_MARKUP.md` for the full specification.
+
+The legacy `{{music "..."}}` / `{{sfx "..."}}` syntax is kept for
+backward compatibility but currently does not trigger generation.
