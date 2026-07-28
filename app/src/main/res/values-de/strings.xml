@@ -61,4 +61,10 @@
     <string name="models_cancel_download">Download abbrechen</string>
     <string name="markup_music">Musik</string>
     <string name="markup_sfx">SFX</string>
+    <string name="voices_pick_local">Lokale Stimme wählen (Piper / SherpaOnnx)</string>
+    <string name="voices_clone_cloud">Stimme klonen (ElevenLabs / Cloud)</string>
+    <string name="voices_my_voice">✓ Meine Stimme</string>
+    <string name="voices_my_voice_change">Ändern</string>
+    <string name="voices_local_dialog_title">Lokale Stimme</string>
+    <string name="voices_local_dialog_close">Schließen</string>
 </resources>

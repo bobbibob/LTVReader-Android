@@ -71,4 +71,10 @@
     <string name="models_cancel_download">Отменить загрузку</string>
     <string name="markup_music">Музыка</string>
     <string name="markup_sfx">Звук</string>
+    <string name="voices_pick_local">Выбрать локальный голос (Piper / SherpaOnnx)</string>
+    <string name="voices_clone_cloud">Клонировать голос (ElevenLabs / облако)</string>
+    <string name="voices_my_voice">✓ Мой голос</string>
+    <string name="voices_my_voice_change">Сменить</string>
+    <string name="voices_local_dialog_title">Локальный голос</string>
+    <string name="voices_local_dialog_close">Закрыть</string>
 </resources>

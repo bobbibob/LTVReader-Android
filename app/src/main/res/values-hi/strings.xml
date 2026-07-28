@@ -61,4 +61,10 @@
     <string name="models_cancel_download">डाउनलोड रद्द करें</string>
     <string name="markup_music">संगीत</string>
     <string name="markup_sfx">ध्वनि प्रभाव</string>
+    <string name="voices_pick_local">स्थानीय आवाज़ चुनें (Piper / SherpaOnnx)</string>
+    <string name="voices_clone_cloud">आवाज़ क्लोन करें (ElevenLabs / क्लाउड)</string>
+    <string name="voices_my_voice">✓ मेरी आवाज़</string>
+    <string name="voices_my_voice_change">बदलें</string>
+    <string name="voices_local_dialog_title">स्थानीय आवाज़</string>
+    <string name="voices_local_dialog_close">बंद</string>
 </resources>

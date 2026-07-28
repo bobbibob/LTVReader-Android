@@ -61,4 +61,10 @@
     <string name="models_cancel_download">取消下载</string>
     <string name="markup_music">音乐</string>
     <string name="markup_sfx">音效</string>
+    <string name="voices_pick_local">选择本地语音 (Piper / SherpaOnnx)</string>
+    <string name="voices_clone_cloud">克隆语音 (ElevenLabs / 云端)</string>
+    <string name="voices_my_voice">✓ 我的声音</string>
+    <string name="voices_my_voice_change">更换</string>
+    <string name="voices_local_dialog_title">本地语音</string>
+    <string name="voices_local_dialog_close">关闭</string>
 </resources>

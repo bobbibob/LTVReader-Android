@@ -61,4 +61,10 @@
     <string name="models_cancel_download">إلغاء التنزيل</string>
     <string name="markup_music">موسيقى</string>
     <string name="markup_sfx">تأثير صوتي</string>
+    <string name="voices_pick_local">اختر صوتًا محليًا (Piper / SherpaOnnx)</string>
+    <string name="voices_clone_cloud">استنساخ الصوت (ElevenLabs / سحابي)</string>
+    <string name="voices_my_voice">✓ صوتي</string>
+    <string name="voices_my_voice_change">تغيير</string>
+    <string name="voices_local_dialog_title">صوت محلي</string>
+    <string name="voices_local_dialog_close">إغلاق</string>
 </resources>

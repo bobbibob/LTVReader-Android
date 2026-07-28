@@ -16,7 +16,6 @@ import org.junit.Test
 class GeneratorRegistryTest {
 
     @Test
-    @Test
     fun `elevenlabs sound is unavailable without an api key`() {
         val gen = ElevenLabsSoundEffectsGenerator(apiKey = "")
         assertFalse(gen.isAvailable())

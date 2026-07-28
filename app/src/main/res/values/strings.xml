@@ -164,4 +164,10 @@
     <string name="info_open">Engine information</string>
     <string name="markup_music">Music</string>
     <string name="markup_sfx">SFX</string>
+    <string name="voices_pick_local">Pick local voice (Piper / SherpaOnnx)</string>
+    <string name="voices_clone_cloud">Clone voice (ElevenLabs / cloud)</string>
+    <string name="voices_my_voice">✓ My voice</string>
+    <string name="voices_my_voice_change">Change</string>
+    <string name="voices_local_dialog_title">Local voice</string>
+    <string name="voices_local_dialog_close">Close</string>
 </resources>

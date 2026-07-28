@@ -63,6 +63,8 @@ class SettingsRepository(private val context: Context) {
         val AZURE_REGION = stringPreferencesKey("engines.azure.region")
         val CUSTOM_URL = stringPreferencesKey("engines.custom_http.url")
         val HUGGING_FACE_TOKEN = stringPreferencesKey("huggingface.token")
+        val PREFERRED_LOCAL_VOICE = stringPreferencesKey("preferred_local_voice")
+        val PREFERRED_LOCAL_VOICE_LABEL = stringPreferencesKey("preferred_local_voice_label")
     }
 
     val flow: Flow<Settings> = context.dataStore.data.map { p -> p.toSettings() }
@@ -108,6 +110,8 @@ class SettingsRepository(private val context: Context) {
     }
 
     private fun Preferences.toSettings(): Settings = Settings(
+        preferredLocalVoice = this[Keys.PREFERRED_LOCAL_VOICE] ?: "",
+        preferredLocalVoiceLabel = this[Keys.PREFERRED_LOCAL_VOICE_LABEL] ?: "",
         uiLanguage = this[Keys.UI_LANGUAGE] ?: "en",
         outputDir = this[Keys.OUTPUT_DIR] ?: "output",
         ttsEngine = this[Keys.TTS_ENGINE] ?: "",
@@ -149,6 +153,8 @@ class SettingsRepository(private val context: Context) {
 }
 
 data class Settings(
+    val preferredLocalVoice: String = "",
+    val preferredLocalVoiceLabel: String = "",
     val uiLanguage: String,
     val outputDir: String,
     val ttsEngine: String,

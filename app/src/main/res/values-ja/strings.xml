@@ -61,4 +61,10 @@
     <string name="models_cancel_download">ダウンロードをキャンセル</string>
     <string name="markup_music">音楽</string>
     <string name="markup_sfx">効果音</string>
+    <string name="voices_pick_local">ローカル音声を選択 (Piper / SherpaOnnx)</string>
+    <string name="voices_clone_cloud">音声をクローン (ElevenLabs / クラウド)</string>
+    <string name="voices_my_voice">✓ マイボイス</string>
+    <string name="voices_my_voice_change">変更</string>
+    <string name="voices_local_dialog_title">ローカル音声</string>
+    <string name="voices_local_dialog_close">閉じる</string>
 </resources>
