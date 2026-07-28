@@ -307,7 +307,7 @@ fun ModelDetailCard(
                     modifier = Modifier.weight(1f),
                 )
                 if (onInfo != null) {
-                    IconButton(onClick = onInfo) {
+                    IconButton(onClick = { onInfo() }) {
                         Icon(
                             Icons.Default.Info,
                             contentDescription = stringResource(R.string.info_open),
@@ -380,7 +380,7 @@ fun DownloadableModelCard(
     infoLicense: String? = null,
     infoRuntime: String? = null,
     infoCategoryLabel: String? = null,
-    onInfo: ((InfoTarget) -> Unit)? = null,
+    onInfo: (() -> Unit)? = null,
 ) {
     val isThisDownloading = state.downloadingCatalogId == catalogId
     val isInstalled = state.isInstalled(catalogId, infoRepository.orEmpty())
@@ -398,7 +398,7 @@ fun DownloadableModelCard(
                     Text(status, style = MaterialTheme.typography.bodySmall)
                 }
                 if (onInfo != null) {
-                    IconButton(onClick = onInfo) {
+                    IconButton(onClick = { onInfo() }) {
                         Icon(
                             Icons.Default.Info,
                             contentDescription = stringResource(R.string.info_open),
