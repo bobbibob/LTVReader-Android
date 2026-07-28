@@ -258,7 +258,7 @@ fun ModelsScreen(
     }
 }
 
-private data class InfoTarget(
+internal data class InfoTarget(
     val title: String,
     val tagline: String?,
     val tags: com.t2v.core.model.GenerationModelCatalog.TagDocs?,
