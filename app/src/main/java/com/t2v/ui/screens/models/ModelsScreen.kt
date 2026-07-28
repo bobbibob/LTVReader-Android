@@ -258,7 +258,7 @@ fun ModelsScreen(
     }
 }
 
-internal data class InfoTarget(
+data class InfoTarget(
     val title: String,
     val tagline: String?,
     val tags: com.t2v.core.model.GenerationModelCatalog.TagDocs?,
@@ -268,7 +268,7 @@ internal data class InfoTarget(
     val categoryLabel: String? = null,
 )
 
-private enum class ModelTab(val title: String) {
+enum class ModelTab(val title: String) {
     Voice("Голос"),
     Music("Музыка"),
     Sound("Звуки"),
