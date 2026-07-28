@@ -349,6 +349,137 @@ fun ModelDetailCard(
     }
 }
 
+/**
+ * Card that shows a single [com.t2v.core.model.GenerationModelCatalog.Entry]
+ * alongside a "Download from Hugging Face" flow.
+ *
+ * Renders the same metadata as [ModelDetailCard] but adds:
+ *  - a "Download (size)" button when the entry's repository is a real HF
+ *    model (i.e. `author/name`) and we don't already have it installed;
+ *  - a progress bar + cancel button while the download is in flight;
+ *  - a "Select" / "Selected" button that only becomes enabled after the
+ *    download finished.
+ *
+ * The actual install goes through [com.t2v.server.HuggingFaceRepository],
+ * which is the same client Kokoro already uses. For catalog entries that
+ * aren't actually backed by a downloadable HF repo (e.g. procedural music
+ * synth, ElevenLabs SFX, experimental entries) [downloadableRepository] is
+ * `false` and the card falls back to the old [ModelDetailCard] flow.
+ */
+@Composable
+fun DownloadableModelCard(
+    catalogId: String,
+    title: String,
+    status: String,
+    tags: com.t2v.core.model.GenerationModelCatalog.TagDocs?,
+    selected: Boolean,
+    enabled: Boolean,
+    state: ModelsState,
+    vm: ModelsViewModel,
+    infoRepository: String? = null,
+    infoLicense: String? = null,
+    infoRuntime: String? = null,
+    infoCategoryLabel: String? = null,
+    onInfo: ((InfoTarget) -> Unit)? = null,
+) {
+    val isThisDownloading = state.downloadingCatalogId == catalogId
+    val isInstalled = state.isInstalled(catalogId, infoRepository.orEmpty())
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(title, style = MaterialTheme.typography.titleMedium)
+                    Text(status, style = MaterialTheme.typography.bodySmall)
+                }
+                if (onInfo != null) {
+                    IconButton(onClick = onInfo) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = stringResource(R.string.info_open),
+                        )
+                    }
+                }
+            }
+            tags?.let { docs ->
+                Text(docs.tagline, style = MaterialTheme.typography.bodySmall)
+                if (docs.supported.isNotEmpty()) {
+                    Text("Supported tags:", style = MaterialTheme.typography.labelMedium)
+                    docs.supported.forEach { Text("- $it", style = MaterialTheme.typography.bodySmall) }
+                }
+                if (docs.partial.isNotEmpty()) {
+                    Text("Partial support (approximated):", style = MaterialTheme.typography.labelMedium)
+                    docs.partial.forEach { Text("~ $it", style = MaterialTheme.typography.bodySmall) }
+                }
+                if (docs.ignored.isNotEmpty()) {
+                    Text("Ignored / dropped:", style = MaterialTheme.typography.labelMedium)
+                    docs.ignored.forEach { Text("x $it", style = MaterialTheme.typography.bodySmall) }
+                }
+                if (docs.examples.isNotEmpty()) {
+                    Text("Examples:", style = MaterialTheme.typography.labelMedium)
+                    docs.examples.forEach { Text("  $it", style = MaterialTheme.typography.bodySmall) }
+                }
+                docs.promptHelp?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+            }
+            when {
+                isThisDownloading -> {
+                    if (state.catalogDownloadTotalBytes > 0) {
+                        LinearProgressIndicator(
+                            progress = { state.catalogDownloadProgress },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    } else {
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    }
+                    Text(downloadProgressText(state.catalogDownloadedBytes, state.catalogDownloadTotalBytes))
+                    OutlinedButton(onClick = vm::cancelDownload) {
+                        Text(stringResource(R.string.models_cancel_download))
+                    }
+                }
+                isInstalled -> {
+                    OutlinedButton(onClick = onSelectSafe(vm, catalogId), enabled = !selected) {
+                        Text(if (selected) "Selected" else "Select")
+                    }
+                }
+                else -> {
+                    Button(
+                        enabled = enabled,
+                        onClick = { vm.downloadModelFromCatalog(catalogId) },
+                    ) {
+                        Text(stringResource(R.string.models_download_button))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Trivial helper that picks the right `selectXxxModel` method based on the
+ * catalog id's category. Returns a no-op lambda when no mapping exists.
+ */
+private fun onSelectSafe(vm: ModelsViewModel, catalogId: String): () -> Unit = {
+    val entry = com.t2v.core.model.GenerationModelCatalog.entries
+        .firstOrNull { it.id == catalogId }
+    when {
+        entry == null -> { }
+        com.t2v.core.model.GenerationModelCatalog.Category.Voice in entry.categories -> {
+            vm.selectVoiceModel(catalogId)
+        }
+        com.t2v.core.model.GenerationModelCatalog.Category.Music in entry.categories -> {
+            vm.selectMusicModel(catalogId)
+        }
+        com.t2v.core.model.GenerationModelCatalog.Category.Sound in entry.categories -> {
+            vm.selectSoundModel(catalogId)
+        }
+    }
+}
+
 
 @Composable
 private fun VoiceModelSection(
@@ -705,9 +836,29 @@ data class ModelsState(
     val downloadedBytes: Long = 0L,
     val downloadTotalBytes: Long = -1L,
     val error: String? = null,
+    /**
+     * Catalog id of the model whose download is currently in flight through
+     * [ModelsViewModel.downloadModelFromCatalog]. `null` when no catalog
+     * download is running.
+     */
+    val downloadingCatalogId: String? = null,
+    /** Per-catalog progress for [downloadingCatalogId], in the range 0f..1f. */
+    val catalogDownloadProgress: Float = 0f,
+    val catalogDownloadedBytes: Long = 0L,
+    val catalogDownloadTotalBytes: Long = -1L,
 ) {
     val kokoroInstalled: Boolean
         get() = installed.any { it.id == HuggingFaceRepository.KOKORO_REPOSITORY }
+
+    /**
+     * True when the catalog model with [catalogId] has been downloaded into
+     * the Hugging Face cache (matched by its repository name, which is what
+     * [HuggingFaceRepository.InstalledModel.id] reports).
+     */
+    fun isInstalled(catalogId: String, repository: String): Boolean {
+        if (catalogId == "kokoro-82m") return kokoroInstalled
+        return installed.any { it.id == repository || it.location.contains(repository) }
+    }
 }
 
 class ModelsViewModel(private val context: android.content.Context) : ViewModel() {
@@ -882,10 +1033,46 @@ class ModelsViewModel(private val context: android.content.Context) : ViewModel(
             it.copy(
                 downloading = false,
                 downloadingVoiceId = null,
+                downloadingCatalogId = null,
                 downloadProgress = 0f,
                 downloadedBytes = 0L,
                 downloadTotalBytes = -1L,
+                catalogDownloadProgress = 0f,
+                catalogDownloadedBytes = 0L,
+                catalogDownloadTotalBytes = -1L,
             )
+        }
+    }
+
+    /**
+     * Download a model declared in [com.t2v.core.model.GenerationModelCatalog].
+     *
+     * For now this is a thin wrapper around [downloadKokoro] for the verified
+     * Kokoro entry and a no-op (with an error message) for every other entry,
+     * because the only catalog entry whose repository is a Hugging Face
+     * identifier in the form `author/name` and whose size we know is
+     * Kokoro-82M. Future TFLite-ready music/sound models will plug in here
+     * once they have a real inference adapter; the UI flow (Download button,
+     * progress bar, cancel) is already in place via
+     * [com.t2v.ui.screens.models.DownloadableModelCard].
+     */
+    fun downloadModelFromCatalog(catalogId: String) {
+        val entry = com.t2v.core.model.GenerationModelCatalog
+            .entries
+            .firstOrNull { it.id == catalogId }
+            ?: return
+        // Single special case: Kokoro has its own bespoke flow that knows
+        // about the model's voice.bin and tokens.txt files. Every other
+        // catalog entry currently points to either a procedural backend (no
+        // download) or a non-HF repository (also no download).
+        when (catalogId) {
+            "kokoro-82m" -> downloadKokoro()
+            else -> _state.update {
+                it.copy(
+                    error = "Загрузка для «${entry.title}» пока не подключена. " +
+                        "Доступно только для Kokoro.",
+                )
+            }
         }
     }
 

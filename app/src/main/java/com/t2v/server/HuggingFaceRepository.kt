@@ -11,6 +11,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import com.t2v.core.model.GenerationModelCatalog
 import kotlinx.serialization.json.put
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
@@ -398,7 +399,19 @@ class HuggingFaceRepository(
          */
         const val KOKORO_REPOSITORY = "csukuangfj/kokoro-en-v0_19"
         const val KOKORO_REVISION = "92805c485745946a0d945562d3aba19e7cbb2104"
-        private val VERIFIED_ANDROID_MODELS: Set<String> = setOf(KOKORO_REPOSITORY)
+        private val VERIFIED_ANDROID_MODELS: Set<String> = run {
+            val catalog = GenerationModelCatalog.entries
+                .filter { entry ->
+                    // Только модели, у которых repository указывает на HF в формате author/name
+                    entry.repository.isNotBlank() &&
+                        !entry.repository.startsWith("http") &&
+                        entry.repository.contains('/')
+                }
+                .map { it.repository }
+                .toSet()
+            // Гарантируем, что Kokoro всегда доступен, даже если каталог отредактирован
+            (catalog + KOKORO_REPOSITORY)
+        }
         private val SUPPORTED_EXTENSIONS = setOf(
             "onnx", "bin", "json", "txt", "model", "safetensors", "pt", "pth",
             "yaml", "yml", "tokens", "vocab", "config", "gguf",

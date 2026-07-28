@@ -80,4 +80,5 @@
     <string name="settings_debug">Отладка</string>
     <string name="settings_debug_selftest_help">Добавляет теги &lt;music&gt; и &lt;sfx&gt; в последний проект и запускает генерацию. Проверяет audio_tracks и audio_clips в БД.</string>
     <string name="settings_debug_selftest">🧪 Запустить smoke-тест &lt;music&gt;/&lt;sfx&gt;</string>
+    <string name="models_download_button">Скачать</string>
 </resources>
