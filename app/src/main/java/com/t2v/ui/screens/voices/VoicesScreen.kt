@@ -8,10 +8,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Card
@@ -29,7 +27,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -62,17 +59,9 @@ fun VoicesScreen(
     var cloneName by remember { mutableStateOf("") }
     var cloneAudioUri by remember { mutableStateOf<Uri?>(null) }
     var consent by remember { mutableStateOf(false) }
-    var showLocalDialog by remember { mutableStateOf(false) }
     val audioPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         cloneAudioUri = uri
     }
-    val elevenlabsKey = remember {
-        androidx.compose.runtime.mutableStateOf(settingsSnapshot(ctx, "elevenlabs"))
-    }
-    androidx.compose.runtime.LaunchedEffect(Unit) {
-        elevenlabsKey.value = settingsSnapshot(ctx, "elevenlabs")
-    }
-    val ctx = androidx.compose.ui.platform.LocalContext.current
     LTVScaffold(
         nav = nav,
         title = stringResource(R.string.nav_voices),
@@ -82,38 +71,13 @@ fun VoicesScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Button(onClick = { showCloneDialog = true }, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.voices_clone_cloud))
-            }
-            Button(
-                onClick = { showLocalDialog = true },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.voices_pick_local))
+                Text("Клонировать голос")
             }
             Text(
                 "Русское клонирование доступно через ElevenLabs после добавления API-ключа. " +
                     "Локальные Piper-голоса скачиваются на экране «Модели».",
                 style = MaterialTheme.typography.bodySmall,
             )
-            if (state.preferredLocalVoiceId.isNotBlank()) {
-                Card {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(12.dp),
-                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("✓ Мой голос", style = MaterialTheme.typography.labelLarge)
-                            Text(
-                                state.preferredLocalVoiceLabel.ifBlank { state.preferredLocalVoiceId },
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                        OutlinedButton(onClick = { showLocalDialog = true }) {
-                            Text("Сменить")
-                        }
-                    }
-                }
-            }
             state.error?.let {
                 Text(it, color = MaterialTheme.colorScheme.error)
             }
@@ -148,31 +112,13 @@ fun VoicesScreen(
                     Text(
                         "Выберите чистую запись русской речи. Рекомендуется 30–120 секунд без музыки и шума.",
                     )
-                    if (elevenlabsKey.value.isBlank()) {
-                        Text(
-                            "Сначала добавьте ElevenLabs API-ключ в Настройках → TTS-движки.",
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
                     OutlinedTextField(
                         value = cloneName,
                         onValueChange = { cloneName = it },
                         label = { Text("Название голоса") },
                         singleLine = true,
                     )
-                    OutlinedButton(onClick = {
-                        val mime = arrayOf("audio/*")
-                        try {
-                            audioPicker.launch(mime)
-                        } catch (e: android.content.ActivityNotFoundException) {
-                            android.widget.Toast.makeText(
-                                ctx,
-                                "Не найден файловый менеджер для выбора аудио",
-                                android.widget.Toast.LENGTH_SHORT,
-                            ).show()
-                        }
-                    }) {
+                    OutlinedButton(onClick = { audioPicker.launch(arrayOf("audio/*")) }) {
                         Text(if (cloneAudioUri == null) "Выбрать аудиозапись" else "Аудиозапись выбрана")
                     }
                     Row {
@@ -186,23 +132,11 @@ fun VoicesScreen(
                         "Запись будет отправлена в ElevenLabs. Функция требует API-ключ и может зависеть от тарифа.",
                         style = MaterialTheme.typography.bodySmall,
                     )
-                    state.error?.let {
-                        Text(
-                            it,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
                 }
             },
             confirmButton = {
                 Button(
-                    enabled = !state.cloning
-                        && cloneName.isNotBlank()
-                        && cloneAudioUri != null
-                        && consent
-                        && elevenlabsKey.value.isNotBlank()
-                        && !state.cloning,
+                    enabled = !state.cloning && cloneName.isNotBlank() && cloneAudioUri != null && consent,
                     onClick = {
                         vm.cloneElevenLabsVoice(cloneName, requireNotNull(cloneAudioUri)) {
                             showCloneDialog = false
@@ -225,66 +159,6 @@ fun VoicesScreen(
             },
         )
     }
-    if (showLocalDialog) {
-        LocalVoiceDialog(
-            onDismiss = { showLocalDialog = false },
-            onPick = { voice ->
-                vm.pickLocalVoice(voice)
-                showLocalDialog = false
-            },
-            current = state.preferredLocalVoiceId,
-        )
-    }
-}
-
-@Composable
-private fun LocalVoiceDialog(
-    onDismiss: () -> Unit,
-    onPick: (com.t2v.tts.engines.PiperRussianTtsEngine.RussianVoice) -> Unit,
-    current: String,
-) {
-    val voices = remember { com.t2v.tts.engines.PiperRussianTtsEngine.RUSSIAN_VOICES }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Локальный голос") },
-        text = {
-            androidx.compose.foundation.lazy.LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.fillMaxWidth().heightIn(max = 480.dp),
-            ) {
-                androidx.compose.foundation.lazy.items(voices, key = { it.id }) { voice ->
-                    val isCurrent = voice.id == current
-                    Card(
-                        modifier = Modifier.fillMaxWidth().clickable { onPick(voice) },
-                    ) {
-                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    voice.displayName,
-                                    style = MaterialTheme.typography.titleSmall,
-                                    modifier = Modifier.weight(1f),
-                                )
-                                if (isCurrent) Text("✓", color = MaterialTheme.colorScheme.primary)
-                            }
-                            Text(
-                                "${voice.language} · ${if (voice.gender == "female") "женский" else "мужской"} · ${formatBytes(voice.approximateSizeBytes)}",
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            OutlinedButton(onClick = onDismiss) { Text("Закрыть") }
-        },
-    )
-}
-
-private fun formatBytes(bytes: Long): String {
-    if (bytes <= 0) return "—"
-    val mb = bytes / 1_000_000.0
-    return String.format(java.util.Locale.US, "%.1f МБ", mb)
 }
 
 @Composable
@@ -317,8 +191,6 @@ data class VoicesState(
     val cloning: Boolean = false,
     val message: String? = null,
     val error: String? = null,
-    val preferredLocalVoiceId: String = "",
-    val preferredLocalVoiceLabel: String = "",
 )
 
 class VoicesViewModel(private val context: android.content.Context) : ViewModel() {
@@ -329,13 +201,7 @@ class VoicesViewModel(private val context: android.content.Context) : ViewModel(
     init {
         viewModelScope.launch {
             settings.flow.collect { value ->
-                _state.update {
-                    it.copy(
-                        selectedVoiceId = value.voiceId,
-                        preferredLocalVoiceId = value.preferredLocalVoice,
-                        preferredLocalVoiceLabel = value.preferredLocalVoiceLabel,
-                    )
-                }
+                _state.update { it.copy(selectedVoiceId = value.voiceId) }
             }
         }
         loadVoices()
@@ -363,25 +229,6 @@ class VoicesViewModel(private val context: android.content.Context) : ViewModel(
             settings.update {
                 it[SettingsRepository.Keys.VOICE_ID] = voice.id
                 it[SettingsRepository.Keys.TTS_ENGINE] = voice.engineId
-            }
-        }
-    }
-
-    /**
-     * Mark a local Piper voice as the user's preferred one. Persists
-     * immediately and surfaces a "✓ мой голос" badge in the UI.
-     */
-    fun pickLocalVoice(voice: com.t2v.tts.engines.PiperRussianTtsEngine.RussianVoice) {
-        viewModelScope.launch {
-            settings.update {
-                it[SettingsRepository.Keys.PREFERRED_LOCAL_VOICE] = voice.id
-                it[SettingsRepository.Keys.PREFERRED_LOCAL_VOICE_LABEL] = voice.displayName
-                it[SettingsRepository.Keys.TTS_ENGINE] = "piper_ru"
-                it[SettingsRepository.Keys.VOICE_ID] = voice.id
-                it[SettingsRepository.Keys.LANGUAGE] = voice.language
-            }
-            _state.update {
-                it.copy(message = "Локальный голос сохранён: ${voice.displayName}")
             }
         }
     }
@@ -438,10 +285,4 @@ class VoicesViewModel(private val context: android.content.Context) : ViewModel(
 class VoicesViewModelFactory(private val context: android.content.Context) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T = VoicesViewModel(context) as T
-}
-
-private fun settingsSnapshot(context: android.content.Context, engineId: String): String {
-    // Quick read through the running repository.
-    val repo = com.t2v.app.AppContainer.settings(context)
-    return repo.state.value.engines[engineId]?.get("apiKey").orEmpty()
 }
