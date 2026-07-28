@@ -66,6 +66,12 @@ fun VoicesScreen(
     val audioPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         cloneAudioUri = uri
     }
+    val elevenlabsKey = remember {
+        androidx.compose.runtime.mutableStateOf(settingsSnapshot(ctx, "elevenlabs"))
+    }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        elevenlabsKey.value = settingsSnapshot(ctx, "elevenlabs")
+    }
     val ctx = androidx.compose.ui.platform.LocalContext.current
     LTVScaffold(
         nav = nav,
@@ -142,14 +148,6 @@ fun VoicesScreen(
                     Text(
                         "Выберите чистую запись русской речи. Рекомендуется 30–120 секунд без музыки и шума.",
                     )
-                    val elevenlabsKey by remember(context) {
-                        androidx.compose.runtime.mutableStateOf(
-                            settingsSnapshot(ctx, "elevenlabs"),
-                        )
-                    }
-                    LaunchedEffect(Unit) {
-                        elevenlabsKey.value = settingsSnapshot(ctx, "elevenlabs")
-                    }
                     if (elevenlabsKey.value.isBlank()) {
                         Text(
                             "Сначала добавьте ElevenLabs API-ключ в Настройках → TTS-движки.",
@@ -169,7 +167,7 @@ fun VoicesScreen(
                             audioPicker.launch(mime)
                         } catch (e: android.content.ActivityNotFoundException) {
                             android.widget.Toast.makeText(
-                                context,
+                                ctx,
                                 "Не найден файловый менеджер для выбора аудио",
                                 android.widget.Toast.LENGTH_SHORT,
                             ).show()
@@ -198,20 +196,12 @@ fun VoicesScreen(
                 }
             },
             confirmButton = {
-                val dialogKey = remember(context) {
-                    androidx.compose.runtime.mutableStateOf(
-                        settingsSnapshot(ctx, "elevenlabs"),
-                    )
-                }
-                LaunchedEffect(Unit) {
-                    dialogKey.value = settingsSnapshot(ctx, "elevenlabs")
-                }
                 Button(
                     enabled = !state.cloning
                         && cloneName.isNotBlank()
                         && cloneAudioUri != null
                         && consent
-                        && dialogKey.value.isNotBlank()
+                        && elevenlabsKey.value.isNotBlank()
                         && !state.cloning,
                     onClick = {
                         vm.cloneElevenLabsVoice(cloneName, requireNotNull(cloneAudioUri)) {
@@ -262,7 +252,7 @@ private fun LocalVoiceDialog(
                 verticalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier.fillMaxWidth().heightIn(max = 480.dp),
             ) {
-                androidx.compose.foundation.lazy.items(voices) { voice ->
+                androidx.compose.foundation.lazy.items(voices, key = { it.id }) { voice ->
                     val isCurrent = voice.id == current
                     Card(
                         modifier = Modifier.fillMaxWidth().clickable { onPick(voice) },
