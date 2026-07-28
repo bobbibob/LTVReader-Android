@@ -112,13 +112,39 @@ fun VoicesScreen(
                     Text(
                         "Выберите чистую запись русской речи. Рекомендуется 30–120 секунд без музыки и шума.",
                     )
+                    val elevenlabsKey by remember(context) {
+                        androidx.compose.runtime.mutableStateOf(
+                            settingsSnapshot(context, "elevenlabs"),
+                        )
+                    }
+                    LaunchedEffect(Unit) {
+                        elevenlabsKey.value = settingsSnapshot(context, "elevenlabs")
+                    }
+                    if (elevenlabsKey.value.isBlank()) {
+                        Text(
+                            "Сначала добавьте ElevenLabs API-ключ в Настройках → TTS-движки.",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                     OutlinedTextField(
                         value = cloneName,
                         onValueChange = { cloneName = it },
                         label = { Text("Название голоса") },
                         singleLine = true,
                     )
-                    OutlinedButton(onClick = { audioPicker.launch(arrayOf("audio/*")) }) {
+                    OutlinedButton(onClick = {
+                        val mime = arrayOf("audio/*")
+                        try {
+                            audioPicker.launch(mime)
+                        } catch (e: android.content.ActivityNotFoundException) {
+                            android.widget.Toast.makeText(
+                                context,
+                                "Не найден файловый менеджер для выбора аудио",
+                                android.widget.Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                    }) {
                         Text(if (cloneAudioUri == null) "Выбрать аудиозапись" else "Аудиозапись выбрана")
                     }
                     Row {
@@ -132,11 +158,31 @@ fun VoicesScreen(
                         "Запись будет отправлена в ElevenLabs. Функция требует API-ключ и может зависеть от тарифа.",
                         style = MaterialTheme.typography.bodySmall,
                     )
+                    state.error?.let {
+                        Text(
+                            it,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
             },
             confirmButton = {
+                val dialogKey = remember(context) {
+                    androidx.compose.runtime.mutableStateOf(
+                        settingsSnapshot(context, "elevenlabs"),
+                    )
+                }
+                LaunchedEffect(Unit) {
+                    dialogKey.value = settingsSnapshot(context, "elevenlabs")
+                }
                 Button(
-                    enabled = !state.cloning && cloneName.isNotBlank() && cloneAudioUri != null && consent,
+                    enabled = !state.cloning
+                        && cloneName.isNotBlank()
+                        && cloneAudioUri != null
+                        && consent
+                        && dialogKey.value.isNotBlank()
+                        && !state.cloning,
                     onClick = {
                         vm.cloneElevenLabsVoice(cloneName, requireNotNull(cloneAudioUri)) {
                             showCloneDialog = false
@@ -285,4 +331,14 @@ class VoicesViewModel(private val context: android.content.Context) : ViewModel(
 class VoicesViewModelFactory(private val context: android.content.Context) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T = VoicesViewModel(context) as T
+}
+
+private fun settingsSnapshot(context: android.content.Context, engineId: String): String {
+    val prefs = androidx.datastore.preferences.preferencesDataStore(
+        name = "t2v_settings",
+        produceMigrations = {},
+    )
+    // Quick read through the running repository.
+    val repo = com.t2v.app.AppContainer.settings(context)
+    return repo.state.value.engines[engineId]?.get("apiKey").orEmpty()
 }
