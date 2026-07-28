@@ -66,6 +66,7 @@ fun VoicesScreen(
     val audioPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         cloneAudioUri = uri
     }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     LTVScaffold(
         nav = nav,
         title = stringResource(R.string.nav_voices),
@@ -143,11 +144,11 @@ fun VoicesScreen(
                     )
                     val elevenlabsKey by remember(context) {
                         androidx.compose.runtime.mutableStateOf(
-                            settingsSnapshot(context, "elevenlabs"),
+                            settingsSnapshot(ctx, "elevenlabs"),
                         )
                     }
                     LaunchedEffect(Unit) {
-                        elevenlabsKey.value = settingsSnapshot(context, "elevenlabs")
+                        elevenlabsKey.value = settingsSnapshot(ctx, "elevenlabs")
                     }
                     if (elevenlabsKey.value.isBlank()) {
                         Text(
@@ -199,11 +200,11 @@ fun VoicesScreen(
             confirmButton = {
                 val dialogKey = remember(context) {
                     androidx.compose.runtime.mutableStateOf(
-                        settingsSnapshot(context, "elevenlabs"),
+                        settingsSnapshot(ctx, "elevenlabs"),
                     )
                 }
                 LaunchedEffect(Unit) {
-                    dialogKey.value = settingsSnapshot(context, "elevenlabs")
+                    dialogKey.value = settingsSnapshot(ctx, "elevenlabs")
                 }
                 Button(
                     enabled = !state.cloning
